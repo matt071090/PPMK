@@ -1,0 +1,4 @@
+# kredensial database
+/application.properties
+target/
+.vscode/

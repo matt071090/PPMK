@@ -1,0 +1,225 @@
+# Tambah payment terms (OCTG) lewat Service Layer. Urut 1 -> 2 -> 3 -> 4.
+# Field lain (Due date based on, Start from) dibiarkan default SAP. Satu changeset: kalau satu gagal, semua batal.
+
+@sl = https://192.168.40.197:50000/b1s/v1
+
+### 1. Login
+POST {{sl}}/Login
+Content-Type: application/json
+
+{"CompanyDB":"CVPPM","UserName":"manager","Password":"1234"}
+
+### 2. Tambah 22 payment terms (hasil benar: 22x "HTTP/1.1 201 Created")
+POST {{sl}}/$batch
+Content-Type: multipart/mixed;boundary=batch_pt
+
+--batch_pt
+Content-Type: multipart/mixed;boundary=changeset_pt
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"Cash After Delivery","NumberOfAdditionalDays":0}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"Cash Before Delivery","NumberOfAdditionalDays":0}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"Cash On Delivery","NumberOfAdditionalDays":0}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 1 days","NumberOfAdditionalDays":1}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 10 days","NumberOfAdditionalDays":10}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 13 days","NumberOfAdditionalDays":13}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 14 days","NumberOfAdditionalDays":14}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 15 days","NumberOfAdditionalDays":15}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 2 days","NumberOfAdditionalDays":2}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 21 days","NumberOfAdditionalDays":21}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 25 days","NumberOfAdditionalDays":25}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 28 days","NumberOfAdditionalDays":28}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 3 days","NumberOfAdditionalDays":3}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 30 days","NumberOfAdditionalDays":30}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 35 days","NumberOfAdditionalDays":35}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 4 days","NumberOfAdditionalDays":4}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 40 days","NumberOfAdditionalDays":40}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 45 days","NumberOfAdditionalDays":45}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 50 days","NumberOfAdditionalDays":50}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 60 days","NumberOfAdditionalDays":60}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 7 days","NumberOfAdditionalDays":7}
+
+--changeset_pt
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/PaymentTermsTypes
+Content-Type: application/json
+
+{"PaymentTermsGroupName":"TT 90 days","NumberOfAdditionalDays":90}
+
+--changeset_pt--
+--batch_pt--
+
+### 3. Cek hasil
+GET {{sl}}/PaymentTermsTypes?$select=GroupNumber,PaymentTermsGroupName,NumberOfAdditionalDays
+Prefer: odata.maxpagesize=200
+
+### 4. Logout
+POST {{sl}}/Logout

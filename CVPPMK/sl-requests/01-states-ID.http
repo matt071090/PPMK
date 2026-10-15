@@ -1,0 +1,208 @@
+# Tambah 20 provinsi Indonesia (OCST) lewat Service Layer. JALANKAN MANUAL, urut 1 -> 2 -> 3.
+# Bisa langsung diklik "Send Request" dengan extension VS Code REST Client (cookie login otomatis dipakai ulang).
+# JTM (JAWA TIMUR) tidak ikut karena sudah ada. Semua dalam satu changeset: kalau satu gagal, semuanya batal.
+
+@sl = https://192.168.40.197:50000/b1s/v1
+
+### 1. Login
+POST {{sl}}/Login
+Content-Type: application/json
+
+{"CompanyDB":"CVPPM","UserName":"manager","Password":"1234"}
+
+### 2. Tambah 20 provinsi (hasil yang benar: 20x "HTTP/1.1 201 Created")
+POST {{sl}}/$batch
+Content-Type: multipart/mixed;boundary=batch_states
+
+--batch_states
+Content-Type: multipart/mixed;boundary=changeset_states
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"BLI","Country":"ID","Name":"BALI"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"BTN","Country":"ID","Name":"BANTEN"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"DIY","Country":"ID","Name":"DI YOGYAKARTA"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"DKI","Country":"ID","Name":"DKI JAKARTA"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"JBR","Country":"ID","Name":"JAWA BARAT"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"JTG","Country":"ID","Name":"JAWA TENGAH"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"KLS","Country":"ID","Name":"KALIMANTAN SELATAN"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"KLG","Country":"ID","Name":"KALIMANTAN TENGAH"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"KLT","Country":"ID","Name":"KALIMANTAN TIMUR"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"KLU","Country":"ID","Name":"KALIMANTAN UTARA"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"MLK","Country":"ID","Name":"MALUKU"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"MLU","Country":"ID","Name":"MALUKU UTARA"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"NTB","Country":"ID","Name":"NUSA TENGGARA BARAT"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"NTT","Country":"ID","Name":"NUSA TENGGARA TIMUR"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"PAP","Country":"ID","Name":"PAPUA"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"PBR","Country":"ID","Name":"PAPUA BARAT"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"PTG","Country":"ID","Name":"PAPUA TENGAH"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"SUS","Country":"ID","Name":"SULAWESI SELATAN"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"SSE","Country":"ID","Name":"SUMATERA SELATAN"}
+
+--changeset_states
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/States
+Content-Type: application/json
+
+{"Code":"SUU","Country":"ID","Name":"SUMATERA UTARA"}
+
+--changeset_states--
+--batch_states--
+
+### 3. Cek hasil (harus 21 baris termasuk JTM)
+GET {{sl}}/States?$filter=Country eq 'ID'&$orderby=Code&$select=Code,Name
+Prefer: odata.maxpagesize=100
+
+### 4. Logout
+POST {{sl}}/Logout

@@ -1,0 +1,327 @@
+# Tambah cost center / profit center (OPRC) lewat Service Layer. Urut 1 -> 2.
+# InWhichDimension = DimCode dari ODIM (dicek 2026-10-15): 1 TYPE, 2 PROCESSING, 3 DEPARTMENT, 4 LOCATION, 5 ZONA.
+# Valid From semua 2023-01-01. Satu changeset: kalau satu gagal, semua batal.
+
+@sl = https://192.168.40.197:50000/b1s/v1
+
+### 1. Login
+POST {{sl}}/Login
+Content-Type: application/json
+
+{"CompanyDB":"CVPPM","UserName":"manager","Password":"1234"}
+
+### 2. Tambah 34 cost center (hasil benar: 34x "HTTP/1.1 201 Created")
+POST {{sl}}/$batch
+Content-Type: multipart/mixed;boundary=batch_cc
+
+--batch_cc
+Content-Type: multipart/mixed;boundary=changeset_cc
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"ADMIN","CenterName":"ADMIN","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"BDH","CenterName":"BREEDING & HATCHERY","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"BLITAR","CenterName":"BLITAR","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"EKST","CenterName":"EKSTERNAL","InWhichDimension":1,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"FAM","CenterName":"FA & MAINTENANCE","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"FEED","CenterName":"FEEDMILL","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"GD-STOCK","CenterName":"GUDANG STOCK","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"GRESIK","CenterName":"GRESIK","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"GUDANG","CenterName":"GUDANG","InWhichDimension":2,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"INT","CenterName":"INTERNAL","InWhichDimension":1,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"JOGJA","CenterName":"JOGJA","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"JOMBANG","CenterName":"JOMBANG","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"KEDIRI","CenterName":"KEDIRI","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"KMT","CenterName":"KEMITRAAN","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"KOM","CenterName":"KOMERSIAL","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"LAMONGAN","CenterName":"LAMONGAN","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"MADIUN","CenterName":"MADIUN","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"MAGETAN","CenterName":"MAGETAN","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"MJOKERTO","CenterName":"MJOKERTO","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"MKT","CenterName":"PENJUALAN","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"NGAWI","CenterName":"NGAWI","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"PROD","CenterName":"PRODUCTION","InWhichDimension":2,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"PROJECT","CenterName":"PROJECT","InWhichDimension":1,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"RPBCS","CenterName":"RPB & COLD STORAGE","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"SEMARANG","CenterName":"SEMARANG","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"SERVICE","CenterName":"SERVICE","InWhichDimension":1,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"SOLO","CenterName":"SOLO","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"SURABAYA","CenterName":"SURABAYA","InWhichDimension":4,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"TRD","CenterName":"TRADING","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"WBI","CenterName":"RETAIL WBI","InWhichDimension":3,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"ZONA A","CenterName":"ZONA A","InWhichDimension":5,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"ZONA B","CenterName":"ZONA B","InWhichDimension":5,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"ZONA C","CenterName":"ZONA C","InWhichDimension":5,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc
+Content-Type: application/http
+Content-Transfer-Encoding: binary
+
+POST /b1s/v1/ProfitCenters
+Content-Type: application/json
+
+{"CenterCode":"ZONA D","CenterName":"ZONA D","InWhichDimension":5,"EffectiveFrom":"2023-01-01","Active":"tYES"}
+
+--changeset_cc--
+--batch_cc--

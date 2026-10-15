@@ -1,0 +1,49 @@
+[
+  { "no": "1", "title": "General Parameter", "pages": [
+    { "id": "ringkasan", "title": "Ringkasan & Temuan" },
+    { "id": "company-details", "no": "1.1", "title": "Company Details", "status": "progress" },
+    { "id": "general-settings", "no": "1.2", "title": "General Settings", "status": "progress" },
+    { "id": "posting-period", "no": "1.3", "title": "Posting Period", "status": "progress" },
+    { "id": "cost-center", "no": "1.4", "title": "Profit Center / Cost Center", "status": "progress" },
+    { "id": "payment-terms", "no": "1.5", "title": "Payment Terms", "status": "progress", "tables": ["OCTG"] },
+    { "id": "currencies", "no": "1.6", "title": "Currencies", "status": "progress" },
+    { "id": "tax", "no": "1.7", "title": "Tax Group & Withholding Tax", "status": "progress", "tables": ["OVTG", "OWHT"] },
+    { "id": "house-bank", "no": "1.8", "title": "House Bank", "status": "progress", "tables": ["DSC1"] },
+    { "id": "banks", "no": "1.9", "title": "Banks", "status": "progress", "tables": ["ODSC"] },
+    { "id": "document-settings", "no": "1.10", "title": "Document Settings (General)", "status": "progress", "tables": ["OADM", "CINF"] },
+    { "id": "document-numbering", "no": "1.11", "title": "Document Numbering", "status": "progress" },
+    { "id": "uom", "no": "1.12", "title": "Units of Measure", "status": "progress", "tables": ["OUOM"] },
+    { "id": "uom-groups", "no": "1.13", "title": "Unit of Measure Groups", "status": "progress", "tables": ["OUGP", "UGP1"] },
+    { "id": "sales-employee", "no": "1.14", "title": "Sales Employee / Buyer", "status": "progress", "tables": ["OSLP"] },
+    { "id": "freight", "no": "1.15", "title": "Freight", "status": "progress", "tables": ["OEXD"] },
+    { "id": "landed-cost", "no": "1.16", "title": "Landed Cost", "status": "progress", "tables": ["OALC"] },
+    { "id": "shipping-type", "no": "1.17", "title": "Shipping Type", "status": "progress", "tables": ["OSHP"] },
+    { "id": "payment-methods", "no": "1.18", "title": "Payment Methods", "status": "progress", "tables": ["OPYM"] },
+    { "id": "users", "no": "1.19", "title": "License, Users & Authorizations", "status": "progress" },
+    { "id": "remarks", "no": "1.20", "title": "Remarks", "status": "progress" },
+    { "id": "org-structure", "title": "Organization Structure", "status": "progress" }
+  ]},
+  { "no": "2", "title": "Keuangan", "pages": [
+    { "id": "coa", "no": "2.1", "title": "Chart of Accounts", "status": "progress" },
+    { "id": "gl-determination", "no": "2.2", "title": "G/L Account Determination", "status": "progress" },
+    { "id": "fixed-asset", "no": "2.3", "title": "Fixed Asset", "status": "progress" }
+  ]},
+  { "no": "3", "title": "Master Data", "pages": [
+    { "id": "item-groups", "no": "3.1", "title": "Item Group", "status": "progress" },
+    { "id": "bp-groups", "no": "3.2", "title": "Customer & Vendor Group", "status": "progress" },
+    { "id": "price-lists", "no": "3.3", "title": "Price List", "status": "progress" },
+    { "id": "master-summary", "no": "3.4", "title": "Status Master Data", "status": "progress" }
+  ]},
+  { "no": "4", "title": "Kontrol Dokumen", "pages": [
+    { "id": "approval", "no": "4.1", "title": "Approval", "status": "progress" },
+    { "id": "alerts", "no": "4.2", "title": "Alert", "status": "progress" },
+    { "id": "layouts", "no": "4.3", "title": "Form Layout", "status": "progress" },
+    { "id": "sp-validation", "no": "4.4", "title": "Validasi (SP Transaction Notification)", "status": "progress" }
+  ]},
+  { "no": "5", "title": "Add-on & Kustomisasi STEM", "pages": [
+    { "id": "udo", "no": "5.1", "title": "User-Defined Object (UDO)", "status": "progress" },
+    { "id": "udt", "no": "5.2", "title": "User-Defined Table (UDT)", "status": "progress" },
+    { "id": "udf", "no": "5.3", "title": "User-Defined Field (UDF)", "status": "progress" },
+    { "id": "saved-queries", "no": "5.4", "title": "Saved Query", "status": "progress" }
+  ]}
+]
