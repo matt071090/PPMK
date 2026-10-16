@@ -349,3 +349,10 @@ body.edit .top { box-shadow: inset 0 -2px 0 var(--accent); }
 .acct { display: block; white-space: nowrap; }
 .acct small { display: block; color: var(--muted); font-size: 12px; }
 .muted { color: var(--muted); }
+
+/* export Excel */
+.xbar { display: flex; justify-content: flex-end; margin: 0 0 6px; }
+.xbtn { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.xbtn:hover { border-color: var(--ok); color: var(--ok); }
+.toolbar .xbtn { margin-left: auto; align-self: center; }

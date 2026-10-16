@@ -1,4 +1,5 @@
-import { $, $$, esc, slug, callouts, flushMounts, rowsOf, table } from "./ui.js";
+import { $, $$, esc, slug, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows } from "./ui.js";
+import { xlsxBlob, download } from "./xlsx.js";
 import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
 
@@ -213,6 +214,7 @@ async function route(fresh = false, keepScroll = false) {
   document.title = `${page.no ? page.no + " " : ""}${page.title} · Dokumentasi CVPPMK`;
 
   let html, meta = "";
+  resetExports();
   try {
     if (id === "ringkasan") ({ html, meta } = await renderSummary(fresh));
     else if (!PAGES[id]) html = renderTodo(page);
@@ -295,6 +297,28 @@ const SUMMARY = {
 // ---------- panel "Di halaman ini" + scrollspy ----------
 let spy;
 const headingText = h => { const c = h.cloneNode(true); $$(".anchor, .no", c).forEach(x => x.remove()); return c.textContent.trim(); };
+
+// ---------- export Excel ----------
+// Judul tabel = nama grup (details) atau judul bagian terdekat di atas tombolnya
+function exportTitle(btn) {
+  const grp = btn.closest("details");
+  if (grp) return $("summary > span", grp).firstChild.textContent.trim();
+  const hs = $$("#article h2[id], #article h3[id]").filter(h => h.compareDocumentPosition(btn) & Node.DOCUMENT_POSITION_FOLLOWING);
+  return hs.length ? headingText(hs[hs.length - 1]) : "Data";
+}
+// buttons: tombol [data-export]; satu tombol = satu sheet. Nama file: "<no> <judul halaman> [- judul tabel].xlsx"
+function exportExcel(buttons) {
+  const page = pages.find(p => p.id === current);
+  const sheets = buttons.map(b => ({ b, x: exportOf(b.dataset.export) })).filter(s => s.x)
+    .map(({ b, x }) => ({ name: exportTitle(b), rows: exportRows(x.cols, x.rows) }));
+  if (!sheets.length) return;
+  const base = `${page.no ? page.no + " " : ""}${page.title}`;
+  download(xlsxBlob(sheets), `${sheets.length === 1 && buttons.length === 1 ? `${base} - ${sheets[0].name}` : base} - CVPPMK.xlsx`);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-export]");
+  if (b) { e.preventDefault(); e.stopPropagation(); exportExcel([b]); }
+});
 function buildToc(page, meta) {
   const hs = $$("#article h2[id], #article h3[id]");
   $("#toc-list").innerHTML = hs.length ? `<h4>Di halaman ini</h4><ul>${hs.map(h =>
@@ -302,7 +326,9 @@ function buildToc(page, meta) {
   const hasSettings = !!$("#article .settings");
   $("#toc-meta").innerHTML = `${meta}
     ${hasSettings ? `<label><input type="checkbox" id="show-cols" ${document.body.classList.contains("show-cols") ? "checked" : ""}> Tampilkan nama kolom DB</label>` : ""}
-    ${(PAGES[page.id] && !PAGES[page.id].static) || page.id === "ringkasan" ? `<button type="button" id="refresh">↻ Muat ulang dari SAP B1</button>` : ""}`;
+    ${(PAGES[page.id] && !PAGES[page.id].static) || page.id === "ringkasan" ? `<button type="button" id="refresh">↻ Muat ulang dari SAP B1</button>` : ""}
+    ${$("#article [data-export]") ? `<button type="button" id="export-page">⤓ Export semua tabel (Excel)</button>` : ""}`;
+  $("#export-page") && ($("#export-page").onclick = () => exportExcel($$("#article [data-export]")));
   $("#show-cols") && ($("#show-cols").onchange = e => {
     document.body.classList.toggle("show-cols", e.target.checked); store.set("show-cols", e.target.checked ? "1" : "");
   });
@@ -385,17 +411,21 @@ function toggleTheme() {
 (async () => {
   applyTheme(store.get("theme"));
   if (store.get("show-cols")) document.body.classList.add("show-cols");
-  if (store.get("edit")) setEdit(true);
-  [chapters] = await Promise.all([
+  let editable;
+  [chapters, editable] = await Promise.all([
     fetch("sections.json").then(r => r.json()),
+    // war di Tomcat = web final read-only: tombol Mode edit tidak ditampilkan
+    getJson("api/review/mode").then(m => m.editable).catch(() => false),
     getJson("api/review").then(r => { review = { pages: {}, exclusions: {}, ...r }; reviewLoaded = true; })
       .catch(e => console.warn("Data review gagal dimuat", e))
   ]);
+  if (!editable) $("#edit-btn").remove();
+  else if (store.get("edit")) setEdit(true);
   pages = chapters.flatMap(c => c.pages);
   buildNav(); buildIndex();
 
   $("#theme-btn").onclick = toggleTheme;
-  $("#edit-btn").onclick = () => { setEdit(!editing()); rerender(); };
+  if (editable) $("#edit-btn").onclick = () => { setEdit(!editing()); rerender(); };
   $("#menu-btn").onclick = () => document.body.classList.toggle("nav-open");
   document.addEventListener("click", e => {
     if (document.body.classList.contains("nav-open") && !e.target.closest(".sidebar, #menu-btn")) document.body.classList.remove("nav-open");

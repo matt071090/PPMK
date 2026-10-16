@@ -32,6 +32,7 @@ const PLANNING = { N: "None", M: "MRP" };
 const PROCURE = { B: "Buy", M: "Make" };
 const BP_TYPE = { C: "Customer", S: "Vendor" };
 const BP_CARD = { ...BP_TYPE, L: "Lead" };
+const ITEM_TYPE = { I: "Item", L: "Labor", T: "Travel", F: "Fixed Asset" };
 const ALERT_TYPE = { S: "System", U: "User-Defined" };
 const FREQ = { H: "Jam", D: "Hari", W: "Minggu", M: "Bulan", N: "Menit" };
 const LAYOUT_CAT = { P: "PLD", C: "Crystal Reports" };
@@ -229,6 +230,24 @@ export const PAGES = {
       { lead: rowsOf(d.groups)[0]?.GLMethod === "C"
           ? "Set Inventory Method By = Item Group, jadi akun persediaan diambil dari item group. Daftar akunnya di <a href=\"#/gl-determination/item-groups\">2.2.2</a>."
           : `Akun persediaan tidak diambil dari item group, karena Set Inventory Method By = ${esc(GL_METHOD[rowsOf(d.groups)[0]?.GLMethod] || "?")} (lihat <a href="#/gl-determination">2.2</a>).` })
+  },
+
+  "items": {
+    lead: "Daftar item (barang, jasa, aset). Kolom yang ditampilkan masih dasar dan akan dilengkapi.",
+    menu: "Inventory › Item Master Data",
+    tables: ["OITM", "OITB"],
+    render(d) {
+      const items = rowsOf(d.items).map(i => ({ ...i, Type: ITEM_TYPE[i.ItemType] || i.ItemType }));
+      return kpis([[items.length, "Total item"], [items.filter(i => i.InvntItem === "Y").length, "Inventory item"],
+          [items.filter(i => i.SellItem === "Y").length, "Sales item"], [items.filter(i => i.PrchseItem === "Y").length, "Purchase item"]])
+        + section("list", "Daftar Item", searchable("item-t", [{ key: "ItemCode", label: "Kode" }, { key: "ItemName", label: "Nama" },
+          { key: "FrgnName", label: "Nama asing" }, { key: "ItmsGrpNam", label: "Item Group" }, { key: "Type", label: "Tipe" },
+          { key: "InvntItem", label: "Inventory", fmt: badgeYN }, { key: "SellItem", label: "Sales", fmt: badgeYN },
+          { key: "PrchseItem", label: "Purchase", fmt: badgeYN }, { key: "InvntryUom", label: "UoM stok" },
+          { key: "ManBtchNum", label: "Batch", fmt: badgeYN }, { key: "ManSerNum", label: "Serial", fmt: badgeYN },
+          { key: "frozenFor", label: "Inactive", fmt: badgeYN }],
+          items, { filterKey: "ItmsGrpNam", filterLabel: "item group", limit: 500 }));
+    }
   },
 
   "bp-groups": {

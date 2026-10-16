@@ -106,6 +106,18 @@
       "status" : "ok",
       "at" : "2026-10-16 11:18",
       "note" : "done"
+    },
+    "fixed-asset" : {
+      "status" : "ok",
+      "at" : "2026-10-16 11:30"
+    },
+    "approval" : {
+      "status" : "nok",
+      "at" : "2026-10-16 11:31"
+    },
+    "alerts" : {
+      "status" : "nok",
+      "at" : "2026-10-16 11:32"
     }
   },
   "exclusions" : { },

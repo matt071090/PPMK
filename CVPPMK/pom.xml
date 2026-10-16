@@ -14,6 +14,8 @@
     <groupId>com.stem</groupId>
     <artifactId>cvppmk-docs</artifactId>
     <version>0.1.0</version>
+    <!-- war: taruh target/cvppmk.war di webapps Tomcat 9 -> http://<server>:<port>/cvppmk/ -->
+    <packaging>war</packaging>
     <name>cvppmk-docs</name>
     <description>Dokumentasi project CVPPMK, data langsung dari SAP B1</description>
 
@@ -35,6 +37,12 @@
             <artifactId>ngdbc</artifactId>
             <version>2.28.6</version>
         </dependency>
+        <!-- disediakan Tomcat di server; tetap dipakai saat dijalankan dari VS Code / java -jar -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-tomcat</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
@@ -44,6 +52,24 @@
     </dependencies>
 
     <build>
+        <finalName>cvppmk</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Dibundel ke war supaya cukup satu file di webapps:
+                 ./application.properties (koneksi DB & SL, tidak di-commit) -> classpath:config/, prioritasnya di atas application.properties bawaan;
+                 ./review.json (hasil review mode edit) -> dibaca read-only di server. -->
+            <resource>
+                <directory>${project.basedir}</directory>
+                <includes><include>application.properties</include></includes>
+                <targetPath>config</targetPath>
+            </resource>
+            <resource>
+                <directory>${project.basedir}</directory>
+                <includes><include>review.json</include></includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

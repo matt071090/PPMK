@@ -75,9 +75,42 @@ function settingValue(r, d, emptyText) {
   return isEmpty(v) ? empty() : `<span class="vv">${esc(v)}</span>`;
 }
 
+// ---------- export Excel ----------
+// Setiap tabel data mendaftarkan kolom + barisnya di sini supaya bisa diekspor persis seperti yang tampil.
+// Registry dikosongkan setiap kali halaman dirender ulang (resetExports di app.js).
+const exportsReg = new Map();
+let exportSeq = 0;
+export const resetExports = () => { exportsReg.clear(); exportSeq = 0; };
+export const exportOf = id => exportsReg.get(id);
+
+// Teks polos dari HTML sel: tag dipisah koma, nama akun dipisah " - ", opsi yang tidak terpilih & "belum diisi" dibuang
+export function cellText(html) {
+  const el = document.createElement("div");
+  el.innerHTML = html;
+  $$(".empty, .opt:not(.on)", el).forEach(x => x.remove());
+  $$(".tag:not(:last-child)", el).forEach(t => t.append(", "));
+  $$(".acct small", el).forEach(s => s.prepend(" - "));
+  $$(".raw", el).forEach(s => s.prepend(" "));
+  return el.textContent.replace(/\s+/g, " ").trim();
+}
+// Baris tabel -> baris Excel. Kolom angka diekspor sebagai angka dari nilai mentahnya.
+export function exportRows(cols, rows) {
+  return [cols.map(c => c.label), ...rows.map(r => cols.map(c => {
+    const raw = r[c.key];
+    if (c.num && raw !== null && raw !== "" && isFinite(+raw)) return +raw;
+    return cellText(c.fmt ? c.fmt(raw, r) : esc(raw));
+  }))];
+}
+
+const exportBtn = id => `<button type="button" class="xbtn" data-export="${id}" title="Download tabel ini sebagai file Excel">
+  <svg width="13" height="13" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0l-4-4m4 4l4-4M4 16h12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Excel</button>`;
+
 // ---------- tabel data ----------
-export function table(cols, rows, { flag } = {}) {
-  return `<div class="table-wrap"><table class="data">
+// xid: id export tetap (dipakai searchable); allRows: baris yang diekspor kalau berbeda dari yang dirender (mis. dibatasi limit)
+export function table(cols, rows, { flag, xid, allRows, noExport } = {}) {
+  const id = xid || `x${++exportSeq}`;
+  if (!noExport) exportsReg.set(id, { cols, rows: allRows || rows });
+  return `${noExport || xid ? "" : `<div class="xbar">${exportBtn(id)}</div>`}<div class="table-wrap"><table class="data">
     <thead><tr>${cols.map(c => `<th>${esc(c.label)}</th>`).join("")}</tr></thead>
     <tbody>${rows.map(r => `<tr class="${flag && flag(r) ? "flag" : ""}">${cols.map(c =>
       `<td class="${c.num ? "num" : ""}">${c.fmt ? c.fmt(r[c.key], r) : val(r[c.key])}</td>`).join("")}</tr>`).join("")
@@ -95,7 +128,8 @@ export function searchable(id, cols, rows, { filterKey, filterLabel, flag, limit
       const t = q.value.toLowerCase(), f = sel ? sel.value : "";
       const list = rows.filter(r => (!f || r[filterKey] === f) &&
         (!t || Object.values(r).some(v => String(v ?? "").toLowerCase().includes(t))));
-      out.innerHTML = table(cols, list.slice(0, limit), { flag });
+      // export mengikuti hasil cari/filter saat ini, tanpa batas limit tampilan
+      out.innerHTML = table(cols, list.slice(0, limit), { flag, xid: id, allRows: list });
       $(".table-wrap", out).classList.add("tall");
       cnt.textContent = list.length > limit
         ? `menampilkan ${limit} dari ${list.length} baris yang cocok, persempit pencarian`
@@ -106,7 +140,7 @@ export function searchable(id, cols, rows, { filterKey, filterLabel, flag, limit
   return `<div id="${id}">
     <div class="toolbar"><input type="search" placeholder="Cari…" aria-label="Cari di tabel">
       ${filterKey ? `<select aria-label="Filter ${esc(filterLabel)}"><option value="">Semua ${esc(filterLabel)}</option>${opts.map(o => `<option>${esc(o)}</option>`).join("")}</select>` : ""}
-      <span class="count"></span></div>
+      <span class="count"></span>${exportBtn(id)}</div>
     <div class="out"></div></div>`;
 }
 
