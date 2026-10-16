@@ -211,7 +211,7 @@ async function route(fresh = false, keepScroll = false) {
   art.innerHTML = head(page) + `<div class="skeleton">${"<div></div>".repeat(6)}</div>`;
   $("#toc-list").innerHTML = ""; $("#toc-meta").innerHTML = "";
   if (!keepScroll) window.scrollTo(0, 0);
-  document.title = `${page.no ? page.no + " " : ""}${page.title} · Dokumentasi CVPPMK`;
+  document.title = `${page.no ? page.no + " " : ""}${page.title} · Project Check List CVPPMK`;
 
   let html, meta = "";
   resetExports();
@@ -239,7 +239,7 @@ async function route(fresh = false, keepScroll = false) {
 
 function head(page, def) {
   const ch = chapters.find(c => c.pages.includes(page));
-  return `<nav class="crumbs" aria-label="Breadcrumb"><span>Dokumentasi</span><span>${esc(ch.no)}. ${esc(ch.title)}</span>${page.no ? `<span>${esc(page.no)}</span>` : ""}</nav>
+  return `<nav class="crumbs" aria-label="Breadcrumb"><span>Project Check List</span><span>${esc(ch.no)}. ${esc(ch.title)}</span>${page.no ? `<span>${esc(page.no)}</span>` : ""}</nav>
     <h1>${page.no ? `<span class="no">${esc(page.no)}</span>` : ""}${esc(page.title)}</h1>
     ${def ? `<p class="lead">${def.lead}</p>` : ""}
     <div class="page-meta">${def?.menu ? `<span><b>Menu SAP B1:</b> ${esc(def.menu)}</span>` : ""}${def?.tables ? `<span><b>Sumber:</b> ${def.tables.map(t => `<code>${t}</code>`).join(" ")}</span>` : ""}</div>`;
