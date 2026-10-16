@@ -2,6 +2,7 @@ package com.stem.cvppmk.docs;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DataAccessException;
@@ -26,17 +27,25 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/section")
 public class SectionController {
+    private static final Set<String> DEV_ONLY = Collections.singleton("template-ref");
     private static final Logger log = LoggerFactory.getLogger(SectionController.class);
 
     private final JdbcTemplate jdbc;
+    private final UdfExpander udf;
+    private final boolean editable;
     private final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
-    public SectionController(JdbcTemplate jdbc) {
+    public SectionController(JdbcTemplate jdbc, UdfExpander udf, @Value("${docs.edit.enabled:true}") boolean editable) {
         this.jdbc = jdbc;
+        this.udf = udf;
+        this.editable = editable;
     }
 
     @GetMapping("/{name:[a-z0-9_-]+}")
     public Map<String, Object> section(@PathVariable String name) throws IOException {
+        // data template upload hanya untuk mode dev (sama seperti Mode edit); di war read-only ditolak
+        if (!editable && DEV_ONLY.contains(name))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bagian '" + name + "' hanya tersedia di mode dev");
         Resource[] files;
         try {
             files = resolver.getResources("classpath:sql/" + name + "/*.sql");
@@ -55,7 +64,16 @@ public class SectionController {
             // ("SQL statement would generate a row count")
             String sql = StreamUtils.copyToString(file.getInputStream(), StandardCharsets.UTF_8)
                     .replaceAll("(?m)^\\s*--.*$", "").trim();
-            results.put(key, run(key, sql));
+            UdfExpander.Expanded ex;
+            try {
+                ex = udf.expand(sql);   // penanda /*@udf-cols ..*/ & /*@udf-joins ..*/ -> kolom UDF dari CUFD
+            } catch (DataAccessException e) {
+                results.put(key, Collections.singletonMap("error", "Metadata UDF: " + e.getMostSpecificCause().getMessage()));
+                continue;
+            }
+            Map<String, Object> res = run(key, ex.sql);
+            if (!ex.udf.isEmpty() && !res.containsKey("error")) res.put("udf", ex.udf);
+            results.put(key, res);
         }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("generatedAt", LocalDateTime.now().withNano(0).toString());
@@ -68,8 +86,11 @@ public class SectionController {
         try {
             Map<String, Object> out = jdbc.query(sql, rs -> {
                 ResultSetMetaData md = rs.getMetaData();
-                List<String> columns = new ArrayList<>();
-                for (int i = 1; i <= md.getColumnCount(); i++) columns.add(md.getColumnLabel(i));
+                List<String> columns = new ArrayList<>(), types = new ArrayList<>();
+                for (int i = 1; i <= md.getColumnCount(); i++) {
+                    columns.add(md.getColumnLabel(i));
+                    types.add(md.getColumnTypeName(i));   // dipakai frontend untuk tahu kolom angka (export Excel)
+                }
                 List<List<String>> rows = new ArrayList<>();
                 while (rs.next()) {
                     List<String> row = new ArrayList<>(columns.size());
@@ -78,6 +99,7 @@ public class SectionController {
                 }
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("columns", columns);
+                m.put("types", types);
                 m.put("rows", rows);
                 return m;
             });

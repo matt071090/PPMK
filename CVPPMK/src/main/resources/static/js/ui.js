@@ -18,6 +18,19 @@ export const badgeYN = v => v === "Y" ? `<span class="badge yes">Ya</span>` : v 
 export const tags = (v, { none } = {}) => isEmpty(v) ? (none ? `<span class="tag none">${esc(none)}</span>` : empty())
   : `<span class="tags">${String(v).split("|").map(t => `<span class="tag">${esc(t)}</span>`).join("")}</span>`;
 export const coded = (map, v) => map[v] ? `${esc(map[v])}<span class="raw">(${esc(v)})</span>` : val(v);
+// ---------- kolom UDF dinamis (metadata "udf" dari penanda /*@udf-cols*/ di file .sql) ----------
+const NUM_TYPES = /^(DECIMAL|INTEGER|SMALLINT|BIGINT|TINYINT|DOUBLE|REAL|FLOAT|SMALLDECIMAL)$/;
+const numText = v => isEmpty(v) ? "" : esc(String(+v));
+export const udfCols = r => (r && r.udf || []).map(u => ({ key: u.col, label: u.label, num: u.num, fmt: u.num ? numText : undefined }));
+export const hasUdf = (r, col) => !!(r && r.udf || []).some(u => u.col === col);
+// Semua kolom hasil query apa adanya (judul = alias kolom, UDF = deskripsi CUFD); kolom angka dari tipe kolom DB
+export function autoCols(r) {
+  const udf = Object.fromEntries((r && r.udf || []).map(u => [u.col, u]));
+  return (r && r.columns || []).map((c, i) => {
+    const u = udf[c], num = u ? u.num : NUM_TYPES.test((r.types || [])[i] || "");
+    return { key: c, label: u ? u.label : c, num, fmt: num ? numText : undefined };
+  });
+}
 export const rowsOf = r => r && r.rows ? r.rows.map(row => Object.fromEntries(r.columns.map((c, i) => [c, row[i]]))) : [];
 
 // ---------- struktur halaman ----------
@@ -161,6 +174,13 @@ export const OBJECTS = {
   204: "A/P Down Payment", 10000071: "Inventory Posting", 310000001: "Inventory Opening Balance",
   1250000001: "Inventory Transfer Request", 1250000025: "Blanket Agreement", 1470000065: "Inventory Counting",
   1470000113: "Purchase Request", 540000006: "Purchase Quotation", 234000031: "Return Request",
-  234000032: "Goods Return Request", 1470000049: "Asset Capitalization", 1470000060: "Asset Capitalization Credit Memo"
+  234000032: "Goods Return Request", 1470000049: "Asset Capitalization", 1470000060: "Asset Capitalization Credit Memo",
+  // nama di bawah dari SAP B1 REFDB (sl-requests/REFDB.chm), 1470000085 dari nama series "FAAR"
+  290: "Resource", 234000021: "Project Management Document", 1470000075: "Asset Manual Depreciation",
+  1470000085: "Asset Revaluation", 1470000090: "Asset Transfer", 1470000094: "Asset Retirement",
+  68: "Production Instructions", 132: "Correction Invoice", 163: "A/P Correction Invoice", 164: "A/P Correction Invoice Reversal",
+  165: "A/R Correction Invoice", 166: "A/R Correction Invoice Reversal", 270: "A/R Monthly Invoice", 280: "A/R Tax Invoice",
+  281: "A/P Tax Invoice", 140000009: "Outgoing Excise Invoice", 140000010: "Incoming Excise Invoice", 140000014: "A/P Monthly Invoice",
+  253000001: "Withholding Tax Document"
 };
 export const sapVersion = v => v && v.length >= 7 ? `${+v.slice(0, -5)}.${v.slice(-5, -3)}.${v.slice(-3)}` : v;

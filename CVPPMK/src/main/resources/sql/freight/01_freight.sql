@@ -1,7 +1,9 @@
 -- 1.15 Freight (Administration > Setup > General > Freight)
 SELECT E."ExpnsCode", E."ExpnsName", E."RevAcct", R."AcctName" AS "RevName", E."ExpnsAcct", X."AcctName" AS "ExpName",
        E."VatGroupO", E."VatGroupI", E."DistrbMthd"
+/*@udf-cols OEXD E*/
 FROM OEXD E
 LEFT JOIN OACT R ON R."AcctCode" = E."RevAcct"
 LEFT JOIN OACT X ON X."AcctCode" = E."ExpnsAcct"
+/*@udf-joins OEXD E*/
 ORDER BY E."ExpnsCode"

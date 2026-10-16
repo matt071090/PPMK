@@ -53,29 +53,49 @@ function sheetNames(names) {
   });
 }
 
-function sheetXml(rows) {
+// Indeks style (lihat styles.xml di bawah). Dipakai template upload lewat cell { v, s }.
+export const S = { HEAD: 1, LABEL: 2, FIELD: 3, NOTE: 4, TEXT: 5, DATE: 6, BOLD: 7, SAMPLE_TEXT: 8, SAMPLE_DATE: 9, SAMPLE: 10 };
+// Tanggal "YYYY-MM-DD" -> nomor seri Excel (dipakai dengan style DATE)
+export const excelDate = iso => (Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) - Date.UTC(1899, 11, 30)) / 864e5;
+
+function cellXml(ref, c) {
+  const { v, s } = c !== null && typeof c === "object" ? c : { v: c };
+  const st = s ? ` s="${s}"` : "";
+  if (typeof v === "number" && isFinite(v)) return `<c r="${ref}"${st}><v>${v}</v></c>`;
+  if (v === null || v === undefined || v === "") return st ? `<c r="${ref}"${st}/>` : "";
+  return `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${xml(v)}</t></is></c>`;
+}
+
+// Sheet export biasa: baris 1 header tebal + filter. Sheet template (sheet.template): style per cell, kolom bisa punya
+// style default (cols[i].style, mis. teks supaya kode 0123 tidak jadi angka), dropdown (validations), freeze sendiri.
+function sheetXml(sheet) {
+  const rows = sheet.rows, tpl = !!sheet.template;
   const width = Math.max(1, ...rows.map(r => r.length));
-  const cols = Array.from({ length: width }, (_, i) =>
-    Math.min(60, Math.max(8, ...rows.map(r => String(r[i] ?? "").length + 2))));
-  const body = rows.map((r, y) => `<row r="${y + 1}">${r.map((v, x) => {
-    const ref = `${colName(x)}${y + 1}`, s = y === 0 ? ` s="1"` : "";
-    if (typeof v === "number" && isFinite(v)) return `<c r="${ref}"${s}><v>${v}</v></c>`;
-    if (v === null || v === undefined || v === "") return "";
-    return `<c r="${ref}" t="inlineStr"${s}><is><t xml:space="preserve">${xml(v)}</t></is></c>`;
-  }).join("")}</row>`).join("");
-  const range = `A1:${colName(width - 1)}${Math.max(rows.length, 1)}`;
+  const text = c => String(c !== null && typeof c === "object" ? c.v ?? "" : c ?? "");
+  const cols = Array.from({ length: width }, (_, i) => {
+    const def = (sheet.cols || [])[i] || {};
+    const w = def.width || (tpl ? Math.min(45, Math.max(10, ...rows.slice(0, 3).map(r => text(r[i]).length + 2)))
+      : Math.min(60, Math.max(8, ...rows.map(r => text(r[i]).length + 2))));
+    return `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"${def.style ? ` style="${def.style}"` : ""}/>`;
+  }).join("");
+  const body = rows.map((r, y) => `<row r="${y + 1}">${r.map((c, x) =>
+    cellXml(`${colName(x)}${y + 1}`, !tpl && y === 0 && c !== null && c !== "" ? { v: c, s: S.HEAD } : c)).join("")}</row>`).join("");
+  const fr = tpl ? sheet.freeze : { row: 1, col: 0 };
+  const pane = !fr ? "" : `<pane${fr.col ? ` xSplit="${fr.col}"` : ""} ySplit="${fr.row}" topLeftCell="${colName(fr.col)}${fr.row + 1}" activePane="${fr.col ? "bottomRight" : "bottomLeft"}" state="frozen"/>`;
+  const filter = !tpl && rows.length > 1 ? `<autoFilter ref="A1:${colName(width - 1)}${rows.length}"/>` : "";
+  const dv = (sheet.validations || []).map(d => `<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="Nilai tidak valid" error="Pilih dari daftar dropdown." sqref="${d.sqref}"><formula1>${xml(d.formula)}</formula1></dataValidation>`);
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
-<cols>${cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>
-<sheetData>${body}</sheetData>${rows.length > 1 ? `<autoFilter ref="${range}"/>` : ""}</worksheet>`;
+<sheetViews><sheetView workbookViewId="0">${pane}</sheetView></sheetViews>
+<cols>${cols}</cols>
+<sheetData>${body}</sheetData>${filter}${dv.length ? `<dataValidations count="${dv.length}">${dv.join("")}</dataValidations>` : ""}</worksheet>`;
 }
 
 export function xlsxBlob(sheets) {
   const names = sheetNames(sheets.map(s => s.name));
   const ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
   const rel = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-  const filters = sheets.map((s, i) => s.rows.length > 1
+  const filters = sheets.map((s, i) => !s.template && s.rows.length > 1
     ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${names[i].replace(/'/g, "''")}'!$A$1:$${colName(Math.max(1, ...s.rows.map(r => r.length)) - 1)}$${s.rows.length}</definedName>` : "").join("");
   const files = [
     ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -89,17 +109,18 @@ ${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" Co
     ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${rel}/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
     ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="${ns}" xmlns:r="${rel}"><sheets>${names.map((n, i) => `<sheet name="${xml(n)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets>${filters ? `<definedNames>${filters}</definedNames>` : ""}</workbook>`],
+<workbook xmlns="${ns}" xmlns:r="${rel}"><sheets>${names.map((n, i) => `<sheet name="${xml(n)}" sheetId="${i + 1}"${sheets[i].hidden ? ` state="hidden"` : ""} r:id="rId${i + 1}"/>`).join("")}</sheets>${filters ? `<definedNames>${filters}</definedNames>` : ""}</workbook>`],
     ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="${rel}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}<Relationship Id="rId${sheets.length + 1}" Type="${rel}/styles" Target="styles.xml"/></Relationships>`],
     ["xl/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="${ns}"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
-<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE4F5F1"/><bgColor indexed="64"/></patternFill></fill></fills>
-<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+<styleSheet xmlns="${ns}"><numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy-mm-dd"/></numFmts>
+<fonts count="5"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><i/><sz val="11"/><color rgb="FF1F4E78"/><name val="Calibri"/></font><font><i/><sz val="9"/><color rgb="FF555555"/><name val="Calibri"/></font></fonts>
+<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE4F5F1"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFB7B7B7"/></left><right style="thin"><color rgb="FFB7B7B7"/></right><top style="thin"><color rgb="FFB7B7B7"/></top><bottom style="thin"><color rgb="FFB7B7B7"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>
+<cellXfs count="11"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/></cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
-    ...sheets.map((s, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s.rows)])
+    ...sheets.map((s, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s)])
   ];
   return zip(files, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }

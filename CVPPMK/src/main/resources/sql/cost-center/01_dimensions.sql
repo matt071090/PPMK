@@ -2,5 +2,7 @@
 SELECT D."DimCode", D."DimName", D."DimDesc", D."DimActive",
        (SELECT COUNT(*) FROM OPRC P WHERE P."DimCode" = D."DimCode") AS "CcCount",
        (SELECT COUNT(*) FROM OPRC P WHERE P."DimCode" = D."DimCode" AND P."Active" = 'Y') AS "CcActive"
+/*@udf-cols ODIM D*/
 FROM ODIM D
+/*@udf-joins ODIM D*/
 ORDER BY D."DimCode"

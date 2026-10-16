@@ -1,6 +1,6 @@
 // Bab 1: General Parameter. Urutan dan nomor mengikuti blueprint "01.01 General Parameters".
 import {
-  $, $$, esc, val, YN, badgeYN, coded, rowsOf, isEmpty, onMount, section, kv, settings, table, searchable, tags,
+  $, $$, esc, val, YN, badgeYN, coded, rowsOf, isEmpty, onMount, section, kv, settings, table, searchable, tags, udfCols, hasUdf,
   VALUATION, GL_METHOD, DATE_FMT, TIME_FMT, PERIOD_STAT, OBJECTS, sapVersion
 } from "../ui.js";
 
@@ -327,6 +327,10 @@ function checkPeriods(periods) {
     ? [["warn", `Posting period terakhir berakhir ${last}. Period tahun berikutnya belum dibuat.`]] : [];
 }
 // Sub-tipe NNM1.DocSubType per objek (Business Partner, Blanket Agreement)
+// Objek yang ada di NNM1 tapi tidak bisa di-set di layar Document Numbering lokalisasi Indonesia (dicek ke SAP B1 REFDB):
+// fitur lokalisasi negara lain + objek bawaan sistem tanpa nama di REFDB. Disembunyikan, bisa ditampilkan lewat checkbox.
+const NNM_HIDDEN = new Set(["68", "132", "163", "164", "165", "166", "270", "280", "281", "140000008", "140000009", "140000010",
+  "140000014", "253000001", "540000024", "1660000003", "1660000004"]);
 const SUBTYPE = { 2: { C: "Customer", S: "Vendor", L: "Lead" }, 1250000025: { C: "Customer", S: "Vendor" } };
 function checkSeries(series) {
   const issues = new Map(); // Series -> [pesan]
@@ -358,14 +362,10 @@ function checkUsers(users) {
   if (noBranch.length) out.push(["info", `User tanpa assignment branch: ${noBranch.join(", ")}.`]);
   return out;
 }
-function checkOrg(branches, whs) {
+function checkOrg(branches) {
   const out = [];
   const noTax = branches.filter(b => !b.TaxIdNum).map(b => b.BPLName);
   if (noTax.length) out.push(["info", `NPWP branch belum diisi: ${noTax.join(", ")}.`]);
-  const noType = whs.filter(w => !w.U_STEM_TYPE).length;
-  if (noType) out.push(["info", `${noType} warehouse belum punya tipe (UDF STEM_TYPE).`]);
-  const types = [...new Set(whs.map(w => w.U_STEM_TYPE).filter(t => t && t.length === 1))];
-  if (types.length) out.push(["info", `Kode tipe warehouse ${types.join(", ")} belum punya keterangan arti.`]);
   return out;
 }
 
@@ -434,10 +434,12 @@ export const PAGES = {
       const dims = rowsOf(d.dimensions), ccs = rowsOf(d.cost_centers);
       const ccCols = [{ key: "PrcCode", label: "Kode" }, { key: "PrcName", label: "Nama" },
         { key: "Active", label: "Aktif", fmt: badgeYN }, { key: "ValidFrom", label: "Berlaku dari" }, { key: "ValidTo", label: "Sampai" },
-        { key: "CCTypeCode", label: "Tipe" }, { key: "PrcCode", label: "Catatan", fmt: (v, r) => isSystemCc(r) ? `<span class="badge">bawaan sistem</span>` : "" }];
+        { key: "CCTypeCode", label: "Tipe" }, { key: "PrcCode", label: "Catatan", fmt: (v, r) => isSystemCc(r) ? `<span class="badge">bawaan sistem</span>` : "" },
+        ...udfCols(d.cost_centers)];
       return section("dimensions", "Dimension", table([{ key: "DimName", label: "Dimension" }, { key: "DimDesc", label: "Keterangan" },
           { key: "DimActive", label: "Aktif", fmt: badgeYN },
-          { key: "CcCount", label: "Cost center", num: 1, fmt: (v, r) => String(ccs.filter(c => c.DimCode === r.DimCode && !isSystemCc(c)).length) }], dims),
+          { key: "CcCount", label: "Cost center", num: 1, fmt: (v, r) => String(ccs.filter(c => c.DimCode === r.DimCode && !isSystemCc(c)).length) },
+          ...udfCols(d.dimensions)], dims),
           { no: "1.4.1", lead: "Kolom Keterangan adalah nama yang tampil di dokumen dan laporan." })
         + section("cost-centers", "Cost Center per Dimension", dims.map(x => section(`dim-${x.DimCode}`, `${x.DimName} · ${x.DimDesc || "-"}`,
             table(ccCols, ccs.filter(c => c.DimCode === x.DimCode)), { level: 3 })).join(""),
@@ -454,7 +456,7 @@ export const PAGES = {
       { key: "BslineDate", label: "Due date based on", fmt: codedCell(BASELINE) }, { key: "ExtraMonth", label: "+ Bulan", num: 1, fmt: num },
       { key: "ExtraDays", label: "+ Hari", num: 1, fmt: num }, { key: "TolDays", label: "Toleransi (hari)", num: 1, fmt: num },
       { key: "InstNum", label: "Cicilan", num: 1, fmt: num }, { key: "ListName", label: "Price List" },
-      { key: "CredLimit", label: "Credit Limit", num: 1, fmt: num }], rowsOf(d.terms)),
+      { key: "CredLimit", label: "Credit Limit", num: 1, fmt: num }, ...udfCols(d.terms)], rowsOf(d.terms)),
       { lead: "Diurutkan dari jumlah hari terkecil." })
   },
 
@@ -477,14 +479,16 @@ export const PAGES = {
     render(d) {
       const vat = rowsOf(d.vat_groups), active = vat.filter(v => v.Inactive !== "Y"), wht = rowsOf(d.withholding);
       const cols = [{ key: "Code", label: "Tax Code" }, { key: "Name", label: "Description" }, { key: "Rate", label: "Rate %", num: 1, fmt: num },
-        { key: "EffecDate", label: "Effective From" }, { key: "Account", label: "Akun" }, { key: "Locked", label: "Dikunci", fmt: badgeYN }];
+        { key: "EffecDate", label: "Effective From" }, { key: "Account", label: "Akun" }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
+        ...udfCols(d.vat_groups)];
       return section("tax-group", "Tax Group", Object.entries(TAX_CAT).map(([c, name]) =>
           section(`tax-${c}`, `Category: ${name}`, table(cols, active.filter(v => v.Category === c)), { level: 3 })).join(""),
           { no: "1.7.1", lead: "Hanya tax group aktif. Rate adalah tarif yang berlaku sekarang." })
         + section("withholding", "Withholding Tax", table([{ key: "WTCode", label: "WTax Code" }, { key: "WTName", label: "WTax Name" },
           { key: "Category", label: "Category", fmt: codedCell(WHT_CAT) }, { key: "Rate", label: "Rate %", num: 1, fmt: num },
           { key: "BaseType", label: "Base Type", fmt: codedCell(WHT_BASE) }, { key: "PrctBsAmnt", label: "% Base", num: 1, fmt: num },
-          { key: "EffecDate", label: "Effective From" }, { key: "Account", label: "Akun" }, { key: "Inactive", label: "Nonaktif", fmt: badgeYN }], wht),
+          { key: "EffecDate", label: "Effective From" }, { key: "Account", label: "Akun" }, { key: "Inactive", label: "Nonaktif", fmt: badgeYN },
+          ...udfCols(d.withholding)], wht),
           { no: "1.7.2" });
     }
   },
@@ -499,7 +503,7 @@ export const PAGES = {
     },
     render: d => section("accounts", "House Bank Accounts", table([{ key: "BankCode", label: "Bank Code" }, { key: "BankName", label: "Bank" },
       { key: "Branch", label: "Branch" }, { key: "Account", label: "Account No." }, { key: "AcctName", label: "Account Name" },
-      { key: "GLAccount", label: "Akun G/L", fmt: acct("GLAccount", "GLName") }], rowsOf(d.accounts)))
+      { key: "GLAccount", label: "Akun G/L", fmt: acct("GLAccount", "GLName") }, ...udfCols(d.accounts)], rowsOf(d.accounts)))
   },
 
   "banks": {
@@ -507,7 +511,7 @@ export const PAGES = {
     menu: "Administration › Setup › Banking › Banks",
     tables: ["ODSC"],
     render: d => section("banks", "Daftar Bank", table([{ key: "BankCode", label: "Bank Code" }, { key: "BankName", label: "Bank Name" },
-      { key: "CountryCod", label: "Country" }, { key: "SwiftNum", label: "BIC/SWIFT Code" }, { key: "Locked", label: "Dikunci", fmt: badgeYN }], rowsOf(d.banks)))
+      { key: "CountryCod", label: "Country" }, { key: "SwiftNum", label: "BIC/SWIFT Code" }, { key: "Locked", label: "Dikunci", fmt: badgeYN }, ...udfCols(d.banks)], rowsOf(d.banks)))
   },
 
   "document-settings": {
@@ -526,11 +530,12 @@ export const PAGES = {
     checks(d) {
       const uom = rowsOf(d.uom).filter(u => u.UomEntry !== "-1");
       if (!uom.length) return [["warn", "Belum ada satuan selain \"Manual\". Item belum bisa memakai satuan yang terdefinisi."]];
+      if (!hasUdf(d.uom, "U_STEM_CT_UOM")) return [];
       const noCt = uom.filter(u => isEmpty(u.U_STEM_CT_UOM)).map(u => u.UomCode);
       return noCt.length ? [["warn", `Satuan tanpa kode UoM CoreTax: ${noCt.join(", ")}.`]] : [];
     },
     render: d => section("uom", "Units of Measure", table([{ key: "UomCode", label: "UoM" }, { key: "UomName", label: "Nama" },
-      { key: "U_STEM_CT_UOM", label: "UoM CoreTax" }, { key: "Locked", label: "Dikunci", fmt: badgeYN }], rowsOf(d.uom)))
+      { key: "Locked", label: "Dikunci", fmt: badgeYN }, ...udfCols(d.uom)], rowsOf(d.uom)))
   },
 
   "uom-groups": {
@@ -542,7 +547,8 @@ export const PAGES = {
       return section("usage", "Penggunaan UoM Group", kv([["Penggunaan Unit of Measure Groups", used ? `<span class="yn y">Ya</span>` : `<span class="yn n">Tidak</span> <span class="raw">(hanya grup "Manual")</span>`]]))
         + section("groups", "Daftar UoM Group", table([{ key: "UgpCode", label: "Kode" }, { key: "UgpName", label: "Nama" },
           { key: "BaseUomCode", label: "Base UoM" }, { key: "UgpEntry", label: "Konversi",
-            fmt: v => lines.filter(l => l.UgpEntry === v).map(l => `${num(l.AltQty)} ${esc(l.UomCode)} = ${num(l.BaseQty)}`).join("<br>") || val(null) }], groups));
+            fmt: v => lines.filter(l => l.UgpEntry === v).map(l => `${num(l.AltQty)} ${esc(l.UomCode)} = ${num(l.BaseQty)}`).join("<br>") || val(null) },
+          ...udfCols(d.groups)], groups));
     }
   },
 
@@ -552,8 +558,8 @@ export const PAGES = {
     tables: ["OSLP"],
     render: d => section("list", "Sales Employee / Buyer", table([{ key: "SlpCode", label: "Kode", num: 1 }, { key: "SlpName", label: "Nama" },
       { key: "Memo", label: "Remarks" }, { key: "Commission", label: "Komisi %", num: 1, fmt: num },
-      { key: "Active", label: "Aktif", fmt: badgeYN }, { key: "Telephone", label: "Telepon" }, { key: "Email", label: "Email" }],
-      rowsOf(d.slp).filter(s => s.SlpCode !== "-1")), { lead: "Baris bawaan \"-No Sales Employee-\" tidak ditampilkan." })
+      { key: "Active", label: "Aktif", fmt: badgeYN }, { key: "Telephone", label: "Telepon" }, { key: "Email", label: "Email" },
+      ...udfCols(d.slp)], rowsOf(d.slp).filter(s => s.SlpCode !== "-1")), { lead: "Baris bawaan \"-No Sales Employee-\" tidak ditampilkan." })
   },
 
   "freight": {
@@ -563,7 +569,7 @@ export const PAGES = {
     render: d => section("list", "Daftar Freight", searchable("freight-t", [{ key: "ExpnsCode", label: "No", num: 1 }, { key: "ExpnsName", label: "Name" },
       { key: "RevAcct", label: "Revenue Account", fmt: acct("RevAcct", "RevName") }, { key: "ExpnsAcct", label: "Expense Account", fmt: acct("ExpnsAcct", "ExpName") },
       { key: "VatGroupO", label: "Output Tax" }, { key: "VatGroupI", label: "Input Tax" },
-      { key: "DistrbMthd", label: "Distribusi", fmt: codedCell(FREIGHT_DIST) }], rowsOf(d.freight)))
+      { key: "DistrbMthd", label: "Distribusi", fmt: codedCell(FREIGHT_DIST) }, ...udfCols(d.freight)], rowsOf(d.freight)))
   },
 
   "landed-cost": {
@@ -572,7 +578,7 @@ export const PAGES = {
     tables: ["OALC", "OACT"],
     render: d => section("list", "Daftar Landed Cost", searchable("lc-t", [{ key: "AlcCode", label: "Kode" }, { key: "AlcName", label: "Landed Cost Name" },
       { key: "OhType", label: "Allocation By", fmt: codedCell(LC_ALLOC) },
-      { key: "LaCAllcAcc", label: "Allocation Account", fmt: acct("LaCAllcAcc", "AllocName") }], rowsOf(d.landed_cost)))
+      { key: "LaCAllcAcc", label: "Allocation Account", fmt: acct("LaCAllcAcc", "AllocName") }, ...udfCols(d.landed_cost)], rowsOf(d.landed_cost)))
   },
 
   "shipping-type": {
@@ -581,7 +587,7 @@ export const PAGES = {
     tables: ["OSHP"],
     checks: d => rowsOf(d.shipping).length ? [] : [["info", "Belum ada shipping type."]],
     render: d => section("list", "Daftar Shipping Type", table([{ key: "TrnspCode", label: "Kode", num: 1 }, { key: "TrnspName", label: "Shipping Type" },
-      { key: "WebSite", label: "Website" }, { key: "Active", label: "Aktif", fmt: badgeYN }], rowsOf(d.shipping)))
+      { key: "WebSite", label: "Website" }, { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.shipping)], rowsOf(d.shipping)))
   },
 
   "payment-methods": {
@@ -592,7 +598,7 @@ export const PAGES = {
     render: d => section("list", "Daftar Payment Method", table([{ key: "PayMethCod", label: "Code" }, { key: "Descript", label: "Description" },
       { key: "Type", label: "Payment Type", fmt: codedCell(PAY_TYPE) }, { key: "BankTransf", label: "Bank Transfer", fmt: badgeYN },
       { key: "BnkDflt", label: "Bank" }, { key: "BankCountr", label: "Country" }, { key: "Format", label: "File Format" },
-      { key: "Active", label: "Aktif", fmt: badgeYN }], rowsOf(d.methods)))
+      { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.methods)], rowsOf(d.methods)))
   },
 
   "remarks": {
@@ -607,7 +613,7 @@ export const PAGES = {
     menu: "Administration › Setup › Financials › Currencies",
     tables: ["OCRN"],
     render: d => section("list", "Daftar Mata Uang", table([{ key: "CurrCode", label: "Kode" }, { key: "CurrName", label: "Nama" },
-      { key: "ISOCurrCod", label: "ISO" }, { key: "Locked", label: "Dikunci", fmt: badgeYN }], rowsOf(d.currencies)))
+      { key: "ISOCurrCod", label: "ISO" }, { key: "Locked", label: "Dikunci", fmt: badgeYN }, ...udfCols(d.currencies)], rowsOf(d.currencies)))
   },
 
   "document-numbering": {
@@ -620,14 +626,16 @@ export const PAGES = {
     },
     render(d) {
       const series = rowsOf(d.series), issues = checkSeries(series), groups = {};
+      let nHidden = 0;
       series.forEach(r => (groups[r.ObjectCode] ||= []).push(r));
       const html = Object.entries(groups).map(([code, list]) => {
-        const name = OBJECTS[code] || list[0].UdoName || `Object ${code}`;
+        const name = OBJECTS[code] || list[0].UdoName || `Object ${code}`, hide = NNM_HIDDEN.has(code);
+        if (hide) nHidden++;
         const years = list.map(r => +r.Indicator).filter(Boolean);
         const brs = [...new Set(list.map(r => r.BPLName).filter(Boolean))];
         const bad = list.filter(r => issues.has(r.Series)).length;
         const yr = years.length ? Math.min(...years) + (Math.max(...years) !== Math.min(...years) ? "–" + Math.max(...years) : "") : esc(list[0].Indicator || "");
-        return `<details class="grp" data-text="${esc((name + " " + code + " " + list.map(r => r.SeriesName).join(" ")).toLowerCase())}" data-bad="${bad ? 1 : ""}">
+        return `<details class="grp" data-text="${esc((name + " " + code + " " + list.map(r => r.SeriesName).join(" ")).toLowerCase())}" data-bad="${bad ? 1 : ""}" data-hide="${hide ? 1 : ""}"${hide ? " hidden" : ""}>
           <summary><span>${esc(name)} <span class="muted">· ${esc(code)}${list[0].UdoName ? " · UDO" : ""}</span></span>
             <span class="muted hide-sm">${brs.length ? brs.length + " branch" : "–"}</span>
             <span class="muted hide-sm">${yr}</span>
@@ -646,16 +654,17 @@ export const PAGES = {
         </details>`;
       }).join("");
       onMount(() => {
-        const q = $("#series-q"), bad = $("#series-bad");
+        const q = $("#series-q"), bad = $("#series-bad"), all = $("#series-all") || {};
         const f = () => $$("#series-list details").forEach(el =>
-          el.hidden = !el.dataset.text.includes(q.value.toLowerCase()) || (bad.checked && !el.dataset.bad));
-        q.oninput = bad.onchange = f;
+          el.hidden = !el.dataset.text.includes(q.value.toLowerCase()) || (bad.checked && !el.dataset.bad) || (!all.checked && !!el.dataset.hide));
+        q.oninput = bad.onchange = all.onchange = f;
       });
       return `<div class="kpis"><div class="kpi"><b>${series.length.toLocaleString("id-ID")}</b><span>Series</span></div>
-          <div class="kpi"><b>${Object.keys(groups).length}</b><span>Objek / dokumen</span></div>
+          <div class="kpi"><b>${Object.keys(groups).length - nHidden}</b><span>Objek / dokumen</span></div>
           <div class="kpi"><b>${issues.size}</b><span>Series bermasalah</span></div></div>`
         + section("series", "Series per Dokumen", `<div class="toolbar"><input type="search" id="series-q" placeholder="Cari dokumen / series…">
-          <label><input type="checkbox" id="series-bad"> Hanya yang bermasalah</label></div><div id="series-list">${html}</div>`);
+          <label><input type="checkbox" id="series-bad"> Hanya yang bermasalah</label>
+          ${nHidden ? `<label title="Objek lokalisasi negara lain / bawaan sistem yang tidak muncul di layar Document Numbering"><input type="checkbox" id="series-all"> Tampilkan objek yang tidak bisa di-set (${nHidden})</label>` : ""}</div><div id="series-list">${html}</div>`);
     }
   },
 
@@ -666,7 +675,7 @@ export const PAGES = {
     checks: d => checkUsers(rowsOf(d.users)),
     render: d => section("users", "User SAP B1", table([{ key: "USER_CODE", label: "User Code" }, { key: "U_NAME", label: "Nama" },
       { key: "SUPERUSER", label: "Superuser", fmt: badgeYN }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
-      { key: "Branches", label: "Branch", fmt: v => tags(v) }, { key: "LastLogin", label: "Login terakhir" }], rowsOf(d.users)))
+      { key: "Branches", label: "Branch", fmt: v => tags(v) }, { key: "LastLogin", label: "Login terakhir" }, ...udfCols(d.users)], rowsOf(d.users)))
   },
 
   "authorizations": {
@@ -726,16 +735,16 @@ export const PAGES = {
     lead: "Branch (unit bisnis) dan warehouse di bawahnya. Transaksi, user, dan numbering series dipisahkan per branch.",
     menu: "Administration › Setup › Financials › Branches · Inventory › Warehouses",
     tables: ["OBPL", "OWHS", "USR6"],
-    checks: d => checkOrg(rowsOf(d.branches), rowsOf(d.warehouses)),
+    checks: d => checkOrg(rowsOf(d.branches)),
     render(d) {
       const branches = rowsOf(d.branches), whs = rowsOf(d.warehouses);
       return section("branches", "Branch", table([{ key: "BPLId", label: "ID", num: 1 }, { key: "BPLName", label: "Nama Branch" },
           { key: "MainBPL", label: "Branch utama", fmt: badgeYN }, { key: "Disabled", label: "Nonaktif", fmt: badgeYN },
           { key: "DflWhs", label: "Warehouse default" }, { key: "TaxIdNum", label: "NPWP" },
-          { key: "WhsCount", label: "Warehouse", num: 1 }, { key: "UserCount", label: "User", num: 1 }], branches))
+          { key: "WhsCount", label: "Warehouse", num: 1 }, { key: "UserCount", label: "User", num: 1 }, ...udfCols(d.branches)], branches))
         + section("warehouses", "Warehouse", searchable("whs", [{ key: "WhsCode", label: "Kode" }, { key: "WhsName", label: "Nama" },
-          { key: "BPLName", label: "Branch" }, { key: "U_STEM_TYPE", label: "Tipe (STEM)" }, { key: "Inactive", label: "Nonaktif", fmt: badgeYN },
-          { key: "Locked", label: "Dikunci", fmt: badgeYN }, { key: "BinActivat", label: "Bin", fmt: badgeYN }], whs,
+          { key: "BPLName", label: "Branch" }, { key: "Inactive", label: "Nonaktif", fmt: badgeYN },
+          { key: "Locked", label: "Dikunci", fmt: badgeYN }, { key: "BinActivat", label: "Bin", fmt: badgeYN }, ...udfCols(d.warehouses)], whs,
           { filterKey: "BPLName", filterLabel: "branch" }), { lead: "Setiap warehouse terikat ke satu branch." });
     }
   }

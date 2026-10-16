@@ -1,6 +1,7 @@
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
-import { esc, val, badgeYN, coded, rowsOf, isEmpty, section, kv, settings, table, searchable, tags, VALUATION, GL_METHOD } from "../ui.js";
+import { mainTable, tableName, tableModule } from "../sap-tables.js";
+import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, kv, settings, table, searchable, tags, udfCols, autoCols, VALUATION, GL_METHOD } from "../ui.js";
 
 const one = r => rowsOf(r)[0] || {};
 const num = v => isEmpty(v) ? val(v) : esc((+v).toLocaleString("id-ID"));
@@ -54,7 +55,8 @@ const TABLE_NAMES = {
   OITT: "Bill of Materials", ITT1: "BOM Rows", ORCT: "Incoming Payment", OVPM: "Outgoing Payment", ODRF: "Draft", DRF1: "Draft Rows",
   OBTN: "Batch", OSRN: "Serial Number", OUSR: "User", OHEM: "Employee", OPRC: "Cost Center", OOCR: "Distribution Rule"
 };
-const tableLabel = id => TABLE_NAMES[id] ? `${esc(id)}<span class="raw">${esc(TABLE_NAMES[id])}</span>` : esc(id);
+// keterangan tabel: nama resmi dari SAP B1 REFDB (sap-tables.js), daftar lokal TABLE_NAMES sebagai cadangan
+const tableLabel = id => { const n = tableName(id) || TABLE_NAMES[id]; return n ? `${esc(id)}<span class="raw">${esc(n)}</span>` : esc(id); };
 
 // 2.2 Akun default per kategori periode (Service Layer PeriodCategory). Field yang namanya tidak jelas sengaja tidak diambil.
 const GL_DEFAULTS = [
@@ -85,6 +87,45 @@ const WHS_ACCTS = [["BalInvntAc", "Inventory"], ["SaleCostAc", "COGS"], ["Transf
   ["RevenuesAc", "Revenue"], ["StkInTnAct", "Stock in Transit"], ["WipAcct", "WIP"]];
 const glMethod = d => one(d.method).GLMethod;
 
+// ---------- UDF Management: kategori & object seperti di layar SAP ----------
+const UDF_CATS = ["Master Data", "Marketing Documents", "Payments", "Production", "Accounting", "Costing", "Budget", "Opportunities", "Service",
+  "Inventory", "Value Added Tax", "Fixed Assets", "Workflow", "Project Management", "Landed Costs", "Human Resources"];
+// Object di UDF Management, dikenali dari tabel wakil grupnya. Tabel lain jatuh ke kategori menurut modul REFDB.
+const UDF_OBJECTS = {
+  OINV: ["Marketing Documents", "Title"], INV1: ["Marketing Documents", "Rows"], INV12: ["Marketing Documents", "Tax Extension"],
+  ORCT: ["Payments", "Title"], RCT2: ["Payments", "Invoices"],
+  OCRD: ["Master Data", "Business Partners"], CRD1: ["Master Data", "Business Partners - Addresses"], OCPR: ["Master Data", "Contact Persons"],
+  OITM: ["Master Data", "Items"], OACT: ["Master Data", "G/L Accounts"], OWHS: ["Master Data", "Warehouses"], OUOM: ["Master Data", "Units of Measure"],
+  OCRY: ["Master Data", "Countries"], OADM: ["Master Data", "Company Details"], OBCD: ["Master Data", "Bar Codes"], ECM2: ["Marketing Documents", "Electronic Transactions"],
+  OWOR: ["Production", "Production Order"], WOR1: ["Production", "Production Order - Rows"], OITT: ["Production", "Bill of Materials"],
+  ITT1: ["Production", "Bill of Materials - Rows"], OFCT: ["Production", "Sales Forecast"],
+  OJDT: ["Accounting", "Journal Entry"], JDT1: ["Accounting", "Journal Entry - Rows"], OPRC: ["Costing", "Profit Centers"],
+  OBTN: ["Inventory", "Serial and Batch Numbers"], OPKL: ["Inventory", "Pick List"], OVTG: ["Value Added Tax", "Tax Groups"],
+  OACS: ["Fixed Assets", "Asset Classes"], OPMG: ["Project Management", "Projects"], OIPF: ["Landed Costs", "Title"], OHEM: ["Human Resources", "Employees"],
+  OSCL: ["Service", "Service Calls"], OOPR: ["Opportunities", "Sales Opportunities"],
+};
+const MODULE_CAT = { "Business Partners": "Master Data", "Marketing Documents": "Marketing Documents", Banking: "Payments", Finance: "Accounting",
+  "Inventory and Production": "Inventory", MRP: "Production", "Sales Opportunities": "Opportunities", Service: "Service",
+  "Human Resources": "Human Resources", Administration: "Master Data", General: "Master Data" };
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+// Tabel dengan definisi UDF identik = satu object (SAP menyimpan salinan definisi di tiap tabel, mis. semua dokumen)
+function udfObjects(fields) {
+  const byTable = {};
+  fields.forEach(f => (byTable[f.TableID] ||= []).push(f));
+  const groups = {};
+  Object.entries(byTable).forEach(([t, list]) => {
+    const sig = list.map(f => `${f.Field}|${f.Descr}|${f.TypeID}|${f.SizeID}`).sort().join("~");
+    (groups[sig] ||= []).push(t);
+  });
+  return Object.values(groups).map(tables => {
+    tables.sort();
+    const rep = tables.find(t => UDF_OBJECTS[t]) || tables.find(t => /^O/.test(t)) || tables[0];
+    const known = UDF_OBJECTS[rep], main = mainTable(rep) || rep;
+    return { tables, fields: byTable[rep], name: known ? known[1] : tableName(rep) || rep,
+      cat: known ? known[0] : MODULE_CAT[tableModule(main)] || "Lainnya" };
+  }).sort((a, b) => UDF_CATS.indexOf(a.cat) - UDF_CATS.indexOf(b.cat) || a.name.localeCompare(b.name));
+}
+
 export const PAGES = {
   // ================= 2. Keuangan =================
   "coa": {
@@ -112,7 +153,7 @@ export const PAGES = {
             { key: "ActType", label: "Tipe", fmt: codedCell(ACT_TYPE) }, { key: "ActCurr", label: "Mata uang", fmt: v => v === "##" ? "Semua" : val(v) },
             { key: "LocManTran", label: "Control", fmt: v => v === "Y" ? `<span class="badge info">Control</span>` : "" },
             { key: "Finanse", label: "Kas", fmt: v => v === "Y" ? `<span class="badge yes">Kas</span>` : "" },
-            { key: "Branches", label: "Branch", fmt: v => tags(v, { none: "Semua branch" }) }],
+            { key: "Branches", label: "Branch", fmt: v => tags(v, { none: "Semua branch" }) }, ...udfCols(d.accounts)],
             rows, { filterKey: "Drawer", filterLabel: "drawer" }),
           { no: "2.1.2", lead: "Huruf tebal = akun judul (tidak bisa diposting). Indentasi mengikuti level akun. Branch kosong = akun tidak dibatasi ke branch tertentu." });
     }
@@ -205,14 +246,14 @@ export const PAGES = {
           { key: "BPLName", label: "Branch" },
           { key: "AssetType", label: "Asset Type", fmt: codedCell(ASSET_TYPE) }, { key: "DprAreaID", label: "Depreciation Area" },
           { key: "AcctDtn", label: "Account Determination" }, { key: "DprTypID", label: "Depreciation Type" },
-          { key: "UseLife", label: "Masa manfaat (bulan)", num: 1 }, { key: "Active", label: "Aktif", fmt: badgeYN }], rowsOf(d.classes)),
+          { key: "UseLife", label: "Masa manfaat (bulan)", num: 1 }, { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.classes)], rowsOf(d.classes)),
           { no: "2.3.1", lead: "Satu kelas bisa punya beberapa depreciation area (mis. komersial dan fiskal). Setiap kelas terikat ke satu branch: prefix T- = CV-TRADING, K- = CV-KOMERSIAL." })
         + section("dep-types", "Depreciation Type", table([{ key: "Code", label: "Kode" }, { key: "Descr", label: "Deskripsi" },
           { key: "DprMeth", label: "Metode", fmt: codedCell(DPR_METH) }, { key: "PerAcq", label: "Periode akuisisi" },
           { key: "PerRet", label: "Periode retirement" }], rowsOf(d.dep_types)), { no: "2.3.2" })
         + section("determination", "Account Determination", table([{ key: "Code", label: "Kode" }, { key: "Descr", label: "Deskripsi" },
           { key: "UsedBy", label: "Dipakai asset class", fmt: v => tags(v, { none: "Belum dipakai" }) },
-          ...FA_ACCTS.map(([k, label]) => ({ key: k, label, fmt: acctCell(names) }))], dtn,
+          ...FA_ACCTS.map(([k, label]) => ({ key: k, label, fmt: acctCell(names) })), ...udfCols(d.determination)], dtn,
           { flag: lacking }),
           { no: "2.3.3", lead: "Akun G/L untuk transaksi aset tetap. Asset class memakainya lewat kolom Account Determination di 2.3.1. "
             + "Baris kuning = dipakai asset class tapi akun utamanya belum diisi." });
@@ -226,27 +267,23 @@ export const PAGES = {
     tables: ["OITB", "OITM"],
     render: d => section("groups", "Daftar Item Group", table([{ key: "ItmsGrpCod", label: "Kode", num: 1 }, { key: "ItmsGrpNam", label: "Nama" },
       { key: "InvntSys", label: "Valuation Method", fmt: codedCell(VALUATION) }, { key: "PlaningSys", label: "Planning", fmt: codedCell(PLANNING) },
-      { key: "PrcrmntMtd", label: "Procurement", fmt: codedCell(PROCURE) }, { key: "ItemCount", label: "Jumlah item", num: 1 }], rowsOf(d.groups)),
+      { key: "PrcrmntMtd", label: "Procurement", fmt: codedCell(PROCURE) }, { key: "ItemCount", label: "Jumlah item", num: 1 }, ...udfCols(d.groups)], rowsOf(d.groups)),
       { lead: rowsOf(d.groups)[0]?.GLMethod === "C"
           ? "Set Inventory Method By = Item Group, jadi akun persediaan diambil dari item group. Daftar akunnya di <a href=\"#/gl-determination/item-groups\">2.2.2</a>."
           : `Akun persediaan tidak diambil dari item group, karena Set Inventory Method By = ${esc(GL_METHOD[rowsOf(d.groups)[0]?.GLMethod] || "?")} (lihat <a href="#/gl-determination">2.2</a>).` })
   },
 
   "items": {
-    lead: "Daftar item (barang, jasa, aset). Kolom yang ditampilkan masih dasar dan akan dilengkapi.",
+    lead: "Daftar item dengan semua field Item Master Data, termasuk semua UDF (kolom UDF otomatis mengikuti CUFD; valid values tampil \"kode - deskripsi\"). Geser tabel ke samping untuk melihat semua kolom.",
     menu: "Inventory › Item Master Data",
-    tables: ["OITM", "OITB"],
+    tables: ["OITM", "OITB", "OUGP", "OARG", "OVTG", "OLGT", "CUFD", "UFD1"],
     render(d) {
-      const items = rowsOf(d.items).map(i => ({ ...i, Type: ITEM_TYPE[i.ItemType] || i.ItemType }));
-      return kpis([[items.length, "Total item"], [items.filter(i => i.InvntItem === "Y").length, "Inventory item"],
-          [items.filter(i => i.SellItem === "Y").length, "Sales item"], [items.filter(i => i.PrchseItem === "Y").length, "Purchase item"]])
-        + section("list", "Daftar Item", searchable("item-t", [{ key: "ItemCode", label: "Kode" }, { key: "ItemName", label: "Nama" },
-          { key: "FrgnName", label: "Nama asing" }, { key: "ItmsGrpNam", label: "Item Group" }, { key: "Type", label: "Tipe" },
-          { key: "InvntItem", label: "Inventory", fmt: badgeYN }, { key: "SellItem", label: "Sales", fmt: badgeYN },
-          { key: "PrchseItem", label: "Purchase", fmt: badgeYN }, { key: "InvntryUom", label: "UoM stok" },
-          { key: "ManBtchNum", label: "Batch", fmt: badgeYN }, { key: "ManSerNum", label: "Serial", fmt: badgeYN },
-          { key: "frozenFor", label: "Inactive", fmt: badgeYN }],
-          items, { filterKey: "ItmsGrpNam", filterLabel: "item group", limit: 500 }));
+      // list view mengikuti query items/01_items.sql apa adanya (judul kolom = alias di query)
+      const items = rowsOf(d.items), yes = c => items.filter(i => i[c] === "Y").length;
+      return kpis([[items.length, "Total item"], [yes("Inventory Item"), "Inventory item"], [yes("Sales Item"), "Sales item"],
+          [yes("Purchasing Item"), "Purchase item"], [(d.items && d.items.udf || []).length, "UDF item"]])
+        + section("list", "Daftar Item", searchable("item-t", autoCols(d.items), items,
+          { filterKey: "Item Group", filterLabel: "item group", limit: 500 }));
     }
   },
 
@@ -256,7 +293,8 @@ export const PAGES = {
     tables: ["OCRG", "OPLN", "OCRD"],
     render(d) {
       const g = rowsOf(d.groups), cols = [{ key: "GroupCode", label: "Kode", num: 1 }, { key: "GroupName", label: "Nama" },
-        { key: "PriceListName", label: "Price List" }, { key: "BpCount", label: "Jumlah BP", num: 1 }, { key: "Locked", label: "Dikunci", fmt: badgeYN }];
+        { key: "PriceListName", label: "Price List" }, { key: "BpCount", label: "Jumlah BP", num: 1 }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
+        ...udfCols(d.groups)];
       return Object.entries(BP_TYPE).map(([t, name]) => section(`grp-${t}`, `${name} Group`, table(cols, g.filter(x => x.GroupType === t)))).join("");
     }
   },
@@ -274,7 +312,7 @@ export const PAGES = {
       return kpis(Object.entries(BP_CARD).map(([t, name]) => [bp.filter(b => b.CardType === t).length, name]))
         + section("list", "Daftar Business Partner", searchable("bp-t", [{ key: "CardCode", label: "Kode" }, { key: "CardName", label: "Nama" },
           { key: "Type", label: "Tipe" }, { key: "GroupName", label: "Group" }, { key: "Currency", label: "Mata uang", fmt: v => v === "##" ? "Semua" : val(v) },
-          { key: "frozenFor", label: "Inactive", fmt: badgeYN }, { key: "Branches", label: "Branch", fmt: v => tags(v) }],
+          { key: "frozenFor", label: "Inactive", fmt: badgeYN }, { key: "Branches", label: "Branch", fmt: v => tags(v) }, ...udfCols(d.bp)],
           bp, { filterKey: "Type", filterLabel: "tipe", limit: 500 }),
           { lead: "Kolom Branch hanya menampilkan branch yang aktif untuk BP tersebut. Cari nama branch di kotak cari untuk menyaring." });
     }
@@ -290,8 +328,8 @@ export const PAGES = {
     },
     render: d => section("lists", "Daftar Price List", table([{ key: "ListNum", label: "No", num: 1 }, { key: "ListName", label: "Nama" },
       { key: "BaseName", label: "Base Price List" }, { key: "Factor", label: "Faktor", num: 1, fmt: v => isEmpty(v) ? val(v) : esc(String(+v)) },
-      { key: "PrimCurr", label: "Mata uang" }, { key: "IsGrossPrc", label: "Gross price", fmt: badgeYN }, { key: "ValidFor", label: "Aktif", fmt: badgeYN }],
-      rowsOf(d.lists)))
+      { key: "PrimCurr", label: "Mata uang" }, { key: "IsGrossPrc", label: "Gross price", fmt: badgeYN }, { key: "ValidFor", label: "Aktif", fmt: badgeYN },
+      ...udfCols(d.lists)], rowsOf(d.lists)))
   },
 
   "master-summary": {
@@ -384,32 +422,49 @@ export const PAGES = {
   },
 
   "udf": {
-    lead: "Field tambahan (prefix U_) di tabel standar SAP, mis. U_STEM_IDTKU di Company Details.",
+    lead: "Field tambahan (prefix U_) di tabel standar SAP, dikelompokkan seperti layar User-Defined Fields - Management: per kategori lalu per object. "
+      + "Satu object bisa berlaku ke banyak tabel, mis. Marketing Documents › Title berlaku ke semua dokumen (A/R Invoice, Purchase Order, dst.).",
     menu: "Tools › Customization Tools › User-Defined Fields - Management",
     tables: ["CUFD"],
     render(d) {
-      const byTable = rowsOf(d.by_table), fields = rowsOf(d.fields);
-      return kpis([[fields.length, "UDF"], [byTable.length, "Tabel standar"]])
-        + section("by-table", "Jumlah UDF per Tabel", searchable("udf-tbl", [{ key: "TableID", label: "Tabel", fmt: tableLabel },
-            { key: "Fields", label: "Jumlah UDF", num: 1 }], byTable), { lead: "Tabel arsip (A…) yang hanya salinan UDF tabel lain tidak dihitung." })
-        + section("fields", "Daftar UDF", searchable("udf-t", [{ key: "TableID", label: "Tabel", fmt: tableLabel }, { key: "Field", label: "Field" },
-            { key: "Descr", label: "Deskripsi" }, { key: "TypeID", label: "Tipe", fmt: codedCell(UDF_TYPE) }, { key: "SizeID", label: "Panjang", num: 1 },
-            { key: "Dflt", label: "Default" }, { key: "NotNull", label: "Wajib", fmt: badgeYN },
-            { key: "RTable", label: "Link ke", fmt: (v, r) => v ? `<code>@${esc(v)}</code>` : r.RelUDO ? `UDO ${esc(r.RelUDO)}` : "" }],
-            fields, { filterKey: "TableID", filterLabel: "tabel", limit: 300 }));
+      const objs = udfObjects(rowsOf(d.fields));
+      const cats = UDF_CATS.filter(c => objs.some(o => o.cat === c)).concat(objs.some(o => !UDF_CATS.includes(o.cat)) ? ["Lainnya"] : []);
+      const cols = [{ key: "Field", label: "Title" }, { key: "Descr", label: "Description" }, { key: "TypeID", label: "Type", fmt: codedCell(UDF_TYPE) },
+        { key: "SizeID", label: "Panjang", num: 1 }, { key: "Dflt", label: "Dflt" }, { key: "NotNull", label: "Mand.", fmt: badgeYN },
+        { key: "RTable", label: "Linked Table", fmt: (v, r) => v ? `<code>@${esc(v)}</code>` : r.RelUDO ? `UDO ${esc(r.RelUDO)}` : "" }];
+      onMount(() => {
+        const q = $("#udf-q");
+        if (q) q.oninput = () => $$("#udf-tree details").forEach(el => el.hidden = !el.dataset.text.includes(q.value.toLowerCase()));
+      });
+      const tree = cats.map(c => section(`cat-${slug(c)}`, c, objs.filter(o => (UDF_CATS.includes(o.cat) ? o.cat : "Lainnya") === c).map(o =>
+        `<details class="grp" data-text="${esc([c, o.name, ...o.tables, ...o.fields.map(f => `${f.Field} ${f.Descr}`)].join(" ").toLowerCase())}">
+          <summary><span>${esc(o.name)}</span><span class="muted hide-sm" title="${esc(o.tables.join(", "))}">${o.tables.length > 1 ? `${o.tables.length} tabel` : esc(o.tables[0])}</span>
+            <span></span><span>${o.fields.length} UDF</span></summary>
+          ${table(cols, o.fields, { noExport: 1 })}
+          <p class="sec-lead" style="margin:6px 14px 12px">Berlaku di tabel: ${o.tables.map(t => `<code>${esc(t)}</code>`).join(" ")}</p>
+        </details>`).join(""), { level: 3 })).join("");
+      const flat = objs.flatMap(o => o.fields.map(f => ({ ...f, Cat: UDF_CATS.includes(o.cat) ? o.cat : "Lainnya", Obj: o.name, Tables: o.tables.length })));
+      return kpis([[flat.length, "UDF"], [objs.length, "Object"], [cats.length, "Kategori"]])
+        + section("tree", "UDF per Kategori", `<div class="toolbar"><input type="search" id="udf-q" placeholder="Cari object / field / deskripsi…"></div><div id="udf-tree">${tree}</div>`,
+          { lead: "Klik object untuk melihat UDF-nya. Tabel salinan (arsip, snapshot) ikut dihitung sebagai tabel tempat object berlaku." })
+        + section("fields", "Daftar Lengkap", searchable("udf-t", [{ key: "Cat", label: "Kategori" }, { key: "Obj", label: "Object" }, ...cols,
+            { key: "Tables", label: "Jumlah tabel", num: 1 }], flat, { filterKey: "Cat", filterLabel: "kategori", limit: 300 }),
+          { lead: "Satu baris per UDF per object (bukan per tabel), untuk dicari atau diekspor ke Excel." });
     }
   },
 
   "saved-queries": {
-    lead: "Query yang tersimpan di Query Manager: laporan, sumber formatted search, alert, dan KPI.",
+    lead: "Query buatan user di Query Manager: laporan, sumber formatted search, alert, dan KPI. Query bawaan SAP (kategori System, SAP_DASHBOARD_*, KPI_MOBILE*) tidak ditampilkan.",
     menu: "Tools › Queries › Query Manager",
     tables: ["OUQR", "OQCN"],
     render(d) {
-      const cats = rowsOf(d.categories), q = rowsOf(d.queries);
-      return section("categories", "Kategori", table([{ key: "CatName", label: "Kategori" }, { key: "QueryCount", label: "Jumlah query", num: 1 }],
-          cats.filter(c => +c.QueryCount > 0)), { lead: "Kategori tanpa query tidak ditampilkan." })
-        + section("queries", "Daftar Query", searchable("q-t", [{ key: "CatName", label: "Kategori" }, { key: "QName", label: "Nama query" },
-          { key: "Len", label: "Panjang (karakter)", num: 1, fmt: num }, { key: "LastRun", label: "Terakhir dijalankan" }], q,
+      const allQ = rowsOf(d.queries), q = allQ.filter(x => x.IsSystem !== "Y");
+      const cats = rowsOf(d.categories).filter(c => c.IsSystem !== "Y" && +c.QueryCount > 0), hidden = allQ.length - q.length;
+      const note = hidden ? `<p class="sec-lead">${hidden.toLocaleString("id-ID")} query bawaan SAP disembunyikan.</p>` : "";
+      return section("categories", "Kategori", table([{ key: "CatName", label: "Kategori" }, { key: "QueryCount", label: "Jumlah query", num: 1 }], cats),
+          { lead: "Kategori query buatan user yang berisi query." })
+        + section("queries", "Daftar Query", note + searchable("q-t", [{ key: "CatName", label: "Kategori" }, { key: "QName", label: "Nama query" },
+          { key: "Len", label: "Panjang (karakter)", num: 1, fmt: num }, { key: "Created", label: "Dibuat" }, { key: "LastRun", label: "Terakhir dijalankan" }], q,
           { filterKey: "CatName", filterLabel: "kategori" }));
     }
   }

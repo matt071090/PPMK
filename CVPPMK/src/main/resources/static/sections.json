@@ -49,5 +49,8 @@
     { "id": "udt", "no": "5.2", "title": "User-Defined Table (UDT)", "status": "progress" },
     { "id": "udf", "no": "5.3", "title": "User-Defined Field (UDF)", "status": "progress" },
     { "id": "saved-queries", "no": "5.4", "title": "Saved Query", "status": "progress" }
+  ]},
+  { "no": "6", "title": "Template Upload", "devOnly": true, "pages": [
+    { "id": "upload-templates", "title": "Template Upload (Excel)" }
   ]}
 ]

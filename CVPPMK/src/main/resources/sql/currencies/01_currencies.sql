@@ -1,2 +1,6 @@
 -- Currency
-SELECT "CurrCode", "CurrName", "ISOCurrCod", "Decimals", "Locked" FROM OCRN ORDER BY "CurrCode"
+SELECT C."CurrCode", C."CurrName", C."ISOCurrCod", C."Decimals", C."Locked"
+/*@udf-cols OCRN C*/
+FROM OCRN C
+/*@udf-joins OCRN C*/
+ORDER BY C."CurrCode"

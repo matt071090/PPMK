@@ -2,8 +2,9 @@ import { $, $$, esc, slug, callouts, flushMounts, rowsOf, table, resetExports, e
 import { xlsxBlob, download } from "./xlsx.js";
 import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
+import { PAGES as UPLOAD } from "./pages/upload.js";
 
-const PAGES = { ...GENERAL, ...MODULES };
+const PAGES = { ...GENERAL, ...MODULES, ...UPLOAD };
 
 let chapters = [], pages = [];          // pages: daftar datar semua halaman, urut sesuai sidebar
 const cache = new Map();                // id halaman -> Promise data API
@@ -39,6 +40,25 @@ function load(id, fresh) {
   return cache.get(id);
 }
 const dataOf = res => res.results;
+
+// Temuan halaman = cek khusus halaman + cek generik UDF: nilai yang bukan valid values (UFD1) di master data mana pun
+const pageChecks = (def, d) => [...(def.checks ? def.checks(d) : []), ...udfFindings(d)];
+function udfFindings(d) {
+  const out = [];
+  for (const r of Object.values(d || {})) for (const u of (r && r.udf) || []) {
+    if (!u.values || !u.values.length) continue;
+    const i = r.columns.indexOf(u.col), bad = {};
+    if (i < 0) continue;
+    // tampilan "kode - deskripsi" atau cukup "kode" -> valid kalau kodenya ada di valid values
+    r.rows.forEach(row => {
+      const v = row[i];
+      if (v !== null && v !== "" && !u.values.some(c => v === c || v.startsWith(c + " - "))) bad[v] = (bad[v] || 0) + 1;
+    });
+    const list = Object.entries(bad);
+    if (list.length) out.push(["warn", `UDF ${u.label} (${u.col}) berisi nilai di luar valid values: ${list.map(([v, n]) => `"${v}" (${n} baris)`).join(", ")}. Valid values: ${u.values.join(", ")}.`]);
+  }
+  return out;
+}
 const queryMs = res => Object.values(res.results).reduce((t, r) => t + (r.ms || 0), 0);
 const queryErrors = res => Object.entries(res.results).filter(([, v]) => v.error);
 
@@ -223,7 +243,7 @@ async function route(fresh = false, keepScroll = false) {
       const res = await load(id, fresh);
       const def = PAGES[id], d = dataOf(res), errs = queryErrors(res);
       html = (errs.length ? `<div class="error">Query gagal: ${errs.map(([k, v]) => `<b>${esc(k)}</b> – ${esc(v.error)}`).join("<br>")}</div>` : "")
-        + findings(id, def.checks ? def.checks(d) : []) + def.render(d);
+        + findings(id, pageChecks(def, d)) + def.render(d);
       meta = `<span>Diperbarui ${esc(res.generatedAt.replace("T", " "))}</span><span>Query ${queryMs(res)} ms</span>`;
     }
   } catch (e) {
@@ -266,7 +286,7 @@ async function renderSummary(fresh) {
   const groups = ids.map(id => {
     const page = pages.find(p => p.id === id);
     if (!by[id]) return [page, [["danger", "Data halaman ini gagal dimuat."]]];
-    return [page, PAGES[id].checks ? PAGES[id].checks(by[id]) : []];
+    return [page, pageChecks(PAGES[id], by[id])];
   }).filter(([, list]) => list.length);
   const total = groups.reduce((t, [p, l]) => t + activeCount(p.id, l), 0);
   const menus = pages.filter(p => p.status), nok = menus.filter(p => statusOf(p.id) === "nok");
@@ -421,6 +441,8 @@ function toggleTheme() {
   ]);
   if (!editable) $("#edit-btn").remove();
   else if (store.get("edit")) setEdit(true);
+  // bab bertanda devOnly (mis. Template Upload) hanya tampil di mode dev, sama seperti Mode edit
+  if (!editable) chapters = chapters.filter(c => !c.devOnly);
   pages = chapters.flatMap(c => c.pages);
   buildNav(); buildIndex();
 

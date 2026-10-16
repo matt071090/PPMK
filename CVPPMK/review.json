@@ -118,6 +118,11 @@
     "alerts" : {
       "status" : "nok",
       "at" : "2026-10-16 11:32"
+    },
+    "items" : {
+      "status" : "ok",
+      "at" : "2026-10-16 15:34",
+      "note" : "Diambil dari db komersial dan TRD"
     }
   },
   "exclusions" : { },
