@@ -1,0 +1,38 @@
+# Account Determination aset tetap (OADT) lewat Service Layer, entity FAAccountDeterminations.
+# Sumber: daftar 10 determination dari user (2026-10-16). 6 sudah ada & identik (INV-BANGUNAN, INV-KENDARAAN, INV-LEASEHOLD,
+# INV-MESIN, INV-PRLTNKANTOR, TANAH) di-skip. Sudah dijalankan di CVPPM (QA): 4x HTTP 201, dicek ulang 10/10 sama.
+
+@sl = https://192.168.40.197:50000/b1s/v1
+
+### 1. Login
+POST {{sl}}/Login
+Content-Type: application/json
+
+{"CompanyDB":"CVPPM","UserName":"manager","Password":"1234"}
+
+### 2. Cek yang sudah ada
+GET {{sl}}/FAAccountDeterminations?$select=Code,Description,AssetBalanceSheetAccount,OrdinaryDepreciation,AccumulatedOrdinaryDepr
+
+### 3. Tambah INV-LOWVALASST (hasil benar: HTTP 201)
+POST {{sl}}/FAAccountDeterminations
+Content-Type: application/json
+
+{"Code": "INV-LOWVALASST", "Description": "INVENTARIS LOW VALUE ASSET", "AssetBalanceSheetAccount": "102010109", "ClearingAccountAcquisition": "102030101", "RevaluationReserveAccount": "102010109", "OrdinaryDepreciation": "603060108", "AccumulatedOrdinaryDepr": "102020108", "UnplannedDepreciation": "603060108", "AccumulatedUnplannedDepr": "102020108", "SpecialDepreciation": "603060108", "AccumulatedSpecialDepr": "102020108", "RevenuefromAssetSalesNet": "701030101", "RetirementwithExpenseNet": "702020101", "RetirementwithRevenueNet": "701030101", "LeavewithExpenseNBVGross": "702020101", "LeavewithRevenueNBVGross": "701030101", "RevenueAccountforRetirement": "701030101", "RevenueClearingAccount": "102030101", "RevaluationReserveClearing": "102030101", "RevaluationAccount": "102010109"}
+
+### 4. Tambah INV-PRLTNLSTRIK (hasil benar: HTTP 201)
+POST {{sl}}/FAAccountDeterminations
+Content-Type: application/json
+
+{"Code": "INV-PRLTNLSTRIK", "Description": "INVENTARIS PERALATAN LISTRIK", "AssetBalanceSheetAccount": "102010106", "ClearingAccountAcquisition": "102030101", "RevaluationReserveAccount": "102010106", "OrdinaryDepreciation": "603060105", "AccumulatedOrdinaryDepr": "102020105", "UnplannedDepreciation": "603060105", "AccumulatedUnplannedDepr": "102020105", "SpecialDepreciation": "603060105", "AccumulatedSpecialDepr": "102020105", "RevenuefromAssetSalesNet": "701030101", "RetirementwithExpenseNet": "702020101", "RetirementwithRevenueNet": "701030101", "LeavewithExpenseNBVGross": "702020101", "LeavewithRevenueNBVGross": "701030101", "RevenueAccountforRetirement": "701030101", "RevenueClearingAccount": "102030101", "RevaluationReserveClearing": "102030101", "RevaluationAccount": "102010106"}
+
+### 5. Tambah INV-PRLTNMESIN (hasil benar: HTTP 201)
+POST {{sl}}/FAAccountDeterminations
+Content-Type: application/json
+
+{"Code": "INV-PRLTNMESIN", "Description": "INVENTARIS PERALATAN MESIN", "AssetBalanceSheetAccount": "102010105", "ClearingAccountAcquisition": "102030101", "RevaluationReserveAccount": "102010105", "OrdinaryDepreciation": "603060104", "AccumulatedOrdinaryDepr": "102020104", "UnplannedDepreciation": "603060104", "AccumulatedUnplannedDepr": "102020104", "SpecialDepreciation": "603060104", "AccumulatedSpecialDepr": "102020104", "RevenuefromAssetSalesNet": "701030101", "RetirementwithExpenseNet": "702020101", "RetirementwithRevenueNet": "701030101", "LeavewithExpenseNBVGross": "702020101", "LeavewithRevenueNBVGross": "701030101", "RevenueAccountforRetirement": "701030101", "RevenueClearingAccount": "102030101", "RevaluationReserveClearing": "102030101", "RevaluationAccount": "102010105"}
+
+### 6. Tambah INV-PRLTNPROD (hasil benar: HTTP 201)
+POST {{sl}}/FAAccountDeterminations
+Content-Type: application/json
+
+{"Code": "INV-PRLTNPROD", "Description": "INVENTARIS PERALATAN PRODUKSI", "AssetBalanceSheetAccount": "102010107", "ClearingAccountAcquisition": "102030101", "RevaluationReserveAccount": "102010107", "OrdinaryDepreciation": "603060106", "AccumulatedOrdinaryDepr": "102020106", "UnplannedDepreciation": "603060106", "AccumulatedUnplannedDepr": "102020106", "SpecialDepreciation": "603060106", "AccumulatedSpecialDepr": "102020106", "RevenuefromAssetSalesNet": "701030101", "RetirementwithExpenseNet": "702020101", "RetirementwithRevenueNet": "701030101", "LeavewithExpenseNBVGross": "702020101", "LeavewithRevenueNBVGross": "701030101", "RevenueAccountforRetirement": "701030101", "RevenueClearingAccount": "102030101", "RevaluationReserveClearing": "102030101", "RevaluationAccount": "102010107"}

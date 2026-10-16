@@ -1,6 +1,6 @@
 # Dokumentasi Project CVPPMK
 
-Database: SAP B1 HANA, schema `CVPPM` (QA). App: Spring Boot, jalankan `DocsApplication` dari Spring Boot Dashboard
+Database: SAP B1 HANA, schema `CVPPM` (QA). App: Spring Boot 2.7 (Java 8, supaya bisa jalan di server Java 8), jalankan `DocsApplication` dari Spring Boot Dashboard
 (atau `mvnw spring-boot:run`), lalu buka http://127.0.0.1:8090
 
 Struktur web (per halaman, mengikuti nomor blueprint `docx/01.01 - General Parameters ...`):

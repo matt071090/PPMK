@@ -20,7 +20,9 @@
     { "id": "shipping-type", "no": "1.17", "title": "Shipping Type", "status": "progress", "tables": ["OSHP"] },
     { "id": "payment-methods", "no": "1.18", "title": "Payment Methods", "status": "progress", "tables": ["OPYM"] },
     { "id": "users", "no": "1.19", "title": "License, Users & Authorizations", "status": "progress" },
-    { "id": "remarks", "no": "1.20", "title": "Remarks", "status": "progress" },
+    { "id": "authorizations", "no": "1.20", "title": "Authorization per User", "status": "progress" },
+    { "id": "ui-templates", "no": "1.21", "title": "UI Configuration Template", "status": "progress" },
+    { "id": "remarks", "no": "1.22", "title": "Remarks", "status": "progress" },
     { "id": "org-structure", "title": "Organization Structure", "status": "progress" }
   ]},
   { "no": "2", "title": "Keuangan", "pages": [
@@ -31,8 +33,9 @@
   { "no": "3", "title": "Master Data", "pages": [
     { "id": "item-groups", "no": "3.1", "title": "Item Group", "status": "progress" },
     { "id": "bp-groups", "no": "3.2", "title": "Customer & Vendor Group", "status": "progress" },
-    { "id": "price-lists", "no": "3.3", "title": "Price List", "status": "progress" },
-    { "id": "master-summary", "no": "3.4", "title": "Status Master Data", "status": "progress" }
+    { "id": "business-partners", "no": "3.3", "title": "Business Partner", "status": "progress" },
+    { "id": "price-lists", "no": "3.4", "title": "Price List", "status": "progress" },
+    { "id": "master-summary", "no": "3.5", "title": "Status Master Data", "status": "progress" }
   ]},
   { "no": "4", "title": "Kontrol Dokumen", "pages": [
     { "id": "approval", "no": "4.1", "title": "Approval", "status": "progress" },

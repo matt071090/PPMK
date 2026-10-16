@@ -1,0 +1,43 @@
+# Nonaktifkan cost center bawaan SAP "General Center" (Centr_z, Centr_z2..5, satu per dimensi 1-5) lewat Service Layer.
+# Sudah dijalankan 2026-10-16 di CVPPM (QA): 5x HTTP 204, dicek ulang Active = tNO.
+
+@sl = https://192.168.40.197:50000/b1s/v1
+
+### 1. Login
+POST {{sl}}/Login
+Content-Type: application/json
+
+{"CompanyDB":"CVPPM","UserName":"manager","Password":"1234"}
+
+### 2. Cek dulu daftar yang akan dinonaktifkan
+GET {{sl}}/ProfitCenters?$select=CenterCode,CenterName,InWhichDimension,Active&$filter=startswith(CenterCode,'Centr_z')
+
+### 3. Nonaktifkan (hasil benar: HTTP 204 per request)
+PATCH {{sl}}/ProfitCenters('Centr_z')
+Content-Type: application/json
+
+{"Active":"tNO"}
+
+###
+PATCH {{sl}}/ProfitCenters('Centr_z2')
+Content-Type: application/json
+
+{"Active":"tNO"}
+
+###
+PATCH {{sl}}/ProfitCenters('Centr_z3')
+Content-Type: application/json
+
+{"Active":"tNO"}
+
+###
+PATCH {{sl}}/ProfitCenters('Centr_z4')
+Content-Type: application/json
+
+{"Active":"tNO"}
+
+###
+PATCH {{sl}}/ProfitCenters('Centr_z5')
+Content-Type: application/json
+
+{"Active":"tNO"}

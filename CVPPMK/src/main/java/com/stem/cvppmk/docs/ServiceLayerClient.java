@@ -6,24 +6,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StreamUtils;
 
+import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
-import java.net.CookieManager;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
-import java.time.Duration;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Client Service Layer SAP B1, khusus baca. Login sekali, session (cookie B1SESSION) dipakai ulang,
+ * Client Service Layer SAP B1, khusus baca. Login sekali, session (cookie B1SESSION, ROUTEID) dipakai ulang,
  * login ulang otomatis kalau session habis (HTTP 401).
  * Konfigurasi di ./application.properties: sap.sl.url, sap.sl.company-db, sap.sl.username, sap.sl.password.
+ * Pakai HttpURLConnection (bukan java.net.http) supaya tetap jalan di Java 8.
  */
 @Component
 public class ServiceLayerClient {
@@ -32,7 +38,8 @@ public class ServiceLayerClient {
     private final String baseUrl, companyDb, username, password;
     private final boolean trustAllCerts;
     private final ObjectMapper json;
-    private HttpClient http;
+    private SSLSocketFactory trustAllFactory;
+    private String cookies; // null = belum login
 
     public ServiceLayerClient(@Value("${sap.sl.url:}") String baseUrl,
                               @Value("${sap.sl.company-db:}") String companyDb,
@@ -53,50 +60,81 @@ public class ServiceLayerClient {
     }
 
     /** POST tanpa body, untuk action seperti CompanyService_GetAdminInfo. */
-    public JsonNode post(String path) throws IOException, InterruptedException {
+    public JsonNode post(String path) throws IOException {
         return call("POST", path, null, true);
     }
 
     /** POST dengan body JSON, untuk action baca yang butuh parameter (mis. CompanyService_GetPeriod). */
-    public JsonNode post(String path, Object body) throws IOException, InterruptedException {
+    public JsonNode post(String path, Object body) throws IOException {
         return call("POST", path, json.writeValueAsString(body), true);
     }
 
-    public JsonNode get(String path) throws IOException, InterruptedException {
+    public JsonNode get(String path) throws IOException {
         return call("GET", path, null, true);
     }
 
-    private synchronized JsonNode call(String method, String path, String body, boolean retry)
-            throws IOException, InterruptedException {
+    private synchronized JsonNode call(String method, String path, String body, boolean retry) throws IOException {
         if (!configured()) throw new IllegalStateException("Service Layer belum dikonfigurasi (sap.sl.* di application.properties)");
-        if (http == null) login();
-        HttpResponse<String> res = http.send(request(method, path, body), HttpResponse.BodyHandlers.ofString());
-        if (res.statusCode() == 401 && retry) {
+        if (cookies == null) login();
+        Response res = send(method, path, body);
+        if (res.status == 401 && retry) {
             log.debug("Session Service Layer habis, login ulang");
             login();
             return call(method, path, body, false);
         }
-        if (res.statusCode() >= 400) throw new IOException("Service Layer " + res.statusCode() + ": " + errorMessage(res.body()));
-        return res.body().isBlank() ? json.createObjectNode() : json.readTree(res.body());
+        if (res.status >= 400) throw new IOException("Service Layer " + res.status + ": " + errorMessage(res.body));
+        return res.body.trim().isEmpty() ? json.createObjectNode() : json.readTree(res.body);
     }
 
-    private void login() throws IOException, InterruptedException {
-        http = newClient();
-        String body = json.writeValueAsString(Map.of("CompanyDB", companyDb, "UserName", username, "Password", password));
-        HttpResponse<String> res = http.send(request("POST", "Login", body), HttpResponse.BodyHandlers.ofString());
-        if (res.statusCode() >= 400) {
-            http = null;
-            throw new IOException("Login Service Layer gagal (" + res.statusCode() + "): " + errorMessage(res.body()));
-        }
+    private void login() throws IOException {
+        cookies = null;
+        Map<String, String> creds = new LinkedHashMap<>();
+        creds.put("CompanyDB", companyDb);
+        creds.put("UserName", username);
+        creds.put("Password", password);
+        Response res = send("POST", "Login", json.writeValueAsString(creds));
+        if (res.status >= 400) throw new IOException("Login Service Layer gagal (" + res.status + "): " + errorMessage(res.body));
+        // simpan cookie session (B1SESSION, ROUTEID) untuk request berikutnya
+        StringBuilder sb = new StringBuilder();
+        for (String c : res.setCookies) sb.append(sb.length() == 0 ? "" : "; ").append(c.split(";", 2)[0]);
+        cookies = sb.toString();
         log.info("Login Service Layer {} sebagai {} berhasil", companyDb, username);
     }
 
-    private HttpRequest request(String method, String path, String body) {
-        return HttpRequest.newBuilder(URI.create(baseUrl + "/" + path))
-                .timeout(Duration.ofSeconds(60))
-                .header("Content-Type", "application/json")
-                .method(method, body == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(body))
-                .build();
+    private static class Response {
+        int status;
+        String body;
+        List<String> setCookies;
+    }
+
+    private Response send(String method, String path, String body) throws IOException {
+        HttpURLConnection con = (HttpURLConnection) new URL(baseUrl + "/" + path).openConnection();
+        if (trustAllCerts && con instanceof HttpsURLConnection) { // Service Layer umumnya pakai sertifikat self-signed
+            ((HttpsURLConnection) con).setSSLSocketFactory(trustAll());
+            ((HttpsURLConnection) con).setHostnameVerifier((host, session) -> true);
+        }
+        con.setConnectTimeout(15_000);
+        con.setReadTimeout(60_000);
+        con.setRequestMethod(method);
+        con.setRequestProperty("Content-Type", "application/json");
+        if (cookies != null) con.setRequestProperty("Cookie", cookies);
+        try {
+            if (body != null || "POST".equals(method)) {
+                con.setDoOutput(true);
+                try (OutputStream out = con.getOutputStream()) {
+                    if (body != null) out.write(body.getBytes(StandardCharsets.UTF_8));
+                }
+            }
+            Response res = new Response();
+            res.status = con.getResponseCode();
+            InputStream in = res.status >= 400 ? con.getErrorStream() : con.getInputStream();
+            res.body = in == null ? "" : StreamUtils.copyToString(in, StandardCharsets.UTF_8);
+            List<String> sc = con.getHeaderFields().get("Set-Cookie");
+            res.setCookies = sc == null ? Collections.<String>emptyList() : sc;
+            return res;
+        } finally {
+            con.disconnect();
+        }
     }
 
     private String errorMessage(String body) {
@@ -108,18 +146,8 @@ public class ServiceLayerClient {
         }
     }
 
-    private HttpClient newClient() {
-        HttpClient.Builder b = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
-                .connectTimeout(Duration.ofSeconds(15))
-                .cookieHandler(new CookieManager());
-        if (trustAllCerts) b.sslContext(trustAll()); // Service Layer umumnya pakai sertifikat self-signed
-        return b.build();
-    }
-
-    private static SSLContext trustAll() {
-        // Hostname verification ikut dimatikan; property ini hanya dibaca HttpClient JDK.
-        System.setProperty("jdk.internal.httpclient.disableHostnameVerification", "true");
+    private SSLSocketFactory trustAll() {
+        if (trustAllFactory != null) return trustAllFactory;
         try {
             SSLContext ctx = SSLContext.getInstance("TLS");
             ctx.init(null, new TrustManager[]{new X509TrustManager() {
@@ -127,7 +155,7 @@ public class ServiceLayerClient {
                 public void checkServerTrusted(X509Certificate[] c, String a) { }
                 public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
             }}, null);
-            return ctx;
+            return trustAllFactory = ctx.getSocketFactory();
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

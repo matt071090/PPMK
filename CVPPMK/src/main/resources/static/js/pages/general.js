@@ -1,6 +1,6 @@
 // Bab 1: General Parameter. Urutan dan nomor mengikuti blueprint "01.01 General Parameters".
 import {
-  $, $$, esc, val, YN, badgeYN, coded, rowsOf, isEmpty, onMount, section, kv, settings, table, searchable,
+  $, $$, esc, val, YN, badgeYN, coded, rowsOf, isEmpty, onMount, section, kv, settings, table, searchable, tags,
   VALUATION, GL_METHOD, DATE_FMT, TIME_FMT, PERIOD_STAT, OBJECTS, sapVersion
 } from "../ui.js";
 
@@ -39,18 +39,57 @@ const DOC_SETTINGS = [
     fmt: d => +d.MaxDaysForCancel === 0 ? "0 (tanpa batas)" : d.MaxDaysForCancel }
 ];
 
-// 1.20 Remarks: catatan project, diisi manual di sini (bukan dari database).
-const REMARKS = {
-  facts: [["Go Live", null], ["Cut Off Beginning Balance", null]],
+// 1.20 Remarks: catatan project (bukan dari database). Diedit lewat Mode edit dan disimpan di review.json (key "remarks").
+// Isi di bawah hanya data awal, dipakai selama review.json belum punya remarks.
+const REMARKS_SEED = {
+  facts: [{ label: "Go Live", value: "" }, { label: "Cut Off Beginning Balance", value: "" }],
   questions: [
     "Arti kode tipe warehouse O, F, T (UDF U_STEM_TYPE).",
     "Series AR Invoice T-ARIN34 & T-ARIN36: range sama (341000001–341999999) dan remark \"Non-R\" di branch Trading. Salah setup?",
     "Perlu tidaknya UoM Group (saat ini hanya UoM \"Manual\").",
     "Status periode 2029–2040: dibiarkan Unlocked atau dikunci (Locked)?"
-  ]
+  ].map(q => ({ q, a: "" })),
+  notes: ""
 };
+const remarksOf = review => review.remarks || JSON.parse(JSON.stringify(REMARKS_SEED));
+
+function renderRemarks(r, editing) {
+  if (editing) {
+    const del = (list, i) => `<button type="button" class="cbtn" data-act="r-del" data-list="${list}" data-i="${i}" aria-label="Hapus">Hapus</button>`;
+    const add = (list, lbl) => `<button type="button" class="cbtn" data-act="r-add" data-list="${list}">+ ${lbl}</button>`;
+    return `<form id="remarks-form" class="remarks-form" onsubmit="return false">`
+      + section("facts", "Tanggal Penting", `${r.facts.map((f, i) => `<div class="r-row" data-list="facts">
+          <input type="text" name="label" value="${esc(f.label)}" placeholder="Nama, mis. Go Live" aria-label="Nama">
+          <input type="text" name="value" value="${esc(f.value)}" placeholder="Tanggal / isi, mis. 1 Januari 2027" aria-label="Isi">${del("facts", i)}</div>`).join("")}
+        ${add("facts", "Tambah baris")}`)
+      + section("questions", "Pertanyaan Terbuka", `${r.questions.map((x, i) => `<div class="r-row q" data-list="questions">
+          <textarea name="q" rows="2" placeholder="Pertanyaan" aria-label="Pertanyaan">${esc(x.q)}</textarea>
+          <textarea name="a" rows="2" placeholder="Jawaban / keputusan (kosong = masih terbuka)" aria-label="Jawaban">${esc(x.a)}</textarea>${del("questions", i)}</div>`).join("")}
+        ${add("questions", "Tambah pertanyaan")}`, { lead: "Pertanyaan yang sudah diisi jawabannya otomatis pindah ke bagian \"Sudah Terjawab\"." })
+      + section("notes", "Catatan Lain", `<textarea name="notes" rows="5" class="r-notes" placeholder="Catatan bebas" aria-label="Catatan lain">${esc(r.notes)}</textarea>`)
+      + `</form>`;
+  }
+  const open = r.questions.filter(x => x.q && !x.a), done = r.questions.filter(x => x.q && x.a);
+  return section("facts", "Tanggal Penting", kv(r.facts.filter(f => f.label).map(f => [f.label, val(f.value)])))
+    + section("questions", "Pertanyaan Terbuka", open.length ? `<ul>${open.map(x => `<li>${esc(x.q)}</li>`).join("")}</ul>` : `<p class="sec-lead">Tidak ada pertanyaan terbuka.</p>`,
+      { lead: "Hal yang masih perlu dikonfirmasi ke user / tim." })
+    + (done.length ? section("answered", "Sudah Terjawab", `<ul class="answered">${done.map(x => `<li>${esc(x.q)}<span>${esc(x.a)}</span></li>`).join("")}</ul>`) : "")
+    + (r.notes ? section("notes", "Catatan Lain", `<p class="r-text">${esc(r.notes)}</p>`) : "");
+}
+
+// Baca isi form Remarks (Mode edit) jadi objek remarks
+function collectRemarks(form) {
+  const rows = list => [...form.querySelectorAll(`.r-row[data-list="${list}"]`)];
+  const f = (el, n) => el.querySelector(`[name="${n}"]`).value.trim();
+  return {
+    facts: rows("facts").map(el => ({ label: f(el, "label"), value: f(el, "value") })),
+    questions: rows("questions").map(el => ({ q: f(el, "q"), a: f(el, "a") })),
+    notes: form.querySelector('[name="notes"]').value.trim()
+  };
+}
 const withName = (code, name) => d => isEmpty(d[code]) ? null : d[name] ? `${d[code]} · ${d[name]}` : d[code];
 const BLOCK = { Y: "Block Posting", N: "Without Warning" };
+const PERMISSION = { F: "Full Authorization", R: "Read Only", N: "No Authorization" };
 
 // ---------- 1.1 Company Details ----------
 const COMPANY_GENERAL = [
@@ -287,11 +326,16 @@ function checkPeriods(periods) {
   return (new Date(last) - new Date()) / 864e5 < 90
     ? [["warn", `Posting period terakhir berakhir ${last}. Period tahun berikutnya belum dibuat.`]] : [];
 }
+// Sub-tipe NNM1.DocSubType per objek (Business Partner, Blanket Agreement)
+const SUBTYPE = { 2: { C: "Customer", S: "Vendor", L: "Lead" }, 1250000025: { C: "Customer", S: "Vendor" } };
 function checkSeries(series) {
   const issues = new Map(); // Series -> [pesan]
   const add = (s, msg) => issues.set(s.Series, [...(issues.get(s.Series) || []), msg]);
+  // range hanya dibandingkan antar series dengan objek + sub-tipe yang sama (BP Customer vs Vendor punya penomoran sendiri),
+  // series manual tidak punya range jadi tidak ikut dicek
   const byObj = {};
-  series.forEach(s => (byObj[s.ObjectCode] ||= []).push(s));
+  series.filter(s => s.IsManual !== "Y" && !isEmpty(s.InitialNum))
+    .forEach(s => (byObj[`${s.ObjectCode}|${s.DocSubType}`] ||= []).push(s));
   for (const list of Object.values(byObj)) {
     for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
       const a = list[i], b = list[j];
@@ -553,10 +597,9 @@ export const PAGES = {
 
   "remarks": {
     static: true,
-    lead: "Catatan project yang tidak tersimpan di SAP. Diisi manual di <code>static/js/pages/general.js</code> (konstanta REMARKS).",
-    render: () => section("facts", "Tanggal Penting", kv(REMARKS.facts.map(([k, v]) => [k, val(v)])))
-      + section("questions", "Pertanyaan Terbuka", `<ul>${REMARKS.questions.map(q => `<li>${esc(q)}</li>`).join("")}</ul>`,
-        { lead: "Hal yang masih perlu dikonfirmasi ke user / tim." })
+    lead: "Catatan project yang tidak tersimpan di SAP: tanggal penting, pertanyaan ke user, dan catatan lain. Diubah lewat <b>Mode edit</b>.",
+    render: (_, { review, editing }) => renderRemarks(remarksOf(review), editing),
+    remarks: { collect: collectRemarks }
   },
 
   "currencies": {
@@ -590,8 +633,13 @@ export const PAGES = {
             <span class="muted hide-sm">${yr}</span>
             <span>${list.length} series ${bad ? `<span class="badge warn">${bad} masalah</span>` : ""}</span></summary>
           ${table([
-            { key: "SeriesName", label: "Nama Series" }, { key: "BPLName", label: "Branch" }, { key: "Indicator", label: "Indicator" },
-            { key: "InitialNum", label: "Awal", num: 1 }, { key: "NextNumber", label: "Berikutnya", num: 1 }, { key: "LastNum", label: "Akhir", num: 1 },
+            { key: "SeriesName", label: "Nama Series" },
+            ...(list.some(r => r.DocSubType && r.DocSubType !== "--")
+              ? [{ key: "DocSubType", label: "Sub-tipe", fmt: v => coded(SUBTYPE[code] || {}, v) }] : []),
+            { key: "BPLName", label: "Branch", fmt: (v, r) => r.IsManual === "Y" && isEmpty(v) ? "–" : val(v) },
+            { key: "Indicator", label: "Indicator" },
+            ...["InitialNum", "NextNumber", "LastNum"].map((k, i) => ({ key: k, label: ["Awal", "Berikutnya", "Akhir"][i], num: 1,
+              fmt: (v, r) => r.IsManual === "Y" ? (i ? "–" : `<span class="badge">Manual</span>`) : val(v) })),
             { key: "Locked", label: "Dikunci", fmt: badgeYN }, { key: "Remark", label: "Remark" },
             { key: "Series", label: "Catatan", fmt: v => issues.has(v) ? issues.get(v).map(esc).join("<br>") : "" }
           ], list, { flag: r => issues.has(r.Series) })}
@@ -612,13 +660,66 @@ export const PAGES = {
   },
 
   "users": {
-    lead: "Akun yang bisa login ke SAP B1, beserta branch yang boleh diakses. License dan authorization menyusul.",
+    lead: "Akun yang bisa login ke SAP B1, beserta branch yang boleh diakses. Otorisasi per user ada di <a href=\"#/authorizations\">1.20</a>.",
     menu: "Administration › Setup › General › Users",
     tables: ["OUSR", "USR6"],
     checks: d => checkUsers(rowsOf(d.users)),
     render: d => section("users", "User SAP B1", table([{ key: "USER_CODE", label: "User Code" }, { key: "U_NAME", label: "Nama" },
       { key: "SUPERUSER", label: "Superuser", fmt: badgeYN }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
-      { key: "Branches", label: "Branch" }, { key: "LastLogin", label: "Login terakhir" }], rowsOf(d.users)))
+      { key: "Branches", label: "Branch", fmt: v => tags(v) }, { key: "LastLogin", label: "Login terakhir" }], rowsOf(d.users)))
+  },
+
+  "authorizations": {
+    lead: "Hak akses tiap user ke menu dan dokumen SAP B1. Superuser otomatis punya akses penuh, jadi izin per menu hanya berlaku untuk user non-superuser.",
+    menu: "Administration › System Initialization › Authorizations › General Authorizations",
+    tables: ["OUSR", "USR3", "USR7", "OUGR"],
+    checks(d) {
+      const users = rowsOf(d.users), active = users.filter(u => u.Locked !== "Y"), out = [];
+      const su = active.filter(u => u.SUPERUSER === "Y");
+      const noPerm = active.filter(u => u.SUPERUSER !== "Y" && !+u.PermFull && !+u.PermRead && !u.AuthGroups).map(u => u.USER_CODE);
+      if (active.length && su.length === active.length) out.push(["warn", `Semua user aktif (${su.length}) Superuser dan belum ada authorization per user. Perlu disusun sebelum go-live.`]);
+      if (noPerm.length) out.push(["warn", `User non-superuser tanpa izin dan tanpa authorization group: ${noPerm.join(", ")}. User ini tidak bisa membuka menu apa pun.`]);
+      return out;
+    },
+    render(d) {
+      const users = rowsOf(d.users), perms = rowsOf(d.permissions);
+      const n = v => +v ? (+v).toLocaleString("id-ID") : `<span class="muted">0</span>`;
+      return section("users", "Ringkasan per User", table([{ key: "USER_CODE", label: "User Code" }, { key: "U_NAME", label: "Nama" },
+          { key: "SUPERUSER", label: "Superuser", fmt: badgeYN }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
+          { key: "AuthGroups", label: "Authorization Group", fmt: v => tags(v, { none: "–" }) },
+          { key: "PermFull", label: "Full", num: 1, fmt: n }, { key: "PermRead", label: "Read Only", num: 1, fmt: n },
+          { key: "PermNone", label: "No Auth.", num: 1, fmt: n }], users),
+          { lead: "Full / Read Only / No Auth. = jumlah izin yang di-set eksplisit untuk user tersebut (USR3)." })
+        + section("groups", "Authorization Group", table([{ key: "GroupName", label: "Nama" }, { key: "GroupDec", label: "Deskripsi" },
+          { key: "StartDate", label: "Mulai" }, { key: "DueDate", label: "Berakhir" }, { key: "Members", label: "Anggota", num: 1 }], rowsOf(d.groups)),
+          { lead: "User yang menjadi anggota group mendapat izin group tersebut." })
+        + section("detail", "Detail Izin per User", perms.length
+          ? searchable("perm-t", [{ key: "USER_CODE", label: "User" }, { key: "PermId", label: "ID Izin" },
+            { key: "Permission", label: "Izin", fmt: v => coded(PERMISSION, v) }], perms, { filterKey: "USER_CODE", filterLabel: "user", limit: 500 })
+          : `<div class="placeholder">Belum ada izin per user yang di-set (tabel USR3 kosong).</div>`,
+          { lead: "Nama menu tidak tersimpan di database, jadi yang tampil adalah ID izin SAP B1." });
+    }
+  },
+
+  "ui-templates": {
+    lead: "Template tampilan form (kolom yang tampil, urutan, field yang bisa diedit) yang bisa dipakai bersama oleh beberapa user atau group.",
+    menu: "Administration › Setup › General › UI Configuration Template",
+    tables: ["UICU", "UIC1", "OUSR", "OUGR"],
+    checks(d) {
+      const tpl = rowsOf(d.templates), shared = tpl.filter(t => t.IsTemplate === "Y");
+      return shared.length ? [] : [["info", `Belum ada UI Configuration Template bersama.${tpl.length ? ` Yang ada hanya template lokal milik user: ${tpl.map(t => `${t.TPLName} (${t.Owner || "-"})`).join(", ")}.` : ""}`]];
+    },
+    render(d) {
+      const tpl = rowsOf(d.templates);
+      return section("templates", "Daftar Template", table([{ key: "TPLId", label: "ID", num: 1 }, { key: "TPLName", label: "Nama" },
+          { key: "TPLDesc", label: "Deskripsi" }, { key: "IsTemplate", label: "Jenis", fmt: v => v === "Y" ? `<span class="badge yes">Bersama</span>` : `<span class="badge">Lokal user</span>` },
+          { key: "Owner", label: "Pemilik" }, { key: "Forms", label: "Jumlah form", num: 1 },
+          { key: "Users", label: "Dipakai user", fmt: v => tags(v, { none: "–" }) }, { key: "Groups", label: "Dipakai group", fmt: v => tags(v, { none: "–" }) }], tpl),
+          { lead: "Template lokal dibuat untuk satu user. Template bersama bisa di-assign ke user lain atau authorization group." })
+        + section("users", "Template per User", table([{ key: "USER_CODE", label: "User Code" }, { key: "U_NAME", label: "Nama" },
+          { key: "TPLName", label: "Template", fmt: (v, r) => isEmpty(v) ? `<span class="muted">Tanpa template</span>` : `${esc(v)}${r.IsTemplate === "Y" ? "" : ` <span class="badge">Lokal</span>`}` }],
+          rowsOf(d.users)));
+    }
   },
 
   "org-structure": {

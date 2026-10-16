@@ -1,0 +1,133 @@
+# Asset Class (OACS/ACS1) lewat Service Layer, entity AssetClasses.
+# Sumber: daftar 10 asset class dari user (2026-10-16). Asset class wajib 1 branch, jadi dibuat per branch
+# (keputusan user): T- = CV-TRADING (BPLID 1), K- = CV-KOMERSIAL (BPLID 2), CV-NONR tidak dibuatkan.
+# Account Determination Main Area = kode tanpa prefix (lihat 06-fa-account-determination.http); Derived Area tanpa determination.
+# Sudah dijalankan di CVPPM (QA): 20x HTTP 201, dicek ulang 20/20 sesuai.
+
+@sl = https://192.168.40.197:50000/b1s/v1
+
+### 1. Login
+POST {{sl}}/Login
+Content-Type: application/json
+
+{"CompanyDB":"CVPPM","UserName":"manager","Password":"1234"}
+
+### 2. T-INV-BANGUNAN (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-INV-BANGUNAN", "Description": "INVENTARIS BANGUNAN", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-BANGUNAN", "DepreciationTypeID": "Straight Line", "UseLife": 120}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 120}]}
+
+### 3. T-INV-MESIN (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-INV-MESIN", "Description": "INVENTARIS MESIN", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-MESIN", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 4. T-INV-KENDARAAN (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-INV-KENDARAAN", "Description": "INVENTARIS KENDARAAN", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-KENDARAAN", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 5. T-TANAH (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-TANAH", "Description": "TANAH", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "TANAH", "DepreciationTypeID": "No Depreciation", "UseLife": 1}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "No Depreciation", "UseLife": 1}]}
+
+### 6. T-INV-PRLTNMESIN (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-INV-PRLTNMESIN", "Description": "INVENTARIS PERALATAN MESIN", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-PRLTNMESIN", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 7. T-INV-PRLTNLSTRIK (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-INV-PRLTNLSTRIK", "Description": "INVENTARIS PERALATAN LISTRIK", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-PRLTNLSTRIK", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 8. T-INV-PRLTNPROD (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-INV-PRLTNPROD", "Description": "INVENTARIS PERALATAN PRODUKSI", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-PRLTNPROD", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 9. T-INV-PRLTNKANTOR (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-INV-PRLTNKANTOR", "Description": "INVENTARIS PERALATAN KANTOR", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-PRLTNKANTOR", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 10. T-INV-LOWVALASST (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-INV-LOWVALASST", "Description": "INVENTARIS LOW VALUE ASSET", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-LOWVALASST", "DepreciationTypeID": "Straight Line", "UseLife": 1}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 1}]}
+
+### 11. T-INV-LEASEHOLD (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "T-INV-LEASEHOLD", "Description": "INVENTARIS LEASEHOLD IMPROVEMENT", "AssetType": "atAssetTypeGeneral", "BPLID": 1, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-LEASEHOLD", "DepreciationTypeID": "Straight Line", "UseLife": 120}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 120}]}
+
+### 12. K-INV-BANGUNAN (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-INV-BANGUNAN", "Description": "INVENTARIS BANGUNAN", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-BANGUNAN", "DepreciationTypeID": "Straight Line", "UseLife": 120}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 120}]}
+
+### 13. K-INV-MESIN (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-INV-MESIN", "Description": "INVENTARIS MESIN", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-MESIN", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 14. K-INV-KENDARAAN (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-INV-KENDARAAN", "Description": "INVENTARIS KENDARAAN", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-KENDARAAN", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 15. K-TANAH (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-TANAH", "Description": "TANAH", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "TANAH", "DepreciationTypeID": "No Depreciation", "UseLife": 1}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "No Depreciation", "UseLife": 1}]}
+
+### 16. K-INV-PRLTNMESIN (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-INV-PRLTNMESIN", "Description": "INVENTARIS PERALATAN MESIN", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-PRLTNMESIN", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 17. K-INV-PRLTNLSTRIK (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-INV-PRLTNLSTRIK", "Description": "INVENTARIS PERALATAN LISTRIK", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-PRLTNLSTRIK", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 18. K-INV-PRLTNPROD (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-INV-PRLTNPROD", "Description": "INVENTARIS PERALATAN PRODUKSI", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-PRLTNPROD", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 19. K-INV-PRLTNKANTOR (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-INV-PRLTNKANTOR", "Description": "INVENTARIS PERALATAN KANTOR", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-PRLTNKANTOR", "DepreciationTypeID": "Straight Line", "UseLife": 48}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 48}]}
+
+### 20. K-INV-LOWVALASST (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-INV-LOWVALASST", "Description": "INVENTARIS LOW VALUE ASSET", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-LOWVALASST", "DepreciationTypeID": "Straight Line", "UseLife": 1}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 1}]}
+
+### 21. K-INV-LEASEHOLD (hasil benar: HTTP 201)
+POST {{sl}}/AssetClasses
+Content-Type: application/json
+
+{"Code": "K-INV-LEASEHOLD", "Description": "INVENTARIS LEASEHOLD IMPROVEMENT", "AssetType": "atAssetTypeGeneral", "BPLID": 2, "AssetClassCollection": [{"DepreciationAreaID": "Main Area", "ActiveStatus": "tYES", "AccountDetermination": "INV-LEASEHOLD", "DepreciationTypeID": "Straight Line", "UseLife": 120}, {"DepreciationAreaID": "Derived Area", "ActiveStatus": "tYES", "DepreciationTypeID": "Straight Line", "UseLife": 120}]}

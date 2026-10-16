@@ -6,7 +6,8 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.0</version>
+        <!-- 2.7.x: versi Spring Boot terakhir yang masih jalan di Java 8 (server target masih Java 8) -->
+        <version>2.7.18</version>
         <relativePath/>
     </parent>
 
@@ -17,7 +18,7 @@
     <description>Dokumentasi project CVPPMK, data langsung dari SAP B1</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>1.8</java.version>
     </properties>
 
     <dependencies>

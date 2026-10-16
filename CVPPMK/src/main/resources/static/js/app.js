@@ -1,4 +1,4 @@
-import { $, $$, esc, slug, callouts, flushMounts, rowsOf } from "./ui.js";
+import { $, $$, esc, slug, callouts, flushMounts, rowsOf, table } from "./ui.js";
 import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
 
@@ -21,7 +21,7 @@ async function getJson(url) {
   return d;
 }
 async function loadSl(name) {
-  const d = await getJson(`/api/sl/${name}`);
+  const d = await getJson(`api/sl/${name}`);
   if (d.error) throw new Error(`Service Layer: ${d.error}`);
   const data = Object.fromEntries(Object.entries(d.data).filter(([, v]) => v === null || typeof v !== "object"));
   return { generatedAt: d.generatedAt, results: { sl: { columns: Object.keys(data), rows: [Object.values(data)], ms: d.ms } } };
@@ -29,9 +29,9 @@ async function loadSl(name) {
 function load(id, fresh) {
   if (fresh || !cache.has(id)) {
     const { sl, withSql } = PAGES[id] || {};
-    const p = !sl ? getJson(`/api/section/${id}`)
+    const p = !sl ? getJson(`api/section/${id}`)
       : !withSql ? loadSl(sl)
-      : Promise.all([getJson(`/api/section/${id}`), loadSl(sl)]).then(([a, b]) => ({ ...a, results: { ...a.results, ...b.results } }));
+      : Promise.all([getJson(`api/section/${id}`), loadSl(sl)]).then(([a, b]) => ({ ...a, results: { ...a.results, ...b.results } }));
     p.catch(() => cache.delete(id));
     cache.set(id, p);
   }
@@ -43,32 +43,154 @@ const queryErrors = res => Object.entries(res.results).filter(([, v]) => v.error
 
 // ---------- sidebar ----------
 function buildNav() {
-  const done = pages.filter(p => p.status === "done").length, total = pages.filter(p => p.status).length;
-  const inProg = pages.filter(p => p.status === "progress").length;
   $("#nav").innerHTML = `
-    <div class="progress-box"><div class="lbl"><span>Progres dokumentasi</span><b>${done + inProg}/${total}</b></div>
-      <div class="bar"><div style="width:${((done + inProg * .5) / total) * 100}%"></div></div></div>
+    <div class="progress-box"><div class="lbl"><span>Menu sudah sesuai</span><b id="rv-count"></b></div>
+      <div class="bar"><div id="rv-ok"></div><div id="rv-nok"></div></div></div>
     ${chapters.map(ch => {
       const flat = ch.pages.length === 1;
       if (flat) { // bab satu halaman: tampil sebagai satu tautan saja
         const p = ch.pages[0];
         return `<div class="nav-group flat"><a href="#/${p.id}" data-id="${p.id}" class="chapter-link ${p.status === "todo" ? "todo" : ""}">
-          <span class="gno">${esc(ch.no)}</span><span>${esc(ch.title)}</span>${p.status ? `<span class="dot ${p.status}" title="${statusLabel(p.status)}"></span>` : ""}</a></div>`;
+          <span class="gno">${esc(ch.no)}</span><span>${esc(ch.title)}</span>${p.status ? `<span class="dot" data-dot="${p.id}"></span>` : ""}</a></div>`;
       }
       return `<div class="nav-group" data-no="${ch.no}">
         <button type="button" aria-expanded="true"><span class="gno">${esc(ch.no)}</span>${esc(ch.title)}
           <svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
         <ul>${ch.pages.map(p => `<li><a href="#/${p.id}" data-id="${p.id}" class="${p.status === "todo" ? "todo" : ""}">
-          ${p.no ? `<span class="no">${esc(p.no)}</span>` : ""}<span>${esc(p.title)}</span>${p.status ? `<span class="dot ${p.status}" title="${statusLabel(p.status)}"></span>` : ""}</a></li>`).join("")}</ul>
+          ${p.no ? `<span class="no">${esc(p.no)}</span>` : ""}<span>${esc(p.title)}</span>${p.status ? `<span class="dot" data-dot="${p.id}"></span>` : ""}</a></li>`).join("")}</ul>
       </div>`;
     }).join("")}
-    <div class="legend"><span><i class="dot done"></i>Selesai</span><span><i class="dot progress"></i>Dikerjakan</span><span><i class="dot todo"></i>Belum</span></div>`;
-  $$(".legend .dot").forEach(d => Object.assign(d.style, { display: "inline-block", width: "7px", height: "7px", borderRadius: "50%" }));
+    <div class="legend">${Object.entries(REVIEW).map(([k, [lbl]]) => `<span><i class="dot ${k}"></i>${lbl}</span>`).join("")}</div>`;
   $$(".nav-group > button").forEach(b => b.onclick = () => {
     const g = b.parentElement; g.classList.toggle("collapsed"); b.setAttribute("aria-expanded", !g.classList.contains("collapsed"));
   });
+  paintNav();
 }
-const statusLabel = s => ({ done: "Selesai", progress: "Sedang dikerjakan", todo: "Belum mulai" }[s] || "");
+// warna titik & bar progres mengikuti status review manual (edit mode)
+function paintNav() {
+  const menus = pages.filter(p => p.status), cnt = s => menus.filter(p => statusOf(p.id) === s).length;
+  $$("#nav [data-dot]").forEach(d => {
+    const s = statusOf(d.dataset.dot), note = review.pages[d.dataset.dot]?.note;
+    d.className = `dot ${s}`; d.title = REVIEW[s][0] + (note ? ` – ${note}` : "");
+  });
+  $("#rv-count").textContent = `${cnt("ok")}/${menus.length}`;
+  $("#rv-ok").style.width = `${cnt("ok") / menus.length * 100}%`;
+  $("#rv-nok").style.width = `${cnt("nok") / menus.length * 100}%`;
+}
+
+// ---------- review manual: status menu & exclusion temuan ----------
+// review.json di server: { pages: {id: {status: "ok"|"nok", note, at}}, exclusions: {key: {page, msg, reason, at}} }
+const REVIEW = { ok: ["Sesuai", "yes"], nok: ["Belum sesuai", "danger"], none: ["Belum direview", ""] };
+let review = { pages: {}, exclusions: {} }, reviewLoaded = false;
+const statusOf = id => review.pages[id]?.status || "none";
+const editing = () => document.body.classList.contains("edit");
+// key memuat teks pesan: kalau datanya berubah (mis. daftar field kosong berubah), temuan dianggap baru dan muncul lagi
+const exKey = (pageId, [t, msg]) => `${pageId}|${t}|${msg}`;
+const now = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16).replace("T", " "); };
+
+async function saveReview() {
+  if (!reviewLoaded) throw new Error("data review gagal dimuat saat start. Muat ulang halaman dulu supaya file review tidak tertimpa");
+  const r = await fetch("api/review", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(review) });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  paintNav();
+}
+
+// temuan otomatis dibagi jadi aktif & dikecualikan
+function findings(pageId, list) {
+  const isEx = i => !!review.exclusions[exKey(pageId, i)];
+  const active = list.filter(i => !isEx(i)), excluded = list.filter(isEx);
+  const btn = (act, lbl, i) => `<button type="button" class="cbtn" data-act="${act}" data-key="${esc(exKey(pageId, i))}">${lbl}</button>`;
+  return callouts(active, { action: editing() ? i => btn("exclude", "Exclude", i) : null })
+    + (excluded.length ? `<details class="excluded"${editing() ? " open" : ""}><summary>Dikecualikan (${excluded.length})</summary>
+      ${callouts(excluded, {
+        note: i => { const x = review.exclusions[exKey(pageId, i)]; return `<span class="reason">Alasan: ${x.reason ? esc(x.reason) : "<i>tanpa alasan</i>"} · ${esc(x.at)}</span>`; },
+        action: editing() ? i => btn("restore", "Batalkan", i) : null
+      })}</details>` : "");
+}
+const activeCount = (pageId, list) => list.filter(i => !review.exclusions[exKey(pageId, i)]).length;
+
+// kotak status review di bawah judul halaman
+function reviewBox(page) {
+  if (!page.status) return "";
+  const r = review.pages[page.id] || {}, s = statusOf(page.id);
+  if (!editing()) return s === "none" && !r.note ? "" : `<div class="review-view"><span class="badge ${REVIEW[s][1]}">${REVIEW[s][0]}</span>
+    ${r.note ? `<span>${esc(r.note)}</span>` : ""}${r.at ? `<small>${esc(r.at)}</small>` : ""}</div>`;
+  return `<div class="review-box" data-page="${page.id}"><div class="seg" role="radiogroup" aria-label="Status review">
+      ${Object.entries(REVIEW).map(([k, [lbl]]) => `<label class="${k}"><input type="radio" name="rv-status" value="${k}" ${k === s ? "checked" : ""}>${lbl}</label>`).join("")}</div>
+    <textarea rows="2" placeholder="Catatan review, mis. alamat & NPWP menunggu data dari client" aria-label="Catatan review">${esc(r.note || "")}</textarea></div>`;
+}
+
+function setPageReview(id, patch) {
+  const old = review.pages[id], r = { ...old, ...patch, at: now() };
+  if (r.status === "none") delete r.status;
+  if (!r.note) delete r.note;
+  if (r.status || r.note) review.pages[id] = r; else delete review.pages[id];
+  saveReview().catch(e => {
+    if (old) review.pages[id] = old; else delete review.pages[id];
+    alert(`Gagal menyimpan review: ${e.message}`); rerender();
+  });
+}
+
+// render ulang halaman aktif tanpa ambil data lagi, posisi scroll dipertahankan
+async function rerender() {
+  const y = window.scrollY; current = null;
+  await route(false, true);
+  window.scrollTo(0, y);
+}
+
+// ---------- 1.20 Remarks (Mode edit): isi disimpan di review.remarks ----------
+const RM = () => PAGES.remarks.remarks;
+async function saveRemarks(next, redraw) {
+  const old = review.remarks;
+  review.remarks = { ...next, at: now() };
+  try { await saveReview(); if (redraw) rerender(); }
+  catch (err) { review.remarks = old; alert(`Gagal menyimpan remarks: ${err.message}`); rerender(); }
+}
+document.addEventListener("change", e => {
+  const form = e.target.closest("#remarks-form");
+  if (form) saveRemarks(RM().collect(form), false);
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest('[data-act="r-add"], [data-act="r-del"]'), form = b && b.closest("#remarks-form");
+  if (!form) return;
+  const r = RM().collect(form), list = r[b.dataset.list];
+  if (b.dataset.act === "r-add") list.push(b.dataset.list === "facts" ? { label: "", value: "" } : { q: "", a: "" });
+  else list.splice(+b.dataset.i, 1);
+  saveRemarks(r, true);
+});
+
+document.addEventListener("change", e => {
+  const box = e.target.closest(".review-box"); if (!box) return;
+  if (e.target.name === "rv-status") setPageReview(box.dataset.page, { status: e.target.value });
+  else if (e.target.tagName === "TEXTAREA") setPageReview(box.dataset.page, { note: e.target.value.trim() });
+});
+
+document.addEventListener("click", async e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const key = b.dataset.key, callout = b.closest(".callout");
+  if (b.dataset.act === "exclude") { // form alasan muncul di dalam callout
+    if ($(".ex-form", callout)) return $(".ex-form input", callout).focus();
+    $(".ct", callout).insertAdjacentHTML("beforeend", `<form class="ex-form"><input type="text" placeholder="Alasan, mis. sudah dikonfirmasi client tidak dipakai" aria-label="Alasan exclusion">
+      <button type="submit" class="cbtn primary">Simpan</button><button type="button" class="cbtn" data-act="cancel">Batal</button></form>`);
+    const f = $(".ex-form", callout); $("input", f).focus();
+    f.onsubmit = async ev => {
+      ev.preventDefault();
+      const [page, , ...msg] = key.split("|");
+      review.exclusions[key] = { page, msg: msg.join("|"), reason: $("input", f).value.trim(), at: now() };
+      try { await saveReview(); rerender(); } catch (err) { delete review.exclusions[key]; alert(`Gagal menyimpan: ${err.message}`); }
+    };
+  } else if (b.dataset.act === "cancel") b.closest(".ex-form").remove();
+  else if (b.dataset.act === "restore") {
+    const old = review.exclusions[key]; delete review.exclusions[key];
+    try { await saveReview(); rerender(); } catch (err) { review.exclusions[key] = old; alert(`Gagal menyimpan: ${err.message}`); }
+  }
+});
+
+function setEdit(on) {
+  document.body.classList.toggle("edit", on);
+  $("#edit-btn").setAttribute("aria-pressed", on);
+  store.set("edit", on ? "1" : "");
+}
 
 // ---------- routing ----------
 function parseHash() {
@@ -76,7 +198,7 @@ function parseHash() {
   return { id: pages.some(p => p.id === id) ? id : "ringkasan", anchor };
 }
 let current = null;
-async function route(fresh = false) {
+async function route(fresh = false, keepScroll = false) {
   const { id, anchor } = parseHash();
   if (current === id && !fresh) return scrollToAnchor(anchor);
   current = id;
@@ -87,19 +209,19 @@ async function route(fresh = false) {
   art.classList.remove("enter"); void art.offsetWidth; art.classList.add("enter");
   art.innerHTML = head(page) + `<div class="skeleton">${"<div></div>".repeat(6)}</div>`;
   $("#toc-list").innerHTML = ""; $("#toc-meta").innerHTML = "";
-  window.scrollTo(0, 0);
+  if (!keepScroll) window.scrollTo(0, 0);
   document.title = `${page.no ? page.no + " " : ""}${page.title} · Dokumentasi CVPPMK`;
 
   let html, meta = "";
   try {
     if (id === "ringkasan") ({ html, meta } = await renderSummary(fresh));
     else if (!PAGES[id]) html = renderTodo(page);
-    else if (PAGES[id].static) html = PAGES[id].render({});
+    else if (PAGES[id].static) html = PAGES[id].render({}, { review, editing: editing() });
     else {
       const res = await load(id, fresh);
       const def = PAGES[id], d = dataOf(res), errs = queryErrors(res);
       html = (errs.length ? `<div class="error">Query gagal: ${errs.map(([k, v]) => `<b>${esc(k)}</b> – ${esc(v.error)}`).join("<br>")}</div>` : "")
-        + callouts(def.checks ? def.checks(d) : []) + def.render(d);
+        + findings(id, def.checks ? def.checks(d) : []) + def.render(d);
       meta = `<span>Diperbarui ${esc(res.generatedAt.replace("T", " "))}</span><span>Query ${queryMs(res)} ms</span>`;
     }
   } catch (e) {
@@ -107,7 +229,7 @@ async function route(fresh = false) {
   }
   if (current !== id) return; // user sudah pindah halaman
   const def = id === "ringkasan" ? SUMMARY : PAGES[id];
-  art.innerHTML = head(page, def) + html + pager(page);
+  art.innerHTML = head(page, def) + reviewBox(page) + html + pager(page);
   flushMounts();
   buildToc(page, meta);
   scrollToAnchor(anchor, false);
@@ -144,7 +266,9 @@ async function renderSummary(fresh) {
     if (!by[id]) return [page, [["danger", "Data halaman ini gagal dimuat."]]];
     return [page, PAGES[id].checks ? PAGES[id].checks(by[id]) : []];
   }).filter(([, list]) => list.length);
-  const total = groups.reduce((t, [, l]) => t + l.length, 0);
+  const total = groups.reduce((t, [p, l]) => t + activeCount(p.id, l), 0);
+  const menus = pages.filter(p => p.status), nok = menus.filter(p => statusOf(p.id) === "nok");
+  const cnt = s => menus.filter(p => statusOf(p.id) === s).length;
   const html = `<div class="kpis">
       ${kpi("org-structure", n("org-structure", "branches"), "Branch")}
       ${kpi("org-structure", n("org-structure", "warehouses"), "Warehouse")}
@@ -152,14 +276,20 @@ async function renderSummary(fresh) {
       ${kpi("users", n("users", "users"), "User SAP B1")}
       ${kpi("document-numbering", n("document-numbering", "series"), "Numbering series")}
     </div>
+    <h2 id="review">Status review menu</h2>
+    <div class="review-sum">${Object.entries(REVIEW).map(([k, [lbl]]) => `<span><i class="dot ${k}"></i><b>${cnt(k)}</b> ${lbl}</span>`).join("")}</div>
+    ${nok.length ? table([
+      { key: "no", label: "No" }, { key: "title", label: "Menu belum sesuai", fmt: (v, r) => `<a href="#/${r.id}">${esc(v)}</a>` },
+      { key: "note", label: "Catatan" }, { key: "at", label: "Diubah" }
+    ], nok.map(p => ({ ...p, ...review.pages[p.id] }))) : ""}
     <h2 id="temuan">Temuan otomatis <span class="no">${total}</span></h2>
     ${groups.length ? groups.map(([p, list]) => `<h3 id="t-${p.id}">${p.no ? `<span class="no">${p.no}</span> ` : ""}${esc(p.title)}</h3>
-      ${callouts(list.map(([t, m]) => [t, m]))}<p style="margin:-18px 0 0;font-size:13px"><a href="#/${p.id}">Buka ${esc(p.title)} →</a></p>`).join("")
+      ${findings(p.id, list.map(([t, m]) => [t, m]))}<p style="margin:-18px 0 0;font-size:13px"><a href="#/${p.id}">Buka ${esc(p.title)} →</a></p>`).join("")
       : callouts([["ok", "Tidak ada temuan."]])}`;
   return { html, meta: "" };
 }
 const SUMMARY = {
-  lead: "Gambaran konfigurasi di database SAP B1 dan temuan yang dicek otomatis dari semua bab. Temuan hilang sendiri kalau konfigurasinya sudah diperbaiki di SAP B1."
+  lead: "Gambaran konfigurasi di database SAP B1 dan temuan yang dicek otomatis dari semua bab. Temuan hilang sendiri kalau konfigurasinya sudah diperbaiki di SAP B1, atau bisa di-exclude lewat mode edit."
 };
 
 // ---------- panel "Di halaman ini" + scrollspy ----------
@@ -255,11 +385,17 @@ function toggleTheme() {
 (async () => {
   applyTheme(store.get("theme"));
   if (store.get("show-cols")) document.body.classList.add("show-cols");
-  chapters = await (await fetch("/sections.json")).json();
+  if (store.get("edit")) setEdit(true);
+  [chapters] = await Promise.all([
+    fetch("sections.json").then(r => r.json()),
+    getJson("api/review").then(r => { review = { pages: {}, exclusions: {}, ...r }; reviewLoaded = true; })
+      .catch(e => console.warn("Data review gagal dimuat", e))
+  ]);
   pages = chapters.flatMap(c => c.pages);
   buildNav(); buildIndex();
 
   $("#theme-btn").onclick = toggleTheme;
+  $("#edit-btn").onclick = () => { setEdit(!editing()); rerender(); };
   $("#menu-btn").onclick = () => document.body.classList.toggle("nav-open");
   document.addEventListener("click", e => {
     if (document.body.classList.contains("nav-open") && !e.target.closest(".sidebar, #menu-btn")) document.body.classList.remove("nav-open");

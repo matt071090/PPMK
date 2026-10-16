@@ -20,7 +20,8 @@ public class DocsApplication {
         System.setProperty("docs.browser.opened", "true");
 
         Environment env = event.getApplicationContext().getEnvironment();
-        String url = "http://localhost:" + env.getProperty("local.server.port", "8090") + "/";
+        String url = "http://localhost:" + env.getProperty("local.server.port", "8090")
+                + env.getProperty("server.servlet.context-path", "") + "/";
         try {
             String os = System.getProperty("os.name").toLowerCase();
             if (os.contains("win")) new ProcessBuilder("rundll32", "url.dll,FileProtocolHandler", url).start();

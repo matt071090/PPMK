@@ -14,6 +14,9 @@ export const empty = () => `<span class="empty">belum diisi</span>`;
 export const val = v => isEmpty(v) ? empty() : esc(v);
 export const YN = v => v === "Y" ? `<span class="yn y">Ya</span>` : v === "N" ? `<span class="yn n">Tidak</span>` : val(v);
 export const badgeYN = v => v === "Y" ? `<span class="badge yes">Ya</span>` : v === "N" ? `<span class="badge">Tidak</span>` : val(v);
+// Daftar nilai dipisah "|" (hasil STRING_AGG di SQL) -> tag. none: teks kalau kosong (default "belum diisi").
+export const tags = (v, { none } = {}) => isEmpty(v) ? (none ? `<span class="tag none">${esc(none)}</span>` : empty())
+  : `<span class="tags">${String(v).split("|").map(t => `<span class="tag">${esc(t)}</span>`).join("")}</span>`;
 export const coded = (map, v) => map[v] ? `${esc(map[v])}<span class="raw">(${esc(v)})</span>` : val(v);
 export const rowsOf = r => r && r.rows ? r.rows.map(row => Object.fromEntries(r.columns.map((c, i) => [c, row[i]]))) : [];
 
@@ -26,10 +29,11 @@ export function section(id, title, body, { lead, no, src, level = 2 } = {}) {
 
 const ICON = { warn: "!", info: "i", ok: "✓", danger: "!" };
 const TAG = { warn: "Perlu dicek", info: "Info", ok: "OK", danger: "Masalah" };
-export function callouts(list) {
+// action(item) -> HTML tambahan di kanan callout (tombol exclude di edit mode). note(item) -> baris keterangan di bawah pesan.
+export function callouts(list, { action, note, cls = "" } = {}) {
   if (!list.length) return "";
-  return `<div class="callouts">${list.map(([t, msg, link]) => `<div class="callout ${t}"><span class="ci">${ICON[t]}</span>
-    <div class="ct"><b>${TAG[t]}</b>${esc(msg)}${link ? ` <a href="${link[0]}">${esc(link[1])} →</a>` : ""}</div></div>`).join("")}</div>`;
+  return `<div class="callouts ${cls}">${list.map(item => { const [t, msg, link] = item; return `<div class="callout ${t}"><span class="ci">${ICON[t]}</span>
+    <div class="ct"><b>${TAG[t]}</b>${esc(msg)}${link ? ` <a href="${link[0]}">${esc(link[1])} →</a>` : ""}${note ? note(item) : ""}</div>${action ? action(item) : ""}</div>`; }).join("")}</div>`;
 }
 
 export function kv(pairs) {

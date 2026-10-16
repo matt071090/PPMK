@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -21,10 +23,11 @@ public class ServiceLayerController {
     private static final Logger log = LoggerFactory.getLogger(ServiceLayerController.class);
 
     // name -> {method, path}
-    private static final Map<String, String[]> READS = Map.of(
-            "admin-info", new String[]{"POST", "CompanyService_GetAdminInfo"},
-            "company-info", new String[]{"POST", "CompanyService_GetCompanyInfo"}
-    );
+    private static final Map<String, String[]> READS = new HashMap<>();
+    static {
+        READS.put("admin-info", new String[]{"POST", "CompanyService_GetAdminInfo"});
+        READS.put("company-info", new String[]{"POST", "CompanyService_GetCompanyInfo"});
+    }
 
     private final ServiceLayerClient sl;
 
@@ -59,7 +62,8 @@ public class ServiceLayerController {
         int year = LocalDateTime.now().getYear();
         JsonNode last = null;
         for (JsonNode p : sl.post("CompanyService_GetPeriods").path("value")) {
-            JsonNode cat = sl.post("CompanyService_GetPeriod", Map.of("PeriodCategoryParams", Map.of("AbsoluteEntry", p.path("AbsoluteEntry").asInt())));
+            JsonNode cat = sl.post("CompanyService_GetPeriod", Collections.singletonMap("PeriodCategoryParams",
+                    Collections.singletonMap("AbsoluteEntry", p.path("AbsoluteEntry").asInt())));
             if (cat.path("FinancialYear").asInt() == year) return cat;
             last = cat;
         }

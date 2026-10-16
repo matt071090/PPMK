@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-DocsApplication<cvppmk-docs>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.stem.cvppmk.docs.DocsApplication",
+            "projectName": "cvppmk-docs",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

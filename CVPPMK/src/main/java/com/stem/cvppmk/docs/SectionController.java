@@ -7,6 +7,7 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -50,10 +51,16 @@ public class SectionController {
         Map<String, Object> results = new LinkedHashMap<>();
         for (Resource file : files) {
             String key = file.getFilename().replaceAll("^\\d+_|\\.sql$", "");
-            String sql = file.getContentAsString(StandardCharsets.UTF_8);
+            // baris komentar "--" dibuang: di Java 8 driver HANA menganggap query yang diawali komentar bukan SELECT
+            // ("SQL statement would generate a row count")
+            String sql = StreamUtils.copyToString(file.getInputStream(), StandardCharsets.UTF_8)
+                    .replaceAll("(?m)^\\s*--.*$", "").trim();
             results.put(key, run(key, sql));
         }
-        return Map.of("generatedAt", LocalDateTime.now().withNano(0).toString(), "results", results);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("generatedAt", LocalDateTime.now().withNano(0).toString());
+        out.put("results", results);
+        return out;
     }
 
     private Map<String, Object> run(String key, String sql) {
@@ -80,7 +87,7 @@ public class SectionController {
             return out;
         } catch (DataAccessException e) {
             log.warn("[{}] gagal: {}", key, e.getMostSpecificCause().getMessage());
-            return Map.of("error", e.getMostSpecificCause().getMessage());
+            return Collections.singletonMap("error", e.getMostSpecificCause().getMessage());
         }
     }
 }
