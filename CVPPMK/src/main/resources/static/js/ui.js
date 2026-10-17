@@ -33,6 +33,30 @@ export function autoCols(r) {
 }
 export const rowsOf = r => r && r.rows ? r.rows.map(row => Object.fromEntries(r.columns.map((c, i) => [c, row[i]]))) : [];
 
+// ---------- tab seperti layar SAP B1 ----------
+// list: [[label, html], ...]. Tab terakhir yang dibuka diingat per id, supaya render ulang tidak balik ke tab pertama.
+const activeTab = {};
+export function tabs(id, list) {
+  const cur = Math.min(activeTab[id] || 0, list.length - 1);
+  return `<div class="tabs" data-tabs="${id}"><div class="tab-list" role="tablist">${list.map(([label], i) =>
+      `<button type="button" role="tab" data-tab="${i}" aria-selected="${i === cur}">${esc(label)}</button>`).join("")}</div>
+    ${list.map(([, html], i) => `<div class="tab-panel" role="tabpanel"${i === cur ? "" : " hidden"}>${html}</div>`).join("")}</div>`;
+}
+function showTab(box, i) {
+  activeTab[box.dataset.tabs] = i;
+  $$(":scope > .tab-list > button", box).forEach((b, j) => b.setAttribute("aria-selected", i === j));
+  $$(":scope > .tab-panel", box).forEach((p, j) => p.hidden = i !== j);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".tab-list > button[data-tab]");
+  if (b) showTab(b.closest("[data-tabs]"), +b.dataset.tab);
+});
+// buka tab yang berisi el (dipakai sebelum scroll ke anchor hasil pencarian)
+export function revealTab(el) {
+  for (let p = el.closest(".tab-panel"); p; p = p.parentElement.closest(".tab-panel"))
+    if (p.hidden) showTab(p.parentElement, $$(":scope > .tab-panel", p.parentElement).indexOf(p));
+}
+
 // ---------- struktur halaman ----------
 export function section(id, title, body, { lead, no, src, level = 2 } = {}) {
   const h = `h${level}`;
@@ -93,7 +117,10 @@ function settingValue(r, d, emptyText) {
 // Registry dikosongkan setiap kali halaman dirender ulang (resetExports di app.js).
 const exportsReg = new Map();
 let exportSeq = 0;
-export const resetExports = () => { exportsReg.clear(); exportSeq = 0; };
+export const resetExports = () => { exportsReg.clear(); exportSeq = 0; lazyReg.clear(); };
+// detail baris expandable yang baru dirender saat pertama kali dibuka (opsi lazy di table)
+const lazyReg = new Map();
+let lazySeq = 0;
 export const exportOf = id => exportsReg.get(id);
 
 // Teks polos dari HTML sel: tag dipisah koma, nama akun dipisah " - ", opsi yang tidak terpilih & "belum diisi" dibuang
@@ -118,17 +145,64 @@ export function exportRows(cols, rows) {
 const exportBtn = id => `<button type="button" class="xbtn" data-export="${id}" title="Download tabel ini sebagai file Excel">
   <svg width="13" height="13" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0l-4-4m4 4l4-4M4 16h12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Excel</button>`;
 
+// Tombol Excel saja (tanpa tabel), untuk tampilan yang bukan tabel. title = nama sheet.
+export function exportButton(cols, rows, title) {
+  const id = `x${++exportSeq}`;
+  exportsReg.set(id, { cols, rows });
+  return `<div class="xbar">${exportBtn(id).replace("<button ", `<button data-title="${esc(title || "")}" `)}</div>`;
+}
+
 // ---------- tabel data ----------
 // xid: id export tetap (dipakai searchable); allRows: baris yang diekspor kalau berbeda dari yang dirender (mis. dibatasi limit)
-export function table(cols, rows, { flag, xid, allRows, noExport } = {}) {
+// expand(r): HTML detail baris; baris jadi bisa diklik untuk buka/tutup detail di bawahnya.
+// exportCols: kolom Excel kalau berbeda dari kolom yang tampil (mis. isi detail ikut diekspor).
+// lazy: detail baru dirender saat baris dibuka (data besar).
+export function table(cols, rows, { flag, xid, allRows, noExport, expand, exportCols, lazy } = {}) {
   const id = xid || `x${++exportSeq}`;
-  if (!noExport) exportsReg.set(id, { cols, rows: allRows || rows });
-  return `${noExport || xid ? "" : `<div class="xbar">${exportBtn(id)}</div>`}<div class="table-wrap"><table class="data">
-    <thead><tr>${cols.map(c => `<th>${esc(c.label)}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map(r => `<tr class="${flag && flag(r) ? "flag" : ""}">${cols.map(c =>
-      `<td class="${c.num ? "num" : ""}">${c.fmt ? c.fmt(r[c.key], r) : val(r[c.key])}</td>`).join("")}</tr>`).join("")
-      || `<tr><td colspan="${cols.length}" style="text-align:center;color:var(--muted);padding:28px">Tidak ada data</td></tr>`}</tbody>
+  if (!noExport) exportsReg.set(id, { cols: exportCols || cols, rows: allRows || rows });
+  const n = cols.length + (expand ? 1 : 0);
+  const row = r => {
+    const cells = cols.map(c => `<td class="${c.num ? "num" : ""}">${c.fmt ? c.fmt(r[c.key], r) : val(r[c.key])}</td>`).join("");
+    const cls = [flag && flag(r) ? "flag" : "", expand ? "has-exp" : ""].join(" ").trim();
+    return expand
+      ? `<tr class="${cls}" aria-expanded="false"><td class="exp-tg"></td>${cells}</tr><tr class="exp-row" hidden>${lazy ? `<td colspan="${n}" data-lazy="${lazyKey(() => expand(r))}"></td>` : `<td colspan="${n}">${expand(r)}</td>`}</tr>`
+      : `<tr class="${cls}">${cells}</tr>`;
+  };
+  return `${noExport || xid ? "" : `<div class="xbar">${exportBtn(id)}</div>`}<div class="table-wrap"><table class="data${expand ? " expandable" : ""}">
+    <thead><tr>${expand ? "<th></th>" : ""}${cols.map(c => `<th>${esc(c.label)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(row).join("")
+      || `<tr><td colspan="${n}" style="text-align:center;color:var(--muted);padding:28px">Tidak ada data</td></tr>`}</tbody>
   </table></div>`;
+}
+const lazyKey = fn => { const k = `l${++lazySeq}`; lazyReg.set(k, fn); return k; };
+export function toggleRow(tr, open = tr.getAttribute("aria-expanded") !== "true") {
+  tr.setAttribute("aria-expanded", open);
+  const td = tr.nextElementSibling.firstElementChild;
+  if (open && td.dataset.lazy) { td.innerHTML = lazyReg.get(td.dataset.lazy)?.() || ""; delete td.dataset.lazy; flushMounts(); }
+  tr.nextElementSibling.hidden = !open;
+}
+document.addEventListener("click", e => {
+  const tr = e.target.closest("tr.has-exp");
+  if (tr && !e.target.closest("a, button, input")) toggleRow(tr);
+});
+
+// Tabel expandable + kotak cari (ikut mencari isi detail yang tertutup) + tombol Buka/Tutup semua.
+export function expandList(id, cols, rows, opts = {}) {
+  onMount(() => {
+    const box = $(`#${id}`); if (!box) return;
+    const trs = $$(":scope > .table-wrap > table > tbody > tr.has-exp", box);
+    $("input[type=search]", box).oninput = e => {
+      const t = e.target.value.toLowerCase();
+      trs.forEach(tr => {
+        const hit = (tr.textContent + " " + tr.nextElementSibling.textContent).toLowerCase().includes(t);
+        tr.hidden = !hit; if (!hit) toggleRow(tr, false);
+      });
+    };
+    $$("[data-exp-all]", box).forEach(b => b.onclick = () => trs.filter(tr => !tr.hidden).forEach(tr => toggleRow(tr, b.dataset.expAll === "1")));
+  });
+  return `<div id="${id}"><div class="toolbar"><input type="search" placeholder="${esc(opts.placeholder || "Cari…")}" aria-label="Cari di tabel">
+      <button type="button" class="cbtn" data-exp-all="1">Buka semua</button><button type="button" class="cbtn" data-exp-all="0">Tutup semua</button></div>
+    ${table(cols, rows, opts)}</div>`;
 }
 
 // Tabel dengan kotak cari + filter dropdown opsional. limit: jumlah baris maksimum yang dirender (data besar).

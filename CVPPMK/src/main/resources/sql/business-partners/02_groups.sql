@@ -1,4 +1,4 @@
--- 3.2 Customer / Vendor Group (Administration > Setup > Business Partners)
+-- 3.4 Customer / Vendor Group (Administration > Setup > Business Partners), ditampilkan sebagai tab di halaman Business Partner
 SELECT G."GroupCode", G."GroupName", G."GroupType", P."ListName" AS "PriceListName", G."Locked",
        (SELECT COUNT(*) FROM OCRD C WHERE C."GroupCode" = G."GroupCode") AS "BpCount"
 /*@udf-cols OCRG G*/

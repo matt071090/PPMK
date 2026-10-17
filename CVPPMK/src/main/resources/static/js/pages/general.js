@@ -19,7 +19,7 @@ const FREIGHT_DIST = { N: "None", Q: "Quantity", V: "Volume", W: "Weight", E: "E
 const LC_ALLOC = { F: "Cash Value Before Customs", A: "Cash Value After Customs", Q: "Quantity", W: "Weight", V: "Volume", E: "Equal" };
 const PAY_TYPE = { I: "Incoming", O: "Outgoing" };
 
-// 1.10 Document Settings: dibaca dari Service Layer (AdminInfo), nama field-nya jelas sehingga tidak perlu tebak kolom DB.
+// 1.3 Document Settings: dibaca dari Service Layer (AdminInfo), nama field-nya jelas sehingga tidak perlu tebak kolom DB.
 const DOC_SETTINGS = [
   { label: "Calculate Gross Profit", col: "SL.CalculateGrossProfitperTra", type: "yn", fmt: slYN("CalculateGrossProfitperTra") },
   { label: "Base Price Origin", col: "SL.PriceListforCostPrice", verify: 1, fmt: d => isEmpty(d.PriceListforCostPrice) ? null : `kode ${d.PriceListforCostPrice}` },
@@ -39,7 +39,7 @@ const DOC_SETTINGS = [
     fmt: d => +d.MaxDaysForCancel === 0 ? "0 (tanpa batas)" : d.MaxDaysForCancel }
 ];
 
-// 1.20 Remarks: catatan project (bukan dari database). Diedit lewat Mode edit dan disimpan di review.json (key "remarks").
+// 1.10 Remarks: catatan project (bukan dari database). Diedit lewat Mode edit dan disimpan di review.json (key "remarks").
 // Isi di bawah hanya data awal, dipakai selama review.json belum punya remarks.
 const REMARKS_SEED = {
   facts: [{ label: "Go Live", value: "" }, { label: "Cut Off Beginning Balance", value: "" }],
@@ -440,10 +440,10 @@ export const PAGES = {
           { key: "DimActive", label: "Aktif", fmt: badgeYN },
           { key: "CcCount", label: "Cost center", num: 1, fmt: (v, r) => String(ccs.filter(c => c.DimCode === r.DimCode && !isSystemCc(c)).length) },
           ...udfCols(d.dimensions)], dims),
-          { no: "1.4.1", lead: "Kolom Keterangan adalah nama yang tampil di dokumen dan laporan." })
+          { no: "2.9.1", lead: "Kolom Keterangan adalah nama yang tampil di dokumen dan laporan." })
         + section("cost-centers", "Cost Center per Dimension", dims.map(x => section(`dim-${x.DimCode}`, `${x.DimName} · ${x.DimDesc || "-"}`,
             table(ccCols, ccs.filter(c => c.DimCode === x.DimCode)), { level: 3 })).join(""),
-          { no: "1.4.2", lead: "<code>Centr_z…</code> (General Center) dibuat otomatis oleh SAP untuk tiap dimension, bukan cost center bisnis." });
+          { no: "2.9.2", lead: "<code>Centr_z…</code> (General Center) dibuat otomatis oleh SAP untuk tiap dimension, bukan cost center bisnis." });
     }
   },
 
@@ -483,13 +483,13 @@ export const PAGES = {
         ...udfCols(d.vat_groups)];
       return section("tax-group", "Tax Group", Object.entries(TAX_CAT).map(([c, name]) =>
           section(`tax-${c}`, `Category: ${name}`, table(cols, active.filter(v => v.Category === c)), { level: 3 })).join(""),
-          { no: "1.7.1", lead: "Hanya tax group aktif. Rate adalah tarif yang berlaku sekarang." })
+          { no: "2.3.1", lead: "Hanya tax group aktif. Rate adalah tarif yang berlaku sekarang." })
         + section("withholding", "Withholding Tax", table([{ key: "WTCode", label: "WTax Code" }, { key: "WTName", label: "WTax Name" },
           { key: "Category", label: "Category", fmt: codedCell(WHT_CAT) }, { key: "Rate", label: "Rate %", num: 1, fmt: num },
           { key: "BaseType", label: "Base Type", fmt: codedCell(WHT_BASE) }, { key: "PrctBsAmnt", label: "% Base", num: 1, fmt: num },
           { key: "EffecDate", label: "Effective From" }, { key: "Account", label: "Akun" }, { key: "Inactive", label: "Nonaktif", fmt: badgeYN },
           ...udfCols(d.withholding)], wht),
-          { no: "1.7.2" });
+          { no: "2.3.2" });
     }
   },
 
@@ -553,13 +553,39 @@ export const PAGES = {
   },
 
   "sales-employee": {
-    lead: "Karyawan yang berkomunikasi dengan customer dan supplier. Dipilih di dokumen sales & purchasing.",
-    menu: "Administration › Setup › General › Sales Employees/Buyers",
-    tables: ["OSLP"],
-    render: d => section("list", "Sales Employee / Buyer", table([{ key: "SlpCode", label: "Kode", num: 1 }, { key: "SlpName", label: "Nama" },
-      { key: "Memo", label: "Remarks" }, { key: "Commission", label: "Komisi %", num: 1, fmt: num },
-      { key: "Active", label: "Aktif", fmt: badgeYN }, { key: "Telephone", label: "Telepon" }, { key: "Email", label: "Email" },
-      ...udfCols(d.slp)], rowsOf(d.slp).filter(s => s.SlpCode !== "-1")), { lead: "Baris bawaan \"-No Sales Employee-\" tidak ditampilkan." })
+    lead: "Karyawan perusahaan (Employee Master Data) dan Sales Employee / Buyer yang dipilih di dokumen sales & purchasing. Employee bisa dihubungkan ke sales employee dan user SAP.",
+    menu: "Human Resources › Employee Master Data · Administration › Setup › General › Sales Employees/Buyers",
+    tables: ["OHEM", "OSLP", "OUDP", "OHPS", "OUSR"],
+    checks(d) {
+      const emp = rowsOf(d.employees), slp = rowsOf(d.slp).filter(s => s.SlpCode !== "-1" && s.Active === "Y");
+      if (!emp.length) return [["info", "Employee master data belum diisi."]];
+      const linked = new Set(emp.map(e => String(e.salesPrson)));
+      const loose = slp.filter(s => !linked.has(String(s.SlpCode))).map(s => s.SlpName);
+      return loose.length ? [["info", `Sales employee aktif yang belum dihubungkan ke employee master data: ${loose.join(", ")}.`]] : [];
+    },
+    render(d) {
+      const emp = rowsOf(d.employees).map(e => ({ ...e, Name: [e.firstName, e.middleName, e.lastName].filter(Boolean).join(" ") }));
+      const empBySlp = new Map(emp.filter(e => !isEmpty(e.salesPrson)).map(e => [String(e.salesPrson), e.Name]));
+      const slp = rowsOf(d.slp).filter(s => s.SlpCode !== "-1").map(s => ({ ...s, Employee: empBySlp.get(String(s.SlpCode)) || null }));
+      const dash = v => isEmpty(v) ? `<span class="muted">–</span>` : esc(v);
+      const kpi = (n, l) => `<div class="kpi"><b>${n}</b><span>${l}</span></div>`;
+      return `<div class="kpis">${kpi(emp.length, "Employee")}${kpi(emp.filter(e => e.Active === "Y").length, "Employee aktif")}
+          ${kpi(slp.length, "Sales employee / buyer")}${kpi(slp.filter(s => s.Employee).length, "Terhubung ke employee")}</div>`
+        + section("employees", "Employee Master Data", emp.length ? searchable("emp-t", [{ key: "empID", label: "ID", num: 1 }, { key: "Name", label: "Nama" },
+            { key: "jobTitle", label: "Job Title", fmt: dash }, { key: "DeptName", label: "Department", fmt: dash }, { key: "PosName", label: "Position", fmt: dash },
+            { key: "BPLName", label: "Branch", fmt: dash }, { key: "Manager", label: "Manager", fmt: dash }, { key: "USER_CODE", label: "User SAP", fmt: dash },
+            { key: "SlpName", label: "Sales Employee", fmt: dash }, { key: "mobile", label: "Mobile", fmt: dash }, { key: "email", label: "E-Mail", fmt: dash },
+            { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.employees)], emp)
+          : `<div class="placeholder"><p style="margin:0;font-weight:600;color:var(--text)">Belum ada employee master data</p>
+              <p style="margin:4px 0 0">Data akan tampil otomatis setelah karyawan diinput di Human Resources › Employee Master Data.</p></div>`,
+          { no: "1.5.1", lead: "Kolom Sales Employee dan User SAP menunjukkan ke mana employee ini dihubungkan." })
+        + section("sales", "Sales Employee / Buyer", table([{ key: "SlpCode", label: "Kode", num: 1 }, { key: "SlpName", label: "Nama" },
+            { key: "Employee", label: "Employee", fmt: v => v ? esc(v) : `<span class="muted">belum dihubungkan</span>` },
+            { key: "Memo", label: "Remarks", fmt: dash }, { key: "Commission", label: "Komisi %", num: 1, fmt: v => +v ? esc(+v) : `<span class="muted">0</span>` },
+            { key: "Telephone", label: "Telepon", fmt: dash }, { key: "Email", label: "Email", fmt: dash },
+            { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.slp)], slp),
+          { no: "1.5.2", lead: "Dipilih di dokumen sales & purchasing. Baris bawaan \"-No Sales Employee-\" tidak ditampilkan." });
+    }
   },
 
   "freight": {
@@ -669,7 +695,7 @@ export const PAGES = {
   },
 
   "users": {
-    lead: "Akun yang bisa login ke SAP B1, beserta branch yang boleh diakses. Otorisasi per user ada di <a href=\"#/authorizations\">1.20</a>.",
+    lead: "Akun yang bisa login ke SAP B1, beserta branch yang boleh diakses. Otorisasi per user ada di <a href=\"#/authorizations\">1.7</a>.",
     menu: "Administration › Setup › General › Users",
     tables: ["OUSR", "USR6"],
     checks: d => checkUsers(rowsOf(d.users)),
@@ -732,20 +758,16 @@ export const PAGES = {
   },
 
   "org-structure": {
-    lead: "Branch (unit bisnis) dan warehouse di bawahnya. Transaksi, user, dan numbering series dipisahkan per branch.",
-    menu: "Administration › Setup › Financials › Branches · Inventory › Warehouses",
+    lead: "Branch (unit bisnis). Transaksi, user, dan numbering series dipisahkan per branch. Daftar gudang ada di halaman <a href=\"#/warehouses\">Warehouse</a>.",
+    menu: "Administration › Setup › Financials › Branches",
     tables: ["OBPL", "OWHS", "USR6"],
     checks: d => checkOrg(rowsOf(d.branches)),
     render(d) {
-      const branches = rowsOf(d.branches), whs = rowsOf(d.warehouses);
       return section("branches", "Branch", table([{ key: "BPLId", label: "ID", num: 1 }, { key: "BPLName", label: "Nama Branch" },
           { key: "MainBPL", label: "Branch utama", fmt: badgeYN }, { key: "Disabled", label: "Nonaktif", fmt: badgeYN },
           { key: "DflWhs", label: "Warehouse default" }, { key: "TaxIdNum", label: "NPWP" },
-          { key: "WhsCount", label: "Warehouse", num: 1 }, { key: "UserCount", label: "User", num: 1 }, ...udfCols(d.branches)], branches))
-        + section("warehouses", "Warehouse", searchable("whs", [{ key: "WhsCode", label: "Kode" }, { key: "WhsName", label: "Nama" },
-          { key: "BPLName", label: "Branch" }, { key: "Inactive", label: "Nonaktif", fmt: badgeYN },
-          { key: "Locked", label: "Dikunci", fmt: badgeYN }, { key: "BinActivat", label: "Bin", fmt: badgeYN }, ...udfCols(d.warehouses)], whs,
-          { filterKey: "BPLName", filterLabel: "branch" }), { lead: "Setiap warehouse terikat ke satu branch." });
+          { key: "WhsCount", label: "Warehouse", num: 1, fmt: v => `<a href="#/warehouses">${esc(v)}</a>` }, { key: "UserCount", label: "User", num: 1 }, ...udfCols(d.branches)],
+        rowsOf(d.branches)));
     }
   }
 };

@@ -1,39 +1,42 @@
 [
+  { "title": "Ringkasan & Temuan", "home": true, "pages": [
+    { "id": "ringkasan", "title": "Ringkasan & Temuan" }
+  ]},
   { "no": "1", "title": "General Parameter", "pages": [
-    { "id": "ringkasan", "title": "Ringkasan & Temuan" },
     { "id": "company-details", "no": "1.1", "title": "Company Details", "status": "progress" },
     { "id": "general-settings", "no": "1.2", "title": "General Settings", "status": "progress" },
-    { "id": "posting-period", "no": "1.3", "title": "Posting Period", "status": "progress" },
-    { "id": "cost-center", "no": "1.4", "title": "Profit Center / Cost Center", "status": "progress" },
-    { "id": "payment-terms", "no": "1.5", "title": "Payment Terms", "status": "progress", "tables": ["OCTG"] },
-    { "id": "currencies", "no": "1.6", "title": "Currencies", "status": "progress" },
-    { "id": "tax", "no": "1.7", "title": "Tax Group & Withholding Tax", "status": "progress", "tables": ["OVTG", "OWHT"] },
-    { "id": "house-bank", "no": "1.8", "title": "House Bank", "status": "progress", "tables": ["DSC1"] },
-    { "id": "banks", "no": "1.9", "title": "Banks", "status": "progress", "tables": ["ODSC"] },
-    { "id": "document-settings", "no": "1.10", "title": "Document Settings (General)", "status": "progress", "tables": ["OADM", "CINF"] },
-    { "id": "document-numbering", "no": "1.11", "title": "Document Numbering", "status": "progress" },
-    { "id": "uom", "no": "1.12", "title": "Units of Measure", "status": "progress", "tables": ["OUOM"] },
-    { "id": "uom-groups", "no": "1.13", "title": "Unit of Measure Groups", "status": "progress", "tables": ["OUGP", "UGP1"] },
-    { "id": "sales-employee", "no": "1.14", "title": "Sales Employee / Buyer", "status": "progress", "tables": ["OSLP"] },
-    { "id": "freight", "no": "1.15", "title": "Freight", "status": "progress", "tables": ["OEXD"] },
-    { "id": "landed-cost", "no": "1.16", "title": "Landed Cost", "status": "progress", "tables": ["OALC"] },
-    { "id": "shipping-type", "no": "1.17", "title": "Shipping Type", "status": "progress", "tables": ["OSHP"] },
-    { "id": "payment-methods", "no": "1.18", "title": "Payment Methods", "status": "progress", "tables": ["OPYM"] },
-    { "id": "users", "no": "1.19", "title": "License, Users & Authorizations", "status": "progress" },
-    { "id": "authorizations", "no": "1.20", "title": "Authorization per User", "status": "progress" },
-    { "id": "ui-templates", "no": "1.21", "title": "UI Configuration Template", "status": "progress" },
-    { "id": "remarks", "no": "1.22", "title": "Remarks", "status": "progress" },
-    { "id": "org-structure", "title": "Organization Structure", "status": "progress" }
+    { "id": "document-settings", "no": "1.3", "title": "Document Settings", "status": "progress", "tables": ["OADM", "CINF"] },
+    { "id": "license", "no": "1.4", "title": "License", "status": "todo" },
+    { "id": "sales-employee", "no": "1.5", "title": "Employee", "status": "progress", "tables": ["OSLP"] },
+    { "id": "users", "no": "1.6", "title": "User", "status": "progress" },
+    { "id": "authorizations", "no": "1.7", "title": "Authorization per User", "status": "progress" },
+    { "id": "ui-templates", "no": "1.8", "title": "UI Configuration Template", "status": "progress" },
+    { "id": "document-numbering", "no": "1.9", "title": "Document Numbering", "status": "progress" },
+    { "id": "remarks", "no": "1.10", "title": "Remarks", "status": "progress" }
+  ]},
+  { "title": "Belum Dikelompokkan", "pages": [
+    { "id": "uom", "title": "Units of Measure", "status": "progress", "onlyIfData": "uom", "tables": ["OUOM"] },
+    { "id": "uom-groups", "title": "Unit of Measure Groups", "status": "progress", "onlyIfData": "groups", "tables": ["OUGP", "UGP1"] }
   ]},
   { "no": "2", "title": "Keuangan", "pages": [
     { "id": "coa", "no": "2.1", "title": "Chart of Accounts", "status": "progress" },
     { "id": "gl-determination", "no": "2.2", "title": "G/L Account Determination", "status": "progress" },
-    { "id": "fixed-asset", "no": "2.3", "title": "Fixed Asset", "status": "progress" }
+    { "id": "tax", "no": "2.3", "title": "Tax Group & Withholding Tax", "status": "progress", "tables": ["OVTG", "OWHT"] },
+    { "id": "currencies", "no": "2.4", "title": "Currencies", "status": "progress" },
+    { "id": "banks", "no": "2.5", "title": "Bank", "status": "progress", "tables": ["ODSC"] },
+    { "id": "house-bank", "no": "2.6", "title": "House Banks", "status": "progress", "tables": ["DSC1"] },
+    { "id": "freight", "no": "2.7", "title": "Freight", "status": "progress", "tables": ["OEXD"] },
+    { "id": "landed-cost", "no": "2.8", "title": "Landed Cost", "status": "progress", "tables": ["OALC"] },
+    { "id": "cost-center", "no": "2.9", "title": "Profit Center / Cost Center", "status": "progress" },
+    { "id": "payment-terms", "no": "2.10", "title": "Payment Terms", "status": "progress", "tables": ["OCTG"] },
+    { "id": "payment-methods", "no": "2.11", "title": "Payment Methods", "status": "progress", "tables": ["OPYM"] },
+    { "id": "posting-period", "no": "2.12", "title": "Posting Period", "status": "progress" },
+    { "id": "fixed-asset", "no": "2.13", "title": "Fixed Asset", "status": "progress" }
   ]},
   { "no": "3", "title": "Master Data", "pages": [
     { "id": "item-groups", "no": "3.1", "title": "Item Group", "status": "progress" },
     { "id": "items", "no": "3.2", "title": "Item", "status": "progress" },
-    { "id": "bp-groups", "no": "3.3", "title": "Customer & Vendor Group", "status": "progress" },
+    { "id": "warehouses", "no": "3.3", "title": "Warehouse", "status": "progress" },
     { "id": "business-partners", "no": "3.4", "title": "Business Partner", "status": "progress" },
     { "id": "price-lists", "no": "3.5", "title": "Price List", "status": "progress" },
     { "id": "master-summary", "no": "3.6", "title": "Status Master Data", "status": "progress" }

@@ -1,7 +1,7 @@
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
 import { mainTable, tableName, tableModule } from "../sap-tables.js";
-import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, kv, settings, table, searchable, tags, udfCols, autoCols, VALUATION, GL_METHOD } from "../ui.js";
+import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, kv, settings, table, tabs, searchable, tags, udfCols, expandList, exportButton, autoCols, VALUATION, GL_METHOD } from "../ui.js";
 
 const one = r => rowsOf(r)[0] || {};
 const num = v => isEmpty(v) ? val(v) : esc((+v).toLocaleString("id-ID"));
@@ -58,29 +58,31 @@ const TABLE_NAMES = {
 // keterangan tabel: nama resmi dari SAP B1 REFDB (sap-tables.js), daftar lokal TABLE_NAMES sebagai cadangan
 const tableLabel = id => { const n = tableName(id) || TABLE_NAMES[id]; return n ? `${esc(id)}<span class="raw">${esc(n)}</span>` : esc(id); };
 
-// 2.2 Akun default per kategori periode (Service Layer PeriodCategory). Field yang namanya tidak jelas sengaja tidak diambil.
-const GL_DEFAULTS = [
-  { group: "Sales" },
-  ["Domestic Accounts Receivable", "DebitorsFollowUpAccount"], ["Foreign Accounts Receivable", "ForeignAccountsReceivables"],
-  ["Revenue Account", "DefaultSaleAccount"], ["Sales Credit Account", "SalesCreditAcc"],
-  ["Down Payment Clearing Account", "DownPaymentSClearingAcct"], ["Overpayment A/R Account", "OverpaymentsARAccount"],
-  ["Underpayment A/R Account", "UnderpaymentsARAccount"], ["Realized Exchange Diff. Gain", "ARGainRealizedExchngeDif"],
-  ["Realized Exchange Diff. Loss", "ARLossRealizedExchangeDi"],
-  { group: "Purchasing" },
-  ["Domestic Accounts Payable", "CreditorsFollowUpAccount"], ["Allocation Account (GRPO clearing)", "AllocationAcc"],
-  ["Goods Clearing Account", "GoodsClearingAcc"], ["Expense Clearing Account", "ExpenseClearingAccount"],
-  ["Price Difference Account", "PriceDifferenceAccount"], ["Expense Variance Account", "ExpenseVarianceAccount"],
-  ["Down Payment Clearing Account", "DownPaymentPClearingAcct"], ["Overpayment A/P Account", "OverpaymentsAPAccount"],
-  ["Underpayment A/P Account", "UnderpaymentsAPAccount"], ["Realized Exchange Diff. Gain", "APGainRealizedExchngeDif"],
-  ["Realized Exchange Diff. Loss", "APLossRealizedExchangeDif"],
-  { group: "Inventory (default, dipakai kalau item group / warehouse tidak mengisi)" },
-  ["Inventory Account", "StockAccount"], ["Cost of Goods Sold", "CostOfGoodsSold"], ["Sales Returns Account", "SalesReturns"], ["Inventory Offset - Increase", "InventoryOffsetIncrease"],
-  ["Inventory Offset - Decrease", "InventoryOffsetDecrease"], ["Increase G/L Account", "IncreaseGLAccount"], ["Decrease G/L Account", "DecreaseGLAcc"],
-  ["WIP Inventory Account", "WIPMaterialAccount"], ["WIP Inventory Variance Account", "WIPMaterialVarianceAccount"],
-  { group: "General" },
-  ["Rounding Account", "RoundingAccount"], ["Exchange Rate Differences", "ExchangeRateDifferencesAcct"],
-  ["Period-End Closing Account", "EOYControlAccount"]
-];
+// 2.2 Akun default per kategori periode (Service Layer PeriodCategory), dikelompokkan sesuai tab layar G/L Account Determination.
+// Field yang namanya tidak jelas sengaja tidak diambil.
+const GL_TABS = {
+  Sales: [
+    ["Domestic Accounts Receivable", "DebitorsFollowUpAccount"], ["Foreign Accounts Receivable", "ForeignAccountsReceivables"],
+    ["Revenue Account", "DefaultSaleAccount"], ["Sales Credit Account", "SalesCreditAcc"],
+    ["Down Payment Clearing Account", "DownPaymentSClearingAcct"], ["Overpayment A/R Account", "OverpaymentsARAccount"],
+    ["Underpayment A/R Account", "UnderpaymentsARAccount"], ["Realized Exchange Diff. Gain", "ARGainRealizedExchngeDif"],
+    ["Realized Exchange Diff. Loss", "ARLossRealizedExchangeDi"]],
+  Purchasing: [
+    ["Domestic Accounts Payable", "CreditorsFollowUpAccount"], ["Allocation Account (GRPO clearing)", "AllocationAcc"],
+    ["Goods Clearing Account", "GoodsClearingAcc"], ["Expense Clearing Account", "ExpenseClearingAccount"],
+    ["Price Difference Account", "PriceDifferenceAccount"], ["Expense Variance Account", "ExpenseVarianceAccount"],
+    ["Down Payment Clearing Account", "DownPaymentPClearingAcct"], ["Overpayment A/P Account", "OverpaymentsAPAccount"],
+    ["Underpayment A/P Account", "UnderpaymentsAPAccount"], ["Realized Exchange Diff. Gain", "APGainRealizedExchngeDif"],
+    ["Realized Exchange Diff. Loss", "APLossRealizedExchangeDif"]],
+  General: [
+    ["Rounding Account", "RoundingAccount"], ["Exchange Rate Differences", "ExchangeRateDifferencesAcct"],
+    ["Period-End Closing Account", "EOYControlAccount"]],
+  Inventory: [
+    ["Inventory Account", "StockAccount"], ["Cost of Goods Sold", "CostOfGoodsSold"], ["Sales Returns Account", "SalesReturns"],
+    ["Inventory Offset - Increase", "InventoryOffsetIncrease"], ["Inventory Offset - Decrease", "InventoryOffsetDecrease"],
+    ["Increase G/L Account", "IncreaseGLAccount"], ["Decrease G/L Account", "DecreaseGLAcc"],
+    ["WIP Inventory Account", "WIPMaterialAccount"], ["WIP Inventory Variance Account", "WIPMaterialVarianceAccount"]]
+};
 // Akun persediaan per warehouse (OWHS) / item group (OITB), urutan sesuai tab Accounting di master-nya.
 const WHS_ACCTS = [["BalInvntAc", "Inventory"], ["SaleCostAc", "COGS"], ["TransferAc", "Allocation"], ["VarianceAc", "Variance"],
   ["PriceDifAc", "Price Diff."], ["DecreasAc", "Decrease"], ["IncreasAc", "Increase"], ["ReturnAc", "Returns"],
@@ -126,6 +128,155 @@ function udfObjects(fields) {
   }).sort((a, b) => UDF_CATS.indexOf(a.cat) - UDF_CATS.indexOf(b.cat) || a.name.localeCompare(b.name));
 }
 
+// ---------- tampilan master data: daftar kiri + detail kanan (dipakai BP & Item) ----------
+// o.item(r): isi baris daftar · o.text(r): teks yang dicari · o.detail(r): isi panel kanan · o.dim(r): baris redup (inactive)
+// o.chips: [{ label, test, title }] (chip pertama = semua) · o.select: { label, options: [[nilai, teks]], key(r) }
+// o.checks: [{ label, test }] (dicentang = hanya baris yang lolos test) · o.noun: kata benda untuk hitungan
+function listDetail(id, rows, o) {
+  const items = rows.map((r, i) => `<button type="button" class="md-item${o.dim && o.dim(r) ? " off" : ""}" data-i="${i}">${o.item(r)}</button>`).join("");
+  const chips = o.chips || [], checks = o.checks || [];
+  onMount(() => {
+    const box = $(`#${id}`); if (!box) return;
+    const pane = $(".md-pane", box), all = $$(".md-item", box), q = $("input[type=search]", box), cnt = $(".md-count", box);
+    const sel = $("select", box), boxes = $$("[data-chk]", box), text = rows.map(r => o.text(r).toLowerCase());
+    let chip = chips[0];
+    const show = el => { all.forEach(x => x.classList.toggle("on", x === el)); pane.innerHTML = o.detail(rows[+el.dataset.i]); };
+    const apply = () => {
+      const t = q.value.toLowerCase().trim(), sv = sel ? sel.value : "";
+      let n = 0, first = null;
+      all.forEach((x, i) => {
+        const r = rows[i];
+        const ok = text[i].includes(t) && (!chip || !chip.test || chip.test(r)) && (!sv || String(o.select.key(r)) === sv)
+          && boxes.every((b, j) => !b.checked || checks[j].test(r));
+        x.hidden = !ok; if (ok) { n++; first = first || x; }
+      });
+      cnt.textContent = `${n.toLocaleString("id-ID")} dari ${all.length.toLocaleString("id-ID")} ${o.noun}`;
+      const cur = all.find(x => x.classList.contains("on"));
+      if (!first) pane.innerHTML = `<p class="md-blank">Tidak ada ${o.noun} yang cocok dengan filter.</p>`;
+      else if (!cur || cur.hidden) show(first);
+    };
+    $$(".chip", box).forEach((c, i) => c.onclick = () => { chip = chips[i]; $$(".chip", box).forEach(x => x.setAttribute("aria-pressed", x === c)); apply(); });
+    $(".md-list", box).onclick = e => { const el = e.target.closest(".md-item"); if (el) show(el); };
+    q.oninput = apply; if (sel) sel.onchange = apply; boxes.forEach(b => b.onchange = apply);
+    apply();
+  });
+  return `<div class="md-view" id="${id}">
+    ${chips.length ? `<div class="chips">${chips.map((c, i) => `<button type="button" class="chip" aria-pressed="${!i}"${c.title ? ` title="${esc(c.title)}"` : ""}>${esc(c.label)}<b>${rows.filter(r => !c.test || c.test(r)).length.toLocaleString("id-ID")}</b></button>`).join("")}</div>` : ""}
+    <div class="toolbar"><input type="search" placeholder="${esc(o.placeholder || "Cari…")}" aria-label="Cari ${esc(o.noun)}">
+      ${o.select ? `<select aria-label="${esc(o.select.label)}"><option value="">Semua ${esc(o.select.label.toLowerCase())}</option>${o.select.options.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("")}</select>` : ""}
+      ${checks.map((c, j) => `<label><input type="checkbox" data-chk="${j}"> ${esc(c.label)}</label>`).join("")}
+      <span class="md-count muted"></span></div>
+    <div class="md-split"><div class="md-list" aria-label="Daftar ${esc(o.noun)}">${items}</div><div class="md-pane" aria-live="polite"></div></div>
+  </div>`;
+}
+// Field terisi tampil sebagai daftar ke bawah; yang kosong dikumpulkan jadi satu baris supaya tidak penuh "belum diisi".
+// pairs: [label, nilai mentah, fmt opsional]
+function fieldList(pairs) {
+  const filled = pairs.filter(([, v]) => !isEmpty(v)), blank = pairs.filter(([, v]) => isEmpty(v)).map(([l]) => l);
+  return (filled.length ? kv(filled.map(([l, v, f]) => [l, f ? f(v) : esc(v)])) : "")
+    + (blank.length ? `<p class="md-blank">Belum diisi: ${blank.map(esc).join(", ")}</p>` : "");
+}
+// kepala panel detail: judul + badge, baris info, lalu isi tambahan
+const mdHead = (title, badges, meta) => `<div class="md-head"><h3>${esc(title)}</h3>${badges.join("")}</div>
+  <div class="md-meta">${meta.filter(Boolean).join(" · ")}</div>`;
+
+// ---------- Business Partner ----------
+const BP_BIZ = { C: "Company", I: "Private", G: "Government", E: "Employee" };
+const ADDR_TYPE = { B: "Bill To", S: "Ship To" };
+const money = v => esc((+v).toLocaleString("id-ID"));
+const dash = v => isEmpty(v) ? `<span class="muted">–</span>` : esc(v);
+const acctPair = (code, name) => `<span class="acct">${esc(code)}<small>${esc(name || "akun tidak ditemukan")}</small></span>`;
+const bpNoBranch = b => b.frozenFor !== "Y" && isEmpty(b.Branches);
+// ctx: { contacts, addresses (Map CardCode -> baris), udf (metadata UDF OCRD), branches (semua nama branch) }
+function bpDetail(b, ctx) {
+  const cp = ctx.contacts.get(b.CardCode) || [], ad = ctx.addresses.get(b.CardCode) || [];
+  const assigned = new Set(String(b.Branches || "").split("|").filter(Boolean));
+  const head = mdHead(b.CardName, [`<span class="badge info">${esc(BP_CARD[b.CardType] || b.CardType)}</span>`,
+      b.frozenFor === "Y" ? `<span class="badge">Inactive</span>` : `<span class="badge yes">Active</span>`],
+    [esc(b.CardCode), esc(b.GroupName || "–"), b.Currency === "##" ? "All Currencies" : esc(b.Currency || ""),
+      b.LicTradNum ? `NPWP ${esc(b.LicTradNum)}` : "", b.CardFName && b.CardFName !== b.CardName ? `Foreign name: ${esc(b.CardFName)}` : ""])
+    + `<div class="md-label">Branch Assignment</div>
+    <div class="bp-branches">${ctx.branches.map(br => assigned.has(br)
+      ? `<span class="bp-br y"><b>✓</b>${esc(br)}</span>` : `<span class="bp-br n"><b>–</b>${esc(br)}</span>`).join("")}
+      ${assigned.size ? "" : `<span class="badge warn">Belum di-assign ke branch, BP tidak bisa dipakai di dokumen</span>`}</div>`;
+  const list = [
+    ["General", fieldList([["Tel 1", b.Phone1], ["Tel 2", b.Phone2], ["Mobile Phone", b.Cellular], ["Fax", b.Fax], ["E-Mail", b.E_Mail],
+      ["Web Site", b.IntrntSite], ["Shipping Type", b.ShipType], ["Type of Business", BP_BIZ[b.CmpPrivate] || b.CmpPrivate],
+      ["Contact Person", b.CntctPrsn], ["Sales Employee", /^-No .*-$/.test(b.SlpName || "") ? null : b.SlpName], ["Alias Name", b.AliasName], ["Remarks", b.Free_Text]])],
+    [`Contact Persons · ${cp.length}`, cp.length ? table([{ key: "Name", label: "Contact ID" }, { key: "Position", label: "Position", fmt: dash },
+      { key: "Tel1", label: "Tel 1", fmt: dash }, { key: "Cellolar", label: "Mobile", fmt: dash }, { key: "E_MailL", label: "E-Mail", fmt: dash },
+      { key: "Active", label: "Active", fmt: badgeYN }], cp, { noExport: 1 }) : `<p class="md-blank">Belum ada contact person.</p>`],
+    [`Addresses · ${ad.length}`, ad.length ? `<div class="bp-addr">${ad.map(a => `<div><div class="bp-addr-h"><b>${esc(a.Address)}</b>
+        <span class="badge ${a.AdresType === "B" ? "info" : ""}">${esc(ADDR_TYPE[a.AdresType] || a.AdresType)}</span></div>
+        <div>${[a.Street, a.Block].filter(Boolean).map(esc).join(", ") || `<span class="muted">jalan belum diisi</span>`}</div>
+        <div class="muted">${[a.City, a.County, a.State, a.ZipCode, a.Country].filter(Boolean).map(esc).join(" · ")}</div></div>`).join("")}</div>`
+      : `<p class="md-blank">Belum ada alamat.</p>`],
+    ["Payment Terms", fieldList([["Payment Terms", b.PymntGroup], ["Price List", b.PriceList],
+      ["Total Discount %", +b.Discount ? b.Discount : null, money], ["Credit Limit", +b.CreditLine ? b.CreditLine : null, money],
+      ["Commitment Limit", +b.DebtLine ? b.DebtLine : null, money]])],
+    ["Payment Run", fieldList([["House Bank", b.HouseBank], ["House Bank Account", b.HousBnkAct], ["Default Payment Method", b.PymCode],
+      ["Payment Methods", b.PymMethods, v => tags(v)]])],
+    ["Accounting", fieldList([[b.CardType === "S" ? "Accounts Payable" : "Accounts Receivable", b.DebPayAcct, v => acctPair(v, b.DebPayName)],
+      ["Down Payment Clearing Account", b.DpmClear, v => acctPair(v, b.DpmClearName)]])],
+    ...(ctx.udf.length ? [["UDF", fieldList(ctx.udf.map(u => [u.label, b[u.col] === "-" ? null : b[u.col]]))]] : [])
+  ];
+  return head + tabs("bp-detail", list);
+}
+// satu tab Customer / Vendor
+function bpView(t, name, list, groups, ctx) {
+  const grps = groups.filter(g => g.GroupType === t), noBr = list.filter(bpNoBranch).length;
+  return kpis([[list.length, name + (t === "C" ? " & lead" : "")], [grps.length, "Group"], [list.filter(b => b.frozenFor === "Y").length, "Inactive"],
+      [noBr, "Aktif tanpa branch"]])
+    + listDetail(`bpv-${t}`, list, {
+      noun: name.toLowerCase(), placeholder: "Cari kode / nama / NPWP / telepon…",
+      chips: [{ label: "Semua group" }, ...grps.map(g => ({ label: g.GroupName, test: b => b.GroupCode === g.GroupCode,
+        title: `Kode ${g.GroupCode} · Price list: ${g.PriceListName || "–"}${g.Locked === "Y" ? " · dikunci" : ""}` }))],
+      checks: [{ label: `Hanya tanpa branch${noBr ? ` (${noBr})` : ""}`, test: bpNoBranch }, { label: "Sembunyikan inactive", test: b => b.frozenFor !== "Y" }],
+      dim: b => b.frozenFor === "Y",
+      text: b => [b.CardCode, b.CardName, b.CardFName, b.GroupName, b.LicTradNum, b.Phone1].filter(Boolean).join(" "),
+      item: b => `<span class="md-name">${esc(b.CardName)}</span>
+        <span class="md-sub">${esc(b.CardCode)}${b.CardType === "L" ? " · Lead" : ""} · ${esc(b.GroupName || "–")}</span>
+        <span class="md-flags">${bpNoBranch(b) ? `<span class="badge warn">Tanpa branch</span>` : ""}${b.frozenFor === "Y" ? `<span class="badge">Inactive</span>` : ""}</span>`,
+      detail: b => bpDetail(b, ctx)
+    });
+}
+
+// ---------- Item Master Data ----------
+// Baris item memakai alias kolom query items/01_items.sql. Angka 0 (dimensi, berat) dianggap kosong.
+const nz = v => isEmpty(v) || !+v ? null : v;
+const qty = v => esc((+v).toLocaleString("id-ID", { maximumFractionDigits: 6 }));
+const yn = v => v === "Y" ? "Ya" : v === "N" ? "Tidak" : v;
+function itemDetail(r, udf) {
+  const flag = (c, l) => r[c] === "Y" ? `<span class="badge info">${l}</span>` : "";
+  const statusBadge = r.Status === "Active" ? `<span class="badge yes">Active</span>` : `<span class="badge">${esc(r.Status)}</span>`;
+  const head = mdHead(r.Description, [statusBadge, flag("Inventory Item", "Inventory"), flag("Sales Item", "Sales"), flag("Purchasing Item", "Purchasing")],
+    [esc(r["Item No."]), esc(r["Item Group"] || "–"), r["Item Type"] !== "Items" ? esc(r["Item Type"]) : "",
+      `UoM Group ${esc(r["UoM Group"] || "–")}`, r["Foreign Name"] ? `Foreign name: ${esc(r["Foreign Name"])}` : ""]);
+  // dimensi kemasan: tampil satu baris "P × L × T" kalau ada yang terisi
+  const dims = p => { const v = ["Length", "Width", "Height"].map(k => +r[`${p} ${k}`] || 0); return v.some(Boolean) ? v.map(x => x.toLocaleString("id-ID")).join(" × ") : null; };
+  const unitData = (p, pre) => [
+    [`${pre} UoM`, r[`${p === "Purch." ? "Purchasing" : "Sales"} UoM Name`]],
+    [`Items per ${pre} Unit`, nz(r[`Items per ${p === "Purch." ? "Purchasing" : "Sales"} Unit`]), qty],
+    [`Packaging UoM`, r[`${p === "Purch." ? "Purch." : "Sales"} Packaging UoM Name`]],
+    [`Qty per Package`, nz(r[`${p} Qty per Package`]), qty],
+    ["Length × Width × Height", dims(p)],
+    ["Volume", nz(r[`${p} Volume`]), v => `${qty(v)} ${esc(r[`${p} Volume Unit`] || "")}`],
+    ["Weight", nz(r[`${p} Weight`]), qty]];
+  const list = [
+    ["General", fieldList([["Withholding Tax Liable", yn(r["Withholding Tax Liable"])], ["Manage Item by", r["Manage Item by"]],
+      ["Management Method", r["Manage Item by"] === "None" ? null : r["Management Method"]], ["Status", r.Status],
+      ["Status From", r["Status From"]], ["Status To", r["Status To"]], ["Status Remarks", r["Status Remarks"]]])],
+    ["Purchasing Data", fieldList([...unitData("Purch.", "Purchasing"), ["Customs Group", r["Customs Group"]], ["Tax Group", r["Purchase Tax Group"]]])],
+    ["Sales Data", fieldList([...unitData("Sales", "Sales"), ["Tax Group", r["Sales Tax Group"]]])],
+    ["Inventory Data", fieldList([["Set G/L Accounts By", r["Set G/L Accounts By"]], ["Inventory UoM", r["Inventory UoM Name"]],
+      ["Weight", nz(r["Inventory Weight"]), qty], ["Valuation Method", r["Valuation Method"]], ["Manage Inventory by Warehouse", yn(r["Manage Inventory by Whse"])]])],
+    ["Planning Data", fieldList([["Planning Method", r["Planning Method"]], ["Procurement Method", r["Procurement Method"]]])],
+    ["Production Data", fieldList([["Phantom Item", yn(r["Phantom Item"])], ["Issue Method", r["Issue Method"]]])],
+    ...(udf.length ? [["UDF", fieldList(udf.map(u => [u.label, r[u.col] === "-" ? null : r[u.col]]))]] : [])
+  ];
+  return head + tabs("item-detail", list);
+}
+
 export const PAGES = {
   // ================= 2. Keuangan =================
   "coa": {
@@ -161,62 +312,62 @@ export const PAGES = {
 
   "gl-determination": {
     sl: "period-category", withSql: true,
-    lead: "Akun G/L yang otomatis dipakai SAP saat transaksi diposting. Ini yang menentukan jurnal dari setiap dokumen.",
-    menu: "Administration › Setup › Financials › G/L Account Determination · Item Groups / Warehouses (tab Accounting)",
-    tables: ["Service Layer: PeriodCategory", "OADM", "OITB", "OWHS", "OACT"],
+    lead: "Akun G/L yang otomatis dipakai SAP saat transaksi diposting, termasuk account determination aset tetap. Ini yang menentukan jurnal dari setiap dokumen.",
+    menu: "Administration › Setup › Financials › G/L Account Determination · Fixed Assets › Account Determination",
+    tables: ["Service Layer: PeriodCategory", "OADM", "OADT", "OACS", "OACT"],
     checks(d) {
-      // hanya master yang dipakai sesuai Set Inventory Method By yang dicek
-      if (glMethod(d) === "C") {
-        const noInv = rowsOf(d.item_groups).filter(g => isEmpty(g.BalInvntAc)).map(g => g.ItmsGrpNam);
-        return noInv.length ? [["warn", `Item group tanpa Inventory Account: ${noInv.join(", ")}.`]] : [];
-      }
-      if (glMethod(d) !== "W") return [];
-      const whs = rowsOf(d.warehouses).filter(w => w.Inactive !== "Y");
-      const noInv = whs.filter(w => isEmpty(w.BalInvntAc)).map(w => w.WhsCode);
-      return noInv.length ? [["warn", `Warehouse aktif tanpa Inventory Account: ${noInv.join(", ")}.`]] : [];
+      const out = [];
+      // akun persediaan per item group / warehouse dicek di halaman Item Group / Warehouse
+      const used = new Set(rowsOf(d.fa_classes).map(c => c.AcctDtn).filter(Boolean));
+      const unused = rowsOf(d.fa_determination).filter(x => !used.has(x.Code) && !isEmpty(x.BalanceAct)).map(x => x.Code);
+      if (unused.length) out.push(["info", `Account determination aset tetap yang sudah berisi akun tapi belum dipakai asset class mana pun: ${unused.join(", ")}.`]);
+      return out;
     },
     render(d) {
-      const names = acctNames(d), p = one(d.sl);
-      const rows = GL_DEFAULTS.map(r => Array.isArray(r)
-        ? { label: r[0], col: `PeriodCategory.${r[1]}`, sub: 1, fmt: x => acctLabel(names, x[r[1]]) } : r);
+      const names = acctNames(d), p = one(d.sl), acct = acctCell(names);
+      const glSettings = tab => settings(GL_TABS[tab].map(([label, f]) => ({ label, col: `PeriodCategory.${f}`, fmt: x => acctLabel(names, x[f]) })),
+        p, `gl-${tab.toLowerCase()}`, { emptyText: "None" });
       const method = glMethod(d), methodTxt = `Setting <b>Set Inventory Method By = ${esc(GL_METHOD[method] || method || "?")}</b> (1.2 General Settings)`;
-      const acct = acctCell(names);
       let inv;
       if (method === "C") {
-        const grps = rowsOf(d.item_groups);
-        inv = section("item-groups", "Akun Persediaan per Item Group", `
-          <p class="sec-lead">${methodTxt}, jadi akun persediaan diambil dari master item group (tab Accounting).
-            ${grps.length} item group.</p>
-          ${searchable("ig-acct", [{ key: "ItmsGrpCod", label: "Kode", num: 1 }, { key: "ItmsGrpNam", label: "Item Group" },
-            ...WHS_ACCTS.map(([c, label]) => ({ key: c, label, fmt: acct }))], grps)}`, { no: "2.2.2" });
+        inv = section("item-groups", "Akun Persediaan per Item Group", `<p class="sec-lead">${methodTxt}, jadi akun persediaan diambil dari master item group (tab Accounting).
+          Daftar akunnya ada di halaman <a href="#/item-groups">Item Group</a> (klik baris item group).</p>`, { level: 3 });
       } else if (method === "W") {
-        // Pola akun yang sama dipakai banyak warehouse: tampilkan per pola supaya ringkas.
-        const whs = rowsOf(d.warehouses), patterns = new Map();
-        whs.forEach(w => { const k = WHS_ACCTS.map(([c]) => w[c] || "").join("|"); (patterns.get(k) || patterns.set(k, []).get(k)).push(w); });
-        const pats = [...patterns.values()].sort((a, b) => b.length - a.length);
-        inv = section("warehouses", "Akun Persediaan per Warehouse", `
-          <p class="sec-lead">${methodTxt}, jadi akun persediaan diambil dari master warehouse.
-            ${whs.length} warehouse memakai ${pats.length} pola akun berbeda.</p>
-          ${pats.map((list, i) => section(`pola-${i + 1}`, `Pola ${i + 1} · ${list.length} warehouse`,
-            `<p class="sec-lead">${list.map(w => esc(w.WhsCode)).join(", ")}</p>`
-            + kv(WHS_ACCTS.map(([c, label]) => [label, val(acctLabel(names, list[0][c]))])), { level: 3 })).join("")}`,
-          { no: "2.2.2" });
+        inv = section("warehouses", "Akun Persediaan per Warehouse", `<p class="sec-lead">${methodTxt}, jadi akun persediaan diambil dari master warehouse (tab Accounting).
+          Daftar akunnya ada di halaman <a href="#/warehouses">Warehouse</a> (klik baris warehouse).</p>`, { level: 3 });
       } else {
-        inv = section("item-level", "Akun Persediaan per Item", `<p class="sec-lead">${methodTxt}, jadi akun persediaan diatur di master data setiap item.</p>`, { no: "2.2.2" });
+        inv = section("item-level", "Akun Persediaan per Item", `<p class="sec-lead">${methodTxt}, jadi akun persediaan diatur di master data setiap item.</p>`, { level: 3 });
       }
-      return section("defaults", `Akun Default · Periode ${esc(p.PeriodCategory || "")}`, settings(rows, p, "gl", { emptyText: "None" }),
-          { no: "2.2.1", lead: "Dibaca lewat Service Layer dari posting period tahun berjalan. Setiap tahun periode menyimpan salinan akun ini sendiri." })
-        + inv;
+
+      // tab Fixed Assets: account determination aset tetap + asset class yang memakainya
+      const classes = rowsOf(d.fa_classes);
+      const lacking = x => classes.some(c => c.AcctDtn === x.Code
+        && (c.DprMeth === "NO" ? FA_REQUIRED.slice(0, 1) : FA_REQUIRED).some(([k]) => isEmpty(x[k])));
+      const dtn = rowsOf(d.fa_determination).map(x => ({ ...x,
+        UsedBy: [...new Set(classes.filter(c => c.AcctDtn === x.Code).map(c => c.Name))].join("|") || null }));
+      const fa = section("fa-determination", "Account Determination Aset Tetap", table([{ key: "Code", label: "Kode" }, { key: "Descr", label: "Deskripsi" },
+          { key: "UsedBy", label: "Dipakai asset class", fmt: v => tags(v, { none: "Belum dipakai" }) },
+          ...FA_ACCTS.map(([k, label]) => ({ key: k, label, fmt: acct })), ...udfCols(d.fa_determination)], dtn, { flag: lacking }),
+        { level: 3, lead: `Administration › Setup › Fixed Assets › Account Determination. Asset class memakainya lewat kolom Account Determination di <a href="#/fixed-asset">Fixed Asset</a>. `
+          + "Baris kuning = dipakai asset class tapi akun utamanya belum diisi." });
+
+      return section("defaults", `G/L Account Determination · Periode ${esc(p.PeriodCategory || "")}`, tabs("gl-det", [
+          ["Sales", glSettings("Sales")],
+          ["Purchasing", glSettings("Purchasing")],
+          ["General", glSettings("General")],
+          ["Inventory", glSettings("Inventory") + inv],
+          ["Fixed Assets", fa]
+        ]), { no: "2.2.1", lead: "Dibaca lewat Service Layer dari posting period tahun berjalan. Setiap tahun periode menyimpan salinan akun ini sendiri. "
+          + "Akun persediaan per item group / warehouse ada di halaman master-nya masing-masing, lihat tab Inventory." });
     }
   },
 
   "fixed-asset": {
-    lead: "Kelas aset tetap, tipe penyusutan, dan account determination (akun G/L) yang dipakai saat membuat master aset.",
-    menu: "Administration › Setup › Fixed Assets › Asset Classes · Depreciation Types · Account Determination",
-    tables: ["OACS", "ACS1", "ODTP", "OADT", "OACT"],
+    lead: "Kelas aset tetap dan master data aset. Akun G/L aset tetap (account determination) ada di <a href=\"#/gl-determination\">G/L Account Determination</a>, tab Fixed Assets.",
+    menu: "Administration › Setup › Fixed Assets › Asset Classes",
+    tables: ["OACS", "ACS1", "ODTP", "OADT"],
     checks(d) {
       const classes = rowsOf(d.classes), dtn = Object.fromEntries(rowsOf(d.determination).map(x => [x.Code, x])), out = [];
-      const used = new Set(classes.map(c => c.AcctDtn).filter(Boolean));
       // depreciation type tanpa penyusutan (mis. Tanah) tidak butuh akun penyusutan
       const noDepr = new Set(rowsOf(d.dep_types).filter(t => t.DprMeth === "NO").map(t => t.Code));
       [...new Set(classes.map(c => c.Code))].forEach(code => {
@@ -230,33 +381,21 @@ export const PAGES = {
             out.push(["warn", `Asset class ${name}, ${a.DprAreaID}: account determination ${a.AcctDtn} belum lengkap akun G/L-nya (${missing.join(", ")}).`]);
         });
       });
-      const unused = rowsOf(d.determination).filter(x => !used.has(x.Code) && !isEmpty(x.BalanceAct)).map(x => x.Code);
-      if (unused.length) out.push(["info", `Account determination yang sudah berisi akun tapi belum dipakai asset class mana pun: ${unused.join(", ")}.`]);
       return out;
     },
     render(d) {
-      const names = acctNames(d), classes = rowsOf(d.classes);
-      const noDepr = new Set(rowsOf(d.dep_types).filter(t => t.DprMeth === "NO").map(t => t.Code));
-      // baris kuning: dipakai asset class yang butuh akun ini tapi akunnya kosong (No Depreciation cukup Asset Balance Sheet)
-      const lacking = x => classes.some(c => c.AcctDtn === x.Code
-        && (noDepr.has(c.DprTypID) ? FA_REQUIRED.slice(0, 1) : FA_REQUIRED).some(([k]) => isEmpty(x[k])));
-      const dtn = rowsOf(d.determination).map(x => ({ ...x,
-        UsedBy: [...new Set(classes.filter(c => c.AcctDtn === x.Code).map(c => c.Name))].join("|") || null }));
+      const types = Object.fromEntries(rowsOf(d.dep_types).map(t => [t.Code, t]));
+      const deprType = v => { const t = types[v]; return t ? `${esc(v)}<span class="raw">${esc(DPR_METH[t.DprMeth] || t.DprMeth)}</span>` : val(v); };
       return section("classes", "Asset Class", table([{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
           { key: "BPLName", label: "Branch" },
           { key: "AssetType", label: "Asset Type", fmt: codedCell(ASSET_TYPE) }, { key: "DprAreaID", label: "Depreciation Area" },
-          { key: "AcctDtn", label: "Account Determination" }, { key: "DprTypID", label: "Depreciation Type" },
+          { key: "AcctDtn", label: "Account Determination", fmt: v => isEmpty(v) ? val(v) : `<a href="#/gl-determination">${esc(v)}</a>` },
+          { key: "DprTypID", label: "Depreciation Type", fmt: deprType },
           { key: "UseLife", label: "Masa manfaat (bulan)", num: 1 }, { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.classes)], rowsOf(d.classes)),
-          { no: "2.3.1", lead: "Satu kelas bisa punya beberapa depreciation area (mis. komersial dan fiskal). Setiap kelas terikat ke satu branch: prefix T- = CV-TRADING, K- = CV-KOMERSIAL." })
-        + section("dep-types", "Depreciation Type", table([{ key: "Code", label: "Kode" }, { key: "Descr", label: "Deskripsi" },
-          { key: "DprMeth", label: "Metode", fmt: codedCell(DPR_METH) }, { key: "PerAcq", label: "Periode akuisisi" },
-          { key: "PerRet", label: "Periode retirement" }], rowsOf(d.dep_types)), { no: "2.3.2" })
-        + section("determination", "Account Determination", table([{ key: "Code", label: "Kode" }, { key: "Descr", label: "Deskripsi" },
-          { key: "UsedBy", label: "Dipakai asset class", fmt: v => tags(v, { none: "Belum dipakai" }) },
-          ...FA_ACCTS.map(([k, label]) => ({ key: k, label, fmt: acctCell(names) })), ...udfCols(d.determination)], dtn,
-          { flag: lacking }),
-          { no: "2.3.3", lead: "Akun G/L untuk transaksi aset tetap. Asset class memakainya lewat kolom Account Determination di 2.3.1. "
-            + "Baris kuning = dipakai asset class tapi akun utamanya belum diisi." });
+          { no: "2.13.1", lead: "Satu kelas bisa punya beberapa depreciation area (mis. komersial dan fiskal). Setiap kelas terikat ke satu branch: prefix T- = CV-TRADING, K- = CV-KOMERSIAL. "
+            + "Kolom Depreciation Type ikut menampilkan metode penyusutannya." })
+        + section("assets", "Fixed Asset Master Data", `<div class="placeholder"><p style="margin:0;font-weight:600;color:var(--text)">Belum dikerjakan</p>
+            <p style="margin:4px 0 0">Daftar master aset tetap (item tipe Fixed Asset) per asset class akan ditampilkan di sini.</p></div>`, { no: "2.13.2" });
     }
   },
 
@@ -264,57 +403,131 @@ export const PAGES = {
   "item-groups": {
     lead: "Pengelompokan item. Menentukan metode valuasi, perencanaan (MRP), dan cara pengadaan default item baru.",
     menu: "Administration › Setup › Inventory › Item Groups",
-    tables: ["OITB", "OITM"],
-    render: d => section("groups", "Daftar Item Group", table([{ key: "ItmsGrpCod", label: "Kode", num: 1 }, { key: "ItmsGrpNam", label: "Nama" },
-      { key: "InvntSys", label: "Valuation Method", fmt: codedCell(VALUATION) }, { key: "PlaningSys", label: "Planning", fmt: codedCell(PLANNING) },
-      { key: "PrcrmntMtd", label: "Procurement", fmt: codedCell(PROCURE) }, { key: "ItemCount", label: "Jumlah item", num: 1 }, ...udfCols(d.groups)], rowsOf(d.groups)),
-      { lead: rowsOf(d.groups)[0]?.GLMethod === "C"
-          ? "Set Inventory Method By = Item Group, jadi akun persediaan diambil dari item group. Daftar akunnya di <a href=\"#/gl-determination/item-groups\">2.2.2</a>."
-          : `Akun persediaan tidak diambil dari item group, karena Set Inventory Method By = ${esc(GL_METHOD[rowsOf(d.groups)[0]?.GLMethod] || "?")} (lihat <a href="#/gl-determination">2.2</a>).` })
-  },
-
-  "items": {
-    lead: "Daftar item dengan semua field Item Master Data, termasuk semua UDF (kolom UDF otomatis mengikuti CUFD; valid values tampil \"kode - deskripsi\"). Geser tabel ke samping untuk melihat semua kolom.",
-    menu: "Inventory › Item Master Data",
-    tables: ["OITM", "OITB", "OUGP", "OARG", "OVTG", "OLGT", "CUFD", "UFD1"],
+    tables: ["OITB", "OITM", "OACT"],
+    checks(d) {
+      const grps = rowsOf(d.groups);
+      if (grps[0]?.GLMethod !== "C") return [];
+      const noInv = grps.filter(g => isEmpty(g.BalInvntAc)).map(g => g.ItmsGrpNam);
+      return noInv.length ? [["warn", `Item group tanpa Inventory Account: ${noInv.join(", ")}.`]] : [];
+    },
     render(d) {
-      // list view mengikuti query items/01_items.sql apa adanya (judul kolom = alias di query)
-      const items = rowsOf(d.items), yes = c => items.filter(i => i[c] === "Y").length;
-      return kpis([[items.length, "Total item"], [yes("Inventory Item"), "Inventory item"], [yes("Sales Item"), "Sales item"],
-          [yes("Purchasing Item"), "Purchase item"], [(d.items && d.items.udf || []).length, "UDF item"]])
-        + section("list", "Daftar Item", searchable("item-t", autoCols(d.items), items,
-          { filterKey: "Item Group", filterLabel: "item group", limit: 500 }));
+      const grps = rowsOf(d.groups), method = grps[0]?.GLMethod, names = acctNames(d), acct = acctCell(names);
+      // satu list: klik baris item group untuk melihat akun tab Accounting-nya (seperti layar SAP)
+      const detail = g => table([{ key: "label", label: "Jenis Akun" }, { key: "code", label: "Kode Akun", fmt: val },
+          { key: "name", label: "Nama Akun", fmt: v => esc(v ?? "") }],
+        WHS_ACCTS.map(([c, label]) => ({ label, code: g[c], name: isEmpty(g[c]) ? null : names[g[c]] || "akun tidak ditemukan" })), { noExport: 1 });
+      const filled = g => WHS_ACCTS.filter(([c]) => !isEmpty(g[c])).length;
+      const noInv = g => method === "C" && isEmpty(g.BalInvntAc);
+      const base = [{ key: "ItmsGrpCod", label: "Kode", num: 1 }, { key: "ItmsGrpNam", label: "Nama" },
+        { key: "InvntSys", label: "Valuation Method", fmt: codedCell(VALUATION) }, { key: "PlaningSys", label: "Planning", fmt: codedCell(PLANNING) },
+        { key: "PrcrmntMtd", label: "Procurement", fmt: codedCell(PROCURE) }];
+      const cols = [...base,
+        { key: "BalInvntAc", label: "Inventory Account", fmt: (v, g) => noInv(g) ? `<span class="badge warn">kosong</span>` : val(v) },
+        { key: "Accts", label: "Akun terisi", fmt: (v, g) => `${filled(g)}/${WHS_ACCTS.length}` },
+        { key: "ItemCount", label: "Jumlah item", num: 1 }, ...udfCols(d.groups)];
+      // Excel: semua akun ikut sebagai kolom
+      const exportCols = [...base, ...WHS_ACCTS.map(([c, label]) => ({ key: c, label, fmt: acct })), { key: "ItemCount", label: "Jumlah item", num: 1 }, ...udfCols(d.groups)];
+      return section("groups", "Daftar Item Group", expandList("ig-box", cols, grps,
+          { expand: detail, exportCols, flag: noInv, placeholder: "Cari item group / kode akun / nama akun…" }),
+        { lead: (method === "C"
+            ? "Set Inventory Method By = Item Group, jadi akun di tab Accounting item group yang dipakai saat transaksi persediaan diposting."
+            : `Akun di tab Accounting item group tidak dipakai untuk posting, karena Set Inventory Method By = ${esc(GL_METHOD[method] || method || "?")} (lihat <a href="#/gl-determination">2.2 G/L Account Determination</a>, tab Inventory).`)
+          + " Klik baris untuk melihat akunnya. Export Excel ikut memuat semua akun." });
     }
   },
 
-  "bp-groups": {
-    lead: "Pengelompokan customer dan vendor, beserta price list default-nya.",
-    menu: "Administration › Setup › Business Partners › Customer Groups / Vendor Groups",
-    tables: ["OCRG", "OPLN", "OCRD"],
+  "items": {
+    lead: "Semua item dengan field Item Master Data per tab, termasuk semua UDF (kolom UDF otomatis mengikuti CUFD; valid values tampil \"kode - deskripsi\").",
+    menu: "Inventory › Item Master Data",
+    tables: ["OITM", "OITB", "OUGP", "OARG", "OVTG", "OLGT", "CUFD", "UFD1"],
     render(d) {
-      const g = rowsOf(d.groups), cols = [{ key: "GroupCode", label: "Kode", num: 1 }, { key: "GroupName", label: "Nama" },
-        { key: "PriceListName", label: "Price List" }, { key: "BpCount", label: "Jumlah BP", num: 1 }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
-        ...udfCols(d.groups)];
-      return Object.entries(BP_TYPE).map(([t, name]) => section(`grp-${t}`, `${name} Group`, table(cols, g.filter(x => x.GroupType === t)))).join("");
+      const items = rowsOf(d.items), udf = d.items?.udf || [], yes = c => items.filter(i => i[c] === "Y").length;
+      const groups = [...new Set(items.map(i => i["Item Group"]).filter(Boolean))].sort();
+      return exportButton(autoCols(d.items), items, "Item")
+        + kpis([[items.length, "Total item"], [yes("Inventory Item"), "Inventory item"], [yes("Sales Item"), "Sales item"],
+          [yes("Purchasing Item"), "Purchase item"], [udf.length, "UDF item"]])
+        + section("list", "Daftar Item", listDetail("item-v", items, {
+            noun: "item", placeholder: "Cari kode / nama / foreign name…",
+            chips: [{ label: "Semua item" }, { label: "Inventory item", test: i => i["Inventory Item"] === "Y" },
+              { label: "Sales item", test: i => i["Sales Item"] === "Y" }, { label: "Purchase item", test: i => i["Purchasing Item"] === "Y" },
+              { label: "Non-inventory", test: i => i["Inventory Item"] !== "Y" }],
+            select: { label: "Item Group", options: groups.map(g => [g, `${g} (${items.filter(i => i["Item Group"] === g).length})`]), key: i => i["Item Group"] },
+            checks: [{ label: "Sembunyikan inactive", test: i => i.Status === "Active" }],
+            dim: i => i.Status !== "Active",
+            text: i => [i["Item No."], i.Description, i["Foreign Name"], i["Item Group"]].filter(Boolean).join(" "),
+            item: i => `<span class="md-name">${esc(i.Description)}</span>
+              <span class="md-sub">${esc(i["Item No."])} · ${esc(i["Item Group"] || "–")}</span>
+              <span class="md-flags">${i.Status !== "Active" ? `<span class="badge">${esc(i.Status)}</span>` : ""}</span>`,
+            detail: i => itemDetail(i, udf)
+          }), { lead: "Pilih filter di atas, lalu klik item di daftar kiri untuk melihat detailnya seperti layar Item Master Data. Export Excel memuat semua kolom." });
+    }
+  },
+
+  "warehouses": {
+    lead: "Gudang per branch, beserta akun G/L di tab Accounting-nya. Setiap warehouse terikat ke satu branch.",
+    menu: "Administration › Setup › Inventory › Warehouses",
+    tables: ["OWHS", "OBPL", "OACT"],
+    checks(d) {
+      const whs = rowsOf(d.warehouses);
+      if (whs[0]?.GLMethod !== "W") return [];
+      const noInv = whs.filter(w => w.Inactive !== "Y" && isEmpty(w.BalInvntAc)).map(w => w.WhsCode);
+      return noInv.length ? [["warn", `Warehouse aktif tanpa Inventory Account: ${noInv.join(", ")}.`]] : [];
+    },
+    render(d) {
+      const whs = rowsOf(d.warehouses), method = whs[0]?.GLMethod, names = acctNames(d), acct = acctCell(names);
+      const detail = w => table([{ key: "label", label: "Jenis Akun" }, { key: "code", label: "Kode Akun", fmt: val },
+          { key: "name", label: "Nama Akun", fmt: v => esc(v ?? "") }],
+        WHS_ACCTS.map(([c, label]) => ({ label, code: w[c], name: isEmpty(w[c]) ? null : names[w[c]] || "akun tidak ditemukan" })), { noExport: 1 });
+      const noInv = w => method === "W" && w.Inactive !== "Y" && isEmpty(w.BalInvntAc);
+      const base = [{ key: "WhsCode", label: "Kode" }, { key: "WhsName", label: "Nama" }, { key: "BPLName", label: "Branch" }];
+      const flags = [{ key: "Inactive", label: "Nonaktif", fmt: badgeYN }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
+        { key: "BinActivat", label: "Bin", fmt: badgeYN }, ...udfCols(d.warehouses)];
+      const cols = [...base, { key: "BalInvntAc", label: "Inventory Account", fmt: (v, w) => noInv(w) ? `<span class="badge warn">kosong</span>` : val(v) },
+        { key: "Accts", label: "Akun terisi", fmt: (v, w) => `${WHS_ACCTS.filter(([c]) => !isEmpty(w[c])).length}/${WHS_ACCTS.length}` }, ...flags];
+      const exportCols = [...base, ...flags, ...WHS_ACCTS.map(([c, label]) => ({ key: c, label, fmt: acct }))];
+      const branches = [...new Set(whs.map(w => w.BPLName).filter(Boolean))];
+      return kpis([[whs.length, "Warehouse"], [whs.filter(w => w.Inactive !== "Y").length, "Aktif"], [branches.length, "Branch"]])
+        + section("list", "Daftar Warehouse", expandList("whs-box", cols, whs,
+          { expand: detail, exportCols, flag: noInv, placeholder: "Cari warehouse / branch / kode akun / nama akun…" }),
+        { lead: (method === "W"
+            ? "Set Inventory Method By = Warehouse, jadi akun di tab Accounting warehouse yang dipakai saat transaksi persediaan diposting."
+            : `Akun di tab Accounting warehouse tidak dipakai untuk posting, karena Set Inventory Method By = ${esc(GL_METHOD[method] || method || "?")} (lihat <a href="#/gl-determination">2.2 G/L Account Determination</a>, tab Inventory).`)
+          + " Klik baris untuk melihat akunnya. Export Excel ikut memuat semua akun." });
     }
   },
 
   "business-partners": {
-    lead: "Customer, vendor, dan lead beserta branch yang di-assign. BP hanya bisa dipakai di dokumen branch yang tercentang di tab Branches.",
-    menu: "Business Partners › Business Partner Master Data (tab Branches)",
-    tables: ["OCRD", "CRD8", "OBPL"],
+    lead: "Customer dan vendor per group, beserta price list default group dan branch yang di-assign ke tiap BP. BP hanya bisa dipakai di dokumen branch yang tercentang di tab Branches.",
+    menu: "Business Partners › Business Partner Master Data · Administration › Setup › Business Partners › Customer Groups / Vendor Groups",
+    tables: ["OCRD", "OCRG", "CRD8", "OBPL", "OPLN", "OCPR", "CRD1", "CRD2", "OSHP"],
     checks(d) {
       const noBranch = rowsOf(d.bp).filter(b => b.frozenFor !== "Y" && isEmpty(b.Branches)).length;
-      return noBranch ? [["warn", `${noBranch} BP aktif belum di-assign ke branch mana pun, sehingga tidak bisa dipakai di dokumen.`]] : [];
+      const out = noBranch ? [["warn", `${noBranch} BP aktif belum di-assign ke branch mana pun, sehingga tidak bisa dipakai di dokumen.`]] : [];
+      if (!rowsOf(d.shipping).length) out.push(["info", "Belum ada shipping type."]);
+      return out;
     },
     render(d) {
-      const bp = rowsOf(d.bp).map(b => ({ ...b, Type: BP_CARD[b.CardType] || b.CardType }));
-      return kpis(Object.entries(BP_CARD).map(([t, name]) => [bp.filter(b => b.CardType === t).length, name]))
-        + section("list", "Daftar Business Partner", searchable("bp-t", [{ key: "CardCode", label: "Kode" }, { key: "CardName", label: "Nama" },
-          { key: "Type", label: "Tipe" }, { key: "GroupName", label: "Group" }, { key: "Currency", label: "Mata uang", fmt: v => v === "##" ? "Semua" : val(v) },
-          { key: "frozenFor", label: "Inactive", fmt: badgeYN }, { key: "Branches", label: "Branch", fmt: v => tags(v) }, ...udfCols(d.bp)],
-          bp, { filterKey: "Type", filterLabel: "tipe", limit: 500 }),
-          { lead: "Kolom Branch hanya menampilkan branch yang aktif untuk BP tersebut. Cari nama branch di kotak cari untuk menyaring." });
+      const bp = rowsOf(d.bp).map(b => ({ ...b, Type: BP_CARD[b.CardType] || b.CardType })), groups = rowsOf(d.groups);
+      const byCode = rows => rows.reduce((m, r) => (m.get(r.CardCode) || m.set(r.CardCode, []).get(r.CardCode)).push(r) && m, new Map());
+      const ctx = { contacts: byCode(rowsOf(d.contacts)), addresses: byCode(rowsOf(d.addresses)), udf: d.bp?.udf || [],
+        branches: [...new Set(bp.flatMap(b => String(b.Branches || "").split("|")).filter(Boolean))] };
+      // Excel tetap satu sheet per tipe: semua BP + group-nya
+      const xCols = [{ key: "CardCode", label: "Kode" }, { key: "CardName", label: "Nama" }, { key: "Type", label: "Tipe" }, { key: "GroupName", label: "Group" },
+        { key: "Currency", label: "Mata uang", fmt: v => v === "##" ? "Semua" : val(v) }, { key: "LicTradNum", label: "NPWP" },
+        { key: "frozenFor", label: "Inactive", fmt: badgeYN }, { key: "Branches", label: "Branch", fmt: v => tags(v) }, ...udfCols(d.bp)];
+      const tab = (t, name) => {
+        const list = bp.filter(b => (b.CardType === "L" ? "C" : b.CardType) === t); // lead memakai customer group
+        return exportButton(xCols, list, name) + bpView(t, name, list, groups, ctx);
+      };
+      // Shipping Type hanya dipakai di BP (tab General), jadi ditampilkan di halaman ini
+      const ships = rowsOf(d.shipping).map(x => ({ ...x, Used: bp.filter(b => b.ShipType === x.TrnspName).length }));
+      const shipping = section("shipping", "Shipping Type", table([{ key: "TrnspCode", label: "Kode", num: 1 }, { key: "TrnspName", label: "Shipping Type" },
+          { key: "WebSite", label: "Website" }, { key: "Active", label: "Aktif", fmt: badgeYN },
+          { key: "Used", label: "Dipakai BP", num: 1, fmt: v => v ? num(v) : `<span class="muted">0</span>` }, ...udfCols(d.shipping)], ships),
+        { lead: "Administration › Setup › General › Shipping Types. Cara pengiriman default BP (tab General), ikut terbawa ke dokumen." });
+      return shipping + section("list", "Business Partner", tabs("bp", Object.entries(BP_TYPE).map(([t, name]) => [name, tab(t, name)])),
+        { lead: "Pilih group di chip atas untuk menyaring, lalu klik BP di daftar kiri untuk melihat detailnya seperti layar BP Master Data. "
+          + "Arahkan kursor ke chip group untuk melihat price list default-nya." });
     }
   },
 

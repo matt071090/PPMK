@@ -1,4 +1,4 @@
-import { $, $$, esc, slug, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows } from "./ui.js";
+import { $, $$, esc, slug, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, revealTab } from "./ui.js";
 import { xlsxBlob, download } from "./xlsx.js";
 import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
@@ -63,6 +63,7 @@ const queryMs = res => Object.values(res.results).reduce((t, r) => t + (r.ms || 
 const queryErrors = res => Object.entries(res.results).filter(([, v]) => v.error);
 
 // ---------- sidebar ----------
+const HOME_ICON = `<svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true" style="vertical-align:-2px"><path d="M3 9.5L10 4l7 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-5V17H4a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>`;
 function buildNav() {
   $("#nav").innerHTML = `
     <div class="progress-box"><div class="lbl"><span>Menu sudah sesuai</span><b id="rv-count"></b></div>
@@ -72,10 +73,10 @@ function buildNav() {
       if (flat) { // bab satu halaman: tampil sebagai satu tautan saja
         const p = ch.pages[0];
         return `<div class="nav-group flat"><a href="#/${p.id}" data-id="${p.id}" class="chapter-link ${p.status === "todo" ? "todo" : ""}">
-          <span class="gno">${esc(ch.no)}</span><span>${esc(ch.title)}</span>${p.status ? `<span class="dot" data-dot="${p.id}"></span>` : ""}</a></div>`;
+          <span class="gno">${ch.home ? HOME_ICON : esc(ch.no || "")}</span><span>${esc(ch.title)}</span>${p.status ? `<span class="dot" data-dot="${p.id}"></span>` : ""}</a></div>`;
       }
       return `<div class="nav-group" data-no="${ch.no}">
-        <button type="button" aria-expanded="true"><span class="gno">${esc(ch.no)}</span>${esc(ch.title)}
+        <button type="button" aria-expanded="true"><span class="gno">${esc(ch.no || "")}</span>${esc(ch.title)}
           <svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
         <ul>${ch.pages.map(p => `<li><a href="#/${p.id}" data-id="${p.id}" class="${p.status === "todo" ? "todo" : ""}">
           ${p.no ? `<span class="no">${esc(p.no)}</span>` : ""}<span>${esc(p.title)}</span>${p.status ? `<span class="dot" data-dot="${p.id}"></span>` : ""}</a></li>`).join("")}</ul>
@@ -159,7 +160,7 @@ async function rerender() {
   window.scrollTo(0, y);
 }
 
-// ---------- 1.20 Remarks (Mode edit): isi disimpan di review.remarks ----------
+// ---------- 1.10 Remarks (Mode edit): isi disimpan di review.remarks ----------
 const RM = () => PAGES.remarks.remarks;
 async function saveRemarks(next, redraw) {
   const old = review.remarks;
@@ -259,7 +260,7 @@ async function route(fresh = false, keepScroll = false) {
 
 function head(page, def) {
   const ch = chapters.find(c => c.pages.includes(page));
-  return `<nav class="crumbs" aria-label="Breadcrumb"><span>Project Check List</span><span>${esc(ch.no)}. ${esc(ch.title)}</span>${page.no ? `<span>${esc(page.no)}</span>` : ""}</nav>
+  return `<nav class="crumbs" aria-label="Breadcrumb"><span>Project Check List</span>${ch.home ? "" : `<span>${ch.no ? esc(ch.no) + ". " : ""}${esc(ch.title)}</span>`}${page.no ? `<span>${esc(page.no)}</span>` : ""}</nav>
     <h1>${page.no ? `<span class="no">${esc(page.no)}</span>` : ""}${esc(page.title)}</h1>
     ${def ? `<p class="lead">${def.lead}</p>` : ""}
     <div class="page-meta">${def?.menu ? `<span><b>Menu SAP B1:</b> ${esc(def.menu)}</span>` : ""}${def?.tables ? `<span><b>Sumber:</b> ${def.tables.map(t => `<code>${t}</code>`).join(" ")}</span>` : ""}</div>`;
@@ -292,8 +293,8 @@ async function renderSummary(fresh) {
   const menus = pages.filter(p => p.status), nok = menus.filter(p => statusOf(p.id) === "nok");
   const cnt = s => menus.filter(p => statusOf(p.id) === s).length;
   const html = `<div class="kpis">
-      ${kpi("org-structure", n("org-structure", "branches"), "Branch")}
-      ${kpi("org-structure", n("org-structure", "warehouses"), "Warehouse")}
+      ${kpi("warehouses", by.warehouses ? new Set(rowsOf(by.warehouses.warehouses).map(w => w.BPLName).filter(Boolean)).size : "–", "Branch")}
+      ${kpi("warehouses", n("warehouses", "warehouses"), "Warehouse")}
       ${kpi("posting-period", n("posting-period", "periods"), "Posting period")}
       ${kpi("users", n("users", "users"), "User SAP B1")}
       ${kpi("document-numbering", n("document-numbering", "series"), "Numbering series")}
@@ -321,6 +322,7 @@ const headingText = h => { const c = h.cloneNode(true); $$(".anchor, .no", c).fo
 // ---------- export Excel ----------
 // Judul tabel = nama grup (details) atau judul bagian terdekat di atas tombolnya
 function exportTitle(btn) {
+  if (btn.dataset.title) return btn.dataset.title;
   const grp = btn.closest("details");
   if (grp) return $("summary > span", grp).firstChild.textContent.trim();
   const hs = $$("#article h2[id], #article h3[id]").filter(h => h.compareDocumentPosition(btn) & Node.DOCUMENT_POSITION_FOLLOWING);
@@ -340,14 +342,17 @@ document.addEventListener("click", e => {
   if (b) { e.preventDefault(); e.stopPropagation(); exportExcel([b]); }
 });
 function buildToc(page, meta) {
-  const hs = $$("#article h2[id], #article h3[id]");
-  $("#toc-list").innerHTML = hs.length ? `<h4>Di halaman ini</h4><ul>${hs.map(h =>
-    `<li><a href="#/${page.id}/${h.id}" data-anchor="${h.id}" class="${h.tagName === "H3" ? "l3" : ""}">${esc(headingText(h))}</a></li>`).join("")}</ul>` : "";
+  // bar horizontal: cukup level h2; kalau halaman tidak punya h2, pakai h3
+  const h2 = $$("#article h2[id]");
+  const hs = h2.length ? h2 : $$("#article h3[id]");
+  $("#toc-list").innerHTML = hs.map(h =>
+    `<a href="#/${page.id}/${h.id}" data-anchor="${h.id}">${esc(headingText(h))}</a>`).join("");
   const hasSettings = !!$("#article .settings");
   $("#toc-meta").innerHTML = `${meta}
-    ${hasSettings ? `<label><input type="checkbox" id="show-cols" ${document.body.classList.contains("show-cols") ? "checked" : ""}> Tampilkan nama kolom DB</label>` : ""}
-    ${(PAGES[page.id] && !PAGES[page.id].static) || page.id === "ringkasan" ? `<button type="button" id="refresh">↻ Muat ulang dari SAP B1</button>` : ""}
-    ${$("#article [data-export]") ? `<button type="button" id="export-page">⤓ Export semua tabel (Excel)</button>` : ""}`;
+    ${hasSettings ? `<label><input type="checkbox" id="show-cols" ${document.body.classList.contains("show-cols") ? "checked" : ""}> Nama kolom DB</label>` : ""}
+    ${(PAGES[page.id] && !PAGES[page.id].static) || page.id === "ringkasan" ? `<button type="button" id="refresh" title="Muat ulang dari SAP B1">↻ Muat ulang</button>` : ""}
+    ${$("#article [data-export]") ? `<button type="button" id="export-page" title="Export semua tabel di halaman ini ke Excel">⤓ Export Excel</button>` : ""}`;
+  $("#pagebar").hidden = !hs.length && !$("#toc-meta").children.length;
   $("#export-page") && ($("#export-page").onclick = () => exportExcel($$("#article [data-export]")));
   $("#show-cols") && ($("#show-cols").onchange = e => {
     document.body.classList.toggle("show-cols", e.target.checked); store.set("show-cols", e.target.checked ? "1" : "");
@@ -360,8 +365,12 @@ function buildToc(page, meta) {
   spy = new IntersectionObserver(entries => {
     entries.forEach(e => e.isIntersecting ? visible.add(e.target.id) : visible.delete(e.target.id));
     const first = hs.find(h => visible.has(h.id));
-    if (first) links.forEach((a, id) => a.classList.toggle("active", id === first.id));
-  }, { rootMargin: "-64px 0px -65% 0px" });
+    if (!first) return;
+    links.forEach((a, id) => a.classList.toggle("active", id === first.id));
+    const a = links.get(first.id), bar = $("#toc-list"); // jaga link aktif tetap kelihatan di bar
+    if (a && (a.offsetLeft < bar.scrollLeft || a.offsetLeft + a.offsetWidth > bar.scrollLeft + bar.clientWidth))
+      bar.scrollTo({ left: a.offsetLeft - 8, behavior: "smooth" });
+  }, { rootMargin: "-110px 0px -65% 0px" });
   hs.forEach(h => spy.observe(h));
   links.size && links.values().next().value.classList.add("active");
 }
@@ -370,6 +379,7 @@ function scrollToAnchor(anchor, smooth = true) {
   if (!anchor) return;
   const el = document.getElementById(anchor);
   if (!el) return;
+  revealTab(el);
   el.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: el.tagName === "TR" ? "center" : "start" });
   if (el.tagName === "TR") { el.classList.remove("hit"); void el.offsetWidth; el.classList.add("hit"); }
 }
@@ -390,9 +400,9 @@ function buildIndex() {
   for (const p of pages) {
     const def = PAGES[p.id];
     for (const [anchor, title, rows] of def?.index || []) {
-      index.push({ title, where: `${p.no} ${p.title}`, href: `#/${p.id}/${anchor}`, text: `${p.title} ${title}` });
+      index.push({ title, where: `${p.no ? p.no + " " : ""}${p.title}`, href: `#/${p.id}/${anchor}`, text: `${p.title} ${title}` });
       rows.filter(r => r.label).forEach(r => index.push({
-        title: r.label, where: `${p.no} ${p.title} › ${title}`, href: `#/${p.id}/${anchor}-${slug(r.label)}`,
+        title: r.label, where: `${p.no ? p.no + " " : ""}${p.title} › ${title}`, href: `#/${p.id}/${anchor}-${slug(r.label)}`,
         text: `${r.label} ${r.col || ""} ${title}`
       }));
     }
@@ -443,6 +453,11 @@ function toggleTheme() {
   else if (store.get("edit")) setEdit(true);
   // bab bertanda devOnly (mis. Template Upload) hanya tampil di mode dev, sama seperti Mode edit
   if (!editable) chapters = chapters.filter(c => !c.devOnly);
+  // halaman bertanda onlyIfData (mis. UoM) hanya tampil kalau hasil query itu lebih dari 1 baris (bukan cuma "Manual")
+  const optional = chapters.flatMap(c => c.pages).filter(p => p.onlyIfData);
+  const hide = new Set((await Promise.all(optional.map(p => load(p.id).then(res => rowsOf(dataOf(res)[p.onlyIfData]).length > 1 ? null : p.id, () => null))))
+    .filter(Boolean));
+  chapters = chapters.map(c => ({ ...c, pages: c.pages.filter(p => !hide.has(p.id)) })).filter(c => c.pages.length);
   pages = chapters.flatMap(c => c.pages);
   buildNav(); buildIndex();
 
