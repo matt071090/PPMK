@@ -64,3 +64,36 @@ export function progressUi(title, total) {
     }
   };
 }
+
+
+// ---------- tabel hasil upload: filter (Semua / Gagal / Berhasil) + paging ----------
+// Murni: kembalikan potongan baris untuk filter + halaman tertentu. filter: "semua" | "gagal" | "berhasil"
+export function pageSlice(items, filter, page, size) {
+  const list = filter === "gagal" ? items.filter(x => !x.ok) : filter === "berhasil" ? items.filter(x => x.ok) : items;
+  const pages = Math.max(1, Math.ceil(list.length / size)), p = Math.min(Math.max(1, page), pages);
+  return { rows: list.slice((p - 1) * size, p * size), total: list.length, pages, page: p, from: list.length ? (p - 1) * size + 1 : 0, to: Math.min(p * size, list.length) };
+}
+
+// items: [{ ok, action, cells: [teks...], message }], cols: judul kolom data. Bawaan membuka filter "Gagal" bila ada yang gagal.
+export function resultsTable(box, items, cols, size = 25) {
+  const nFail = items.filter(x => !x.ok).length, count = { semua: items.length, gagal: nFail, berhasil: items.length - nFail };
+  let filter = nFail ? "gagal" : "semua", page = 1;
+  const draw = () => {
+    const s = pageSlice(items, filter, page, size);
+    page = s.page;
+    box.innerHTML = `<div class="chips" role="group" aria-label="Saring hasil">${[["semua", "Semua"], ["gagal", "Gagal"], ["berhasil", "Berhasil"]].map(([k, l]) =>
+        `<button type="button" class="chip" data-f="${k}" aria-pressed="${k === filter}">${l}<b>${count[k]}</b></button>`).join("")}</div>
+      <div class="table-wrap"><table class="data"><thead><tr><th>Hasil</th><th>Aksi</th>${cols.map(c => `<th>${esc(c)}</th>`).join("")}<th>Pesan dari SAP</th></tr></thead>
+      <tbody>${s.rows.map(x => `<tr><td><span class="badge ${x.ok ? "yes" : "danger"}">${x.ok ? "Berhasil" : "Gagal"}</span></td><td>${esc(x.action)}</td>${x.cells.map(c => `<td>${esc(c)}</td>`).join("")}
+        <td class="sx-note">${x.ok ? "OK" : esc(x.message || "")}</td></tr>`).join("") || `<tr><td colspan="${cols.length + 3}" style="text-align:center;color:var(--muted);padding:24px">Tidak ada baris</td></tr>`}</tbody></table></div>
+      ${s.pages > 1 ? `<div class="sx-pg"><button type="button" class="cbtn" data-p="-1"${s.page <= 1 ? " disabled" : ""}>‹ Sebelumnya</button>
+        <span>Baris ${s.from}–${s.to} dari ${s.total} · halaman ${s.page}/${s.pages}</span>
+        <button type="button" class="cbtn" data-p="1"${s.page >= s.pages ? " disabled" : ""}>Berikutnya ›</button></div>` : ""}`;
+  };
+  box.onclick = e => {
+    const f = e.target.closest && e.target.closest("[data-f]"), p = e.target.closest && e.target.closest("[data-p]");
+    if (f) { filter = f.dataset.f; page = 1; draw(); }
+    else if (p && !p.disabled) { page += +p.dataset.p; draw(); }
+  };
+  draw();
+}

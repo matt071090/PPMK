@@ -514,3 +514,8 @@ a.edit-btn:hover { text-decoration: none; }
 .sx-prog-s, .sx-prog-w { margin: 2px 0; font-size: 13px; color: var(--muted); }
 .sx-prog .cbtn { margin-top: 12px; }
 @media (prefers-reduced-motion: reduce) { .sx-prog-bar i { transition: none; } }
+
+
+/* paging tabel hasil upload (halaman Setup) */
+.sx-pg { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.sx-pg .cbtn:disabled { opacity: .45; cursor: default; }

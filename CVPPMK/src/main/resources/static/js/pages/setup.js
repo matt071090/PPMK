@@ -9,7 +9,7 @@ import { $, $$, esc, isEmpty, onMount, flushMounts } from "../ui.js";
 import { xlsxBlob, download } from "../xlsx.js";
 import { readXlsx } from "../xlsx-read.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
-import { uploadInChunks, progressUi } from "./upload-progress.js";
+import { uploadInChunks, progressUi, resultsTable } from "./upload-progress.js";
 
 const PROJECT = "CVPPMK";
 const store = {
@@ -498,10 +498,9 @@ function drawStep(step, body, cmp, opt) {
       showNow(step, document.querySelector(`#sx-${step.id} .sx-now`));   // isi tujuan setelah upload
       res.innerHTML = `<h3>Hasil upload</h3>
         <p class="sx-req"><b>${ok}</b> berhasil, <b>${results.length - ok}</b> gagal${unsent ? `, <b>${unsent}</b> belum dikirim (${aborted ? "pengiriman terhenti: " + esc(aborted) : "dihentikan"})` : ""}. Baca ulang untuk membandingkan lagi dengan data terbaru.</p>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Hasil</th><th>Aksi</th>${step.match.map(f => `<th>${esc(label(f))}</th>`).join("")}<th>Pesan dari SAP</th></tr></thead>
-        <tbody>${results.map((x, i) => `<tr><td><span class="badge ${x.ok ? "yes" : "danger"}">${x.ok ? "Berhasil" : "Gagal"}</span></td>
-          <td>${list[i].status === "new" ? "Dibuat" : "Diperbarui"}</td>${step.match.map(f => `<td>${esc(norm(list[i].src[f]))}</td>`).join("")}
-          <td class="sx-note">${x.ok ? "OK" : esc(x.message || "")}</td></tr>`).join("")}</tbody></table></div>`;
+        <div class="sx-res-tbl"></div>`;
+      resultsTable($(".sx-res-tbl", res), results.map((x, i) => ({ ok: !!x.ok, action: list[i].status === "new" ? "Dibuat" : "Diperbarui",
+        cells: step.match.map(f => norm(list[i].src[f])), message: x.message })), step.match.map(label));
       res.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) {
       res.innerHTML = `<div class="error">Upload gagal: ${esc(e.message)}</div>`;
