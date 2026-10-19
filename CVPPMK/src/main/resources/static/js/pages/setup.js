@@ -188,6 +188,10 @@ export function compare(step, data, lookups = {}) {
     for (const l of step.lookups || [])
       if (touched(l.from) && !(lookups[`${l.step}|${l.by}`] || new Map()).has(up(s[l.from])))
         errors.push(`${label(l.from)} "${s[l.from]}" belum ada di tujuan`);
+    // baris anak (step.children): upload tidak mengubah detail yang sudah ada (PATCH koleksi UDO bisa menggandakan baris)
+    const childFrom = new Set((step.children || []).map(c => c.from));
+    if (t && childFrom.size && diffs.size && [...diffs].every(f => childFrom.has(f)))
+      errors.push("Detail beda dengan sumber; upload tidak bisa mengubah baris detail, ubah di SAP");
     const status = errors.length ? "error" : t && !diffs.size ? "same" : t ? "diff" : "new";
     rows.push({ status, src: s, tgt: t, diffs, errors });
   }
@@ -212,6 +216,11 @@ export function payload(step, r, lookups) {
     if (!v || (r.status !== "new" && !r.diffs.has(l.from))) continue;
     const k = lookups[`${l.step}|${l.by}`].get(v.toUpperCase());
     data[l.field] = numLike(String(k)) ? +k : k;
+  }
+  // baris anak UDO (step.children): hanya untuk baris baru; _Detail = nilai digabung, dipecah jadi satu baris anak per nilai
+  if (r.status === "new") for (const c of step.children || []) {
+    const v = norm(r.src[c.from]);
+    if (v) data[c.collection] = v.split(c.sep || "|").map(x => x.trim()).filter(Boolean).map(x => ({ [c.field]: x }));
   }
   return r.status === "new" ? { action: "create", data } : { action: "update", key: r.tgt._key, data };
 }
