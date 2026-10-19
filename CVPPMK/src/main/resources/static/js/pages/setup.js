@@ -220,7 +220,11 @@ export function payload(step, r, lookups) {
   // baris anak UDO (step.children): hanya untuk baris baru; _Detail = nilai digabung, dipecah jadi satu baris anak per nilai
   if (r.status === "new") for (const c of step.children || []) {
     const v = norm(r.src[c.from]);
-    if (v) data[c.collection] = v.split(c.sep || "|").map(x => x.trim()).filter(Boolean).map(x => ({ [c.field]: x }));
+    if (!v) continue;
+    // anak banyak kolom (c.fields): baris dipisah c.rowSep, kolom dipisah c.colSep, kolom kosong tidak dikirim
+    if (c.fields) data[c.collection] = v.split(c.rowSep || "¦").map(row => Object.fromEntries(row.split(c.colSep || "^")
+      .map((x, i) => [c.fields[i], x.trim()]).filter(([k, x]) => k && x !== "").map(([k, x]) => [k, (c.numeric || []).includes(k) ? +x : x]))).filter(o => Object.keys(o).length);
+    else data[c.collection] = v.split(c.sep || "|").map(x => x.trim()).filter(Boolean).map(x => ({ [c.field]: x }));
   }
   return r.status === "new" ? { action: "create", data } : { action: "update", key: r.tgt._key, data };
 }
