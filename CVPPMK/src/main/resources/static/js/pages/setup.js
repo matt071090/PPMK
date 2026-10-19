@@ -9,6 +9,7 @@ import { $, $$, esc, isEmpty, onMount, flushMounts } from "../ui.js";
 import { xlsxBlob, download } from "../xlsx.js";
 import { readXlsx } from "../xlsx-read.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
+import { uploadInChunks, progressUi } from "./upload-progress.js";
 
 const PROJECT = "CVPPMK";
 const store = {
@@ -484,15 +485,19 @@ function drawStep(step, body, cmp, opt) {
       + `• ${nNew} baris baru akan dibuat\n• ${nDiff} baris akan diperbarui\n\nLanjutkan?`)) return;
     btn.disabled = true; btn.textContent = "Mengirim…";
     const res = $(".sx-result", body);
+    const prog = progressUi(step.title, list.length);
     try {
-      const out = await getJson(`api/setup/${step.id}/upload`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows: list.map(r => payload(step, r, opt.lookups)) }) });
-      const results = out.results, ok = results.filter(x => x.ok).length;
+      const url = `api/setup/${step.id}/upload`;
+      const { results, aborted } = await uploadInChunks(list.map(r => payload(step, r, opt.lookups)),
+        part => getJson(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: part }) }),
+        { onProgress: prog.update, shouldStop: prog.isStopped });
+      prog.close();
+      const ok = results.filter(x => x.ok).length, unsent = list.length - results.length;
       if (opt.box) stage(opt.box, 3, ok > 0);
       tgtCache.delete(step.id);
       showNow(step, document.querySelector(`#sx-${step.id} .sx-now`));   // isi tujuan setelah upload
       res.innerHTML = `<h3>Hasil upload</h3>
-        <p class="sx-req"><b>${ok}</b> berhasil, <b>${results.length - ok}</b> gagal. Baca ulang untuk membandingkan lagi dengan data terbaru.</p>
+        <p class="sx-req"><b>${ok}</b> berhasil, <b>${results.length - ok}</b> gagal${unsent ? `, <b>${unsent}</b> belum dikirim (${aborted ? "pengiriman terhenti: " + esc(aborted) : "dihentikan"})` : ""}. Baca ulang untuk membandingkan lagi dengan data terbaru.</p>
         <div class="table-wrap"><table class="data"><thead><tr><th>Hasil</th><th>Aksi</th>${step.match.map(f => `<th>${esc(label(f))}</th>`).join("")}<th>Pesan dari SAP</th></tr></thead>
         <tbody>${results.map((x, i) => `<tr><td><span class="badge ${x.ok ? "yes" : "danger"}">${x.ok ? "Berhasil" : "Gagal"}</span></td>
           <td>${list[i].status === "new" ? "Dibuat" : "Diperbarui"}</td>${step.match.map(f => `<td>${esc(norm(list[i].src[f]))}</td>`).join("")}
@@ -501,6 +506,7 @@ function drawStep(step, body, cmp, opt) {
     } catch (e) {
       res.innerHTML = `<div class="error">Upload gagal: ${esc(e.message)}</div>`;
     } finally {
+      prog.close();
       btn.disabled = false; btn.textContent = "Upload ke SAP…";
     }
   };
