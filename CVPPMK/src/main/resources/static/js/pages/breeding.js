@@ -62,6 +62,12 @@ function udfRows(d) {
   }));
 }
 
+// query gagal (mis. login HANA ditolak): pesan errornya sudah tampil di atas halaman, jangan tampilkan hitungan palsu
+const failed = (d, keys) => keys.some(k => !d[k] || d[k].error);
+const guard = (keys, page) => ({ ...page,
+  checks: d => failed(d, keys) ? [] : page.checks(d),
+  render: d => failed(d, keys) ? `<p class="sec-lead">Belum bisa dibandingkan karena data dari DB gagal dibaca. Perbaiki dulu pesan error di atas, lalu klik Muat ulang.</p>` : page.render(d) });
+
 const statusCol = { key: "status", label: "Status", fmt: badge };
 
 export const PAGES = {
@@ -83,7 +89,7 @@ export const PAGES = {
     }
   },
 
-  "breeding-params": {
+  "breeding-params": guard(["params"], {
     lead: "Key yang dibaca addon Farm Breeding dari tabel @ST_PARAM. Key bertanda wajib dibaca langsung di jalur Statistic, Setter, Hatcher, dan Transfer.",
     menu: "Tools › User-Defined Tables › STEM AddOn Parameter",
     tables: ["@ST_PARAM"],
@@ -97,9 +103,9 @@ export const PAGES = {
           rows, { filterKey: "Group", filterLabel: "kelompok", flag: r => r.status.t === "danger" }),
           { lead: `${extra.length} key lain di @ST_PARAM tidak dicek di sini (milik STEM atau modul lain).` });
     }
-  },
+  }),
 
-  "breeding-master": {
+  "breeding-master": guard(["tables"], {
     lead: "Tabel buatan addon. Tabel yang perlu isi data tapi masih kosong ditandai, karena modulnya tidak bisa dipakai sebelum itu.",
     menu: "Tools › User-Defined Tables",
     tables: ["SYS.TABLES"],
@@ -112,9 +118,9 @@ export const PAGES = {
           { key: "By", label: "Dibuat oleh" }, { key: "Used", label: "Dibaca oleh" }, { key: "Note", label: "Catatan" }],
           rows, { flag: r => r.status.t === "danger" }));
     }
-  },
+  }),
 
-  "breeding-sql": {
+  "breeding-sql": guard(["procs","funcs"], {
     lead: "Stored procedure dan function HANA yang dipanggil addon Farm Breeding. Definisinya ada di folder yang tertulis di kolom File, dan harus dijalankan sendiri di HANA.",
     menu: "Database HANA › Procedures dan Functions",
     tables: ["SYS.PROCEDURES", "SYS.FUNCTIONS"],
@@ -127,9 +133,9 @@ export const PAGES = {
           { key: "Used", label: "Dipanggil oleh" }, { key: "File", label: "File definisi" }],
           rows, { filterKey: "Kind", filterLabel: "jenis", flag: r => r.status.t === "danger" }));
     }
-  },
+  }),
 
-  "breeding-udf": {
+  "breeding-udf": guard(["udf"], {
     lead: "Field buatan DBCreator yang dipakai Farm Breeding. Field branch hanya ada bila DBCreator dijalankan pada DB yang memakai branch.",
     menu: "Tools › Customization Tools › User-Defined Fields",
     tables: ["CUFD"],
@@ -141,5 +147,5 @@ export const PAGES = {
           { key: "Table", label: "Tabel", fmt: code }, { key: "Field", label: "Field", fmt: code }, { key: "Used", label: "Fungsi" }],
           rows, { flag: r => r.status.t === "danger" }));
     }
-  }
+  })
 };
