@@ -528,6 +528,7 @@ function overviewPage(steps) {
     lead: "Semua setup & master data, diurutkan menurut ketergantungan datanya: langkah yang tidak memakai akun G/L ada di atas Chart of Accounts.",
     render() {
       onMount(() => mountOverview(steps, $("#sx-overview")));
+      onMount(() => wireOverviewSearch($("#sx-overview")));
       const tiers = Object.keys(TIERS).filter(t => steps.some(s => s.tier === t));
       return `<div class="sx" id="sx-overview">
         <div class="sx-ways sx-ways-info">
@@ -536,11 +537,12 @@ function overviewPage(steps) {
         </div>
         <p class="sx-req">Dua cara ini dipilih di halaman tiap langkah. Apa pun caranya, data selalu dicek dulu terhadap SAP tujuan sebelum di-upload lewat Service Layer.
           Kolom <b>Di tujuan</b> = jumlah data yang sudah ada sekarang.</p>
+        <div class="toolbar"><input type="search" id="sx-q" placeholder="Cari langkah: nama, tabel, tahap, atau butuh apa…" aria-label="Cari langkah setup"><span class="count" id="sx-qc"></span></div>
         ${tiers.map(t => `<h2 id="tahap-${t.toLowerCase()}"><span class="no">${t}</span>${esc(TIERS[t][0])}</h2>
           <p class="sec-lead">${esc(TIERS[t][1])}</p>
           <div class="table-wrap"><table class="data sx-overview"><thead><tr><th class="num">Urut</th><th>Langkah</th><th>Jenis</th><th>Butuh</th>
             <th>Cara isi</th><th class="num">Di tujuan</th></tr></thead>
-          <tbody>${steps.filter(s => s.tier === t).map(s => `<tr data-step="${s.id}">
+          <tbody>${steps.filter(s => s.tier === t).map(s => `<tr data-step="${s.id}" data-tier="${esc(t + " " + TIERS[t][0])}">
             <td class="num">${s.order}</td>
             <td><a href="#/${s.id}"><b>${esc(s.title)}</b></a><div class="muted">${esc(s.ref || "")}</div></td>
             <td><span class="badge ${s.kind === "data" ? "info" : ""}">${s.kind === "data" ? "Data" : "Setting"}</span></td>
@@ -550,6 +552,30 @@ function overviewPage(steps) {
           </tr>`).join("")}</tbody></table></div>`).join("")}</div>`;
     }
   };
+}
+// Cocokkan teks dengan kueri: semua kata (dipisah spasi) harus ada, tanpa peduli huruf besar/kecil.
+export function matchQuery(text, query) {
+  const words = String(query || "").toLowerCase().split(/\s+/).filter(Boolean), t = String(text || "").toLowerCase();
+  return words.every(w => t.includes(w));
+}
+// Kotak cari di halaman Urutan Setup: menyembunyikan baris yang tidak cocok dan tahap yang barisnya habis; Esc mengosongkan.
+function wireOverviewSearch(box) {
+  if (!box) return;
+  const q = $("#sx-q", box), cnt = $("#sx-qc", box), rows = $("tbody tr[data-step]", box);
+  const text = new Map(rows.map(tr => [tr, `${tr.textContent} ${tr.dataset.step} ${tr.dataset.tier || ""}`]));
+  const draw = () => {
+    let shown = 0;
+    rows.forEach(tr => { const ok = matchQuery(text.get(tr), q.value); tr.hidden = !ok; if (ok) shown++; });
+    $("table.sx-overview", box).forEach(tb => {
+      const any = $("tbody tr[data-step]", tb).some(tr => !tr.hidden), wrap = tb.closest(".table-wrap");
+      [wrap, wrap && wrap.previousElementSibling, wrap && wrap.previousElementSibling && wrap.previousElementSibling.previousElementSibling]
+        .forEach(el => { if (el) el.hidden = !any; });
+    });
+    cnt.textContent = q.value.trim() ? (shown ? `${shown} dari ${rows.length} langkah` : "Tidak ada langkah yang cocok") : `${rows.length} langkah`;
+  };
+  q.oninput = draw;
+  q.onkeydown = e => { if (e.key === "Escape" && q.value) { q.value = ""; draw(); } };
+  draw();
 }
 async function mountOverview(steps, box) {
   if (!box) return;
