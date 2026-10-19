@@ -1,0 +1,104 @@
+# Item Group (OITB) lewat Service Layer, entity ItemGroups.
+# Sumber: daftar 38 item group dari user (2026-10-16); 22 sudah ada (di-skip), PAKAN JADI EKSTERNAL ditahan
+# karena kemungkinan sama dengan PAKAN JADI EXTERNAL yang sudah ada.
+# Sudah dijalankan di CVPPM (QA): 15x HTTP 201 (No 123-137).
+# PERHATIAN: hanya nama + Moving Average yang dikirim; akun G/L terisi default SAP (akun PAKAN JADI INTERNAL:
+# 101070801 / 501010801). Akun per group perlu di-PATCH setelah datanya ada.
+
+@sl = https://192.168.40.197:50000/b1s/v1
+
+### 1. Login
+POST {{sl}}/Login
+Content-Type: application/json
+
+{"CompanyDB":"CVPPM","UserName":"manager","Password":"1234"}
+
+### 2. TELUR HE (hasil benar: HTTP 201, No 123)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "TELUR HE", "InventorySystem": "bis_MovingAverage"}
+
+### 3. SEMEN (hasil benar: HTTP 201, No 124)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "SEMEN", "InventorySystem": "bis_MovingAverage"}
+
+### 4. DAGING BEKU (hasil benar: HTTP 201, No 125)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "DAGING BEKU", "InventorySystem": "bis_MovingAverage"}
+
+### 5. RAW MATERIAL PRODUKSI - MIKRO (hasil benar: HTTP 201, No 126)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "RAW MATERIAL PRODUKSI - MIKRO", "InventorySystem": "bis_MovingAverage"}
+
+### 6. SEMI FINISH PRODUKSI (WIP) (hasil benar: HTTP 201, No 127)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "SEMI FINISH PRODUKSI (WIP)", "InventorySystem": "bis_MovingAverage"}
+
+### 7. SEMI FINISH PREMIX (WIP) (hasil benar: HTTP 201, No 128)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "SEMI FINISH PREMIX (WIP)", "InventorySystem": "bis_MovingAverage"}
+
+### 8. SUPPORT PRODUKSI - OLIE & PELUMAS (hasil benar: HTTP 201, No 129)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "SUPPORT PRODUKSI - OLIE & PELUMAS", "InventorySystem": "bis_MovingAverage"}
+
+### 9. SUPPORT PRODUKSI - LIMBAH (hasil benar: HTTP 201, No 130)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "SUPPORT PRODUKSI - LIMBAH", "InventorySystem": "bis_MovingAverage"}
+
+### 10. MATERIAL FA & MAINTENANCE - BANGUNAN (hasil benar: HTTP 201, No 131)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "MATERIAL FA & MAINTENANCE - BANGUNAN", "InventorySystem": "bis_MovingAverage"}
+
+### 11. MATERIAL FA & MAINTENANCE - LISTRIK (hasil benar: HTTP 201, No 132)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "MATERIAL FA & MAINTENANCE - LISTRIK", "InventorySystem": "bis_MovingAverage"}
+
+### 12. MATERIAL FA & MAINTENANCE - IT (hasil benar: HTTP 201, No 133)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "MATERIAL FA & MAINTENANCE - IT", "InventorySystem": "bis_MovingAverage"}
+
+### 13. MATERIAL FA & MAINTENANCE - PERALATAN KANDANG (hasil benar: HTTP 201, No 134)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "MATERIAL FA & MAINTENANCE - PERALATAN KANDANG", "InventorySystem": "bis_MovingAverage"}
+
+### 14. MATERIAL FA & MAINTENANCE - MESIN (hasil benar: HTTP 201, No 135)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "MATERIAL FA & MAINTENANCE - MESIN", "InventorySystem": "bis_MovingAverage"}
+
+### 15. SPAREPART & UTILITY (hasil benar: HTTP 201, No 136)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "SPAREPART & UTILITY", "InventorySystem": "bis_MovingAverage"}
+
+### 16. SAYURAN (hasil benar: HTTP 201, No 137)
+POST {{sl}}/ItemGroups
+Content-Type: application/json
+
+{"GroupName": "SAYURAN", "InventorySystem": "bis_MovingAverage"}

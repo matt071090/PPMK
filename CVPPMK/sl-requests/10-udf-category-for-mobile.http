@@ -1,0 +1,23 @@
+# Tambah valid values UDF OITM.U_STEM_CategoryForMobile (FieldID 19) lewat Service Layer, entity UserFieldsMD.
+# PATCH koleksi ValidValuesMD MENAMBAHKAN nilai: kirim hanya nilai baru (mengirim nilai lama -> error "Duplicate value").
+# Sudah dijalankan di CVPPM (QA): tahap 1 HTTP 204 (jadi 8), tahap 2 HTTP 204 (jadi 14).
+
+@sl = https://192.168.40.197:50000/b1s/v1
+
+### Login
+POST {{sl}}/Login
+Content-Type: application/json
+
+{"CompanyDB":"CVPPM","UserName":"manager","Password":"1234"}
+
+### Tambah 5 valid values (hasil benar: HTTP 204)
+PATCH {{sl}}/UserFieldsMD(TableName='OITM',FieldID=19)
+Content-Type: application/json
+
+{"ValidValuesMD": [{"Value": "NON HE AYAM", "Description": "NON HE AYAM"}, {"Value": "NON HE BEBEK LOKAL", "Description": "NON HE BEBEK LOKAL"}, {"Value": "NON HE BEBEK PEKING", "Description": "NON HE BEBEK PEKING"}, {"Value": "NON HE BEBEK HIBRIDA", "Description": "NON HE BEBEK HIBRIDA"}, {"Value": "SUPPORT PRODUKSI - LITTER", "Description": "SUPPORT PRODUKSI - LITTER"}]}
+
+### Tahap 2: tambah 6 valid values dari OITMKOM.txt (hasil benar: HTTP 204)
+PATCH {{sl}}/UserFieldsMD(TableName='OITM',FieldID=19)
+Content-Type: application/json
+
+{"ValidValuesMD": [{"Value": "RAW MATERIAL PRODUKSI - MAKRO", "Description": "RAW MATERIAL PRODUKSI - MAKRO"}, {"Value": "PAKAN TRIAL", "Description": "PAKAN TRIAL"}, {"Value": "PAKAN JADI INTERNAL BEBEK COMERCIAL", "Description": "PAKAN JADI INTERNAL BEBEK COMERCIAL"}, {"Value": "SUPPORT PRODUKSI - OBAT LINGKUNGAN", "Description": "SUPPORT PRODUKSI - OBAT LINGKUNGAN"}, {"Value": "SUPPORT PRODUKSI - OVK - MEDICINE & ANTIBOTIK", "Description": "SUPPORT PRODUKSI - OVK - MEDICINE & ANTIBOTIK"}, {"Value": "SUPPORT PRODUKSI - OVK - VITAMIN", "Description": "SUPPORT PRODUKSI - OVK - VITAMIN"}]}

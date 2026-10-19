@@ -30,10 +30,10 @@ async function loadSl(name) {
 }
 function load(id, fresh) {
   if (fresh || !cache.has(id)) {
-    const { sl, withSql } = PAGES[id] || {};
-    const p = !sl ? getJson(`api/section/${id}`)
-      : !withSql ? loadSl(sl)
-      : Promise.all([getJson(`api/section/${id}`), loadSl(sl)]).then(([a, b]) => ({ ...a, results: { ...a.results, ...b.results } }));
+    // sumber data halaman: query SQL (default), Service Layer (def.sl), License Server (def.sld); withSql = SQL ikut dimuat
+    const { sl, sld, withSql } = PAGES[id] || {};
+    const parts = [...(!sl && !sld) || withSql ? [getJson(`api/section/${id}`)] : [], ...sl ? [loadSl(sl)] : [], ...sld ? [getJson(`api/sld/${sld}`)] : []];
+    const p = Promise.all(parts).then(rs => ({ ...rs[0], results: Object.assign({}, ...rs.map(r => r.results)) }));
     p.catch(() => cache.delete(id));
     cache.set(id, p);
   }
@@ -449,7 +449,8 @@ function toggleTheme() {
     getJson("api/review").then(r => { review = { pages: {}, exclusions: {}, ...r }; reviewLoaded = true; })
       .catch(e => console.warn("Data review gagal dimuat", e))
   ]);
-  if (!editable) $("#edit-btn").remove();
+  // tombol Mode edit & Setup (halaman terpisah setup.html, bisa upload ke SAP) hanya di mode dev
+  if (!editable) { $("#edit-btn").remove(); $("#setup-btn").remove(); }
   else if (store.get("edit")) setEdit(true);
   // bab bertanda devOnly (mis. Template Upload) hanya tampil di mode dev, sama seperti Mode edit
   if (!editable) chapters = chapters.filter(c => !c.devOnly);

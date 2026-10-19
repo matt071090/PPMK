@@ -694,6 +694,51 @@ export const PAGES = {
     }
   },
 
+  "license": {
+    sld: "license", withSql: true,
+    lead: "Jumlah license SAP B1 per tipe dari License Server: dimiliki, terpakai, dan sisa, beserta masa berlakunya. Data ini tidak ada di database company, jadi dibaca langsung dari License Server (System Landscape Directory).",
+    menu: "Administration › License › License Administration",
+    tables: ["License Server: LicenseModules, LicenseFiles", "OUSR"],
+    checks(d) {
+      if (one(d.sld).configured !== "Y" || !d.modules || d.modules.error) return [];
+      const out = [], soon = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10), today = new Date().toISOString().slice(0, 10);
+      for (const m of rowsOf(d.modules)) {
+        const name = m.Description || m.Type;
+        if (m.IsExpired === "true" || (m.ExpirationDate && m.ExpirationDate < today)) out.push(["danger", `License ${name} sudah kedaluwarsa (${m.ExpirationDate}).`]);
+        else if (m.ExpirationDate && m.ExpirationDate <= soon) out.push(["warn", `License ${name} kedaluwarsa ${m.ExpirationDate}, kurang dari 30 hari lagi.`]);
+        if (+m.Total > 0 && +m.Available <= 0) out.push(["warn", `License ${name} habis terpakai (${m.Total} dari ${m.Total}).`]);
+      }
+      return out;
+    },
+    render(d) {
+      const u = one(d.users), kpi = (n, l) => `<div class="kpi"><b>${n}</b><span>${l}</span></div>`;
+      const users = `<p class="sec-lead">User SAP di database ini: <b>${esc(u.Aktif ?? "–")}</b> aktif dari ${esc(u.Total ?? "–")} user
+        (${esc(u.Superuser ?? "–")} superuser aktif). Penugasan license per user tidak ditampilkan.</p>`;
+      if (one(d.sld).configured !== "Y")
+        return section("modules", "License per Tipe", `<div class="placeholder"><p style="margin:0 0 6px;font-weight:600;color:var(--text)">License Server belum dikonfigurasi</p>
+          <p style="margin:0 0 8px">Isi akun License Server (SLD, biasanya B1SiteUser) di <code>application.properties</code> server, lalu restart aplikasi:</p>
+          <pre class="sx-pre">sap.sld.url=https://[host]:40000/sld/sld0100.svc
+sap.sld.username=B1SiteUser
+sap.sld.password=[PASSWORD]</pre></div>`) + users;
+      const mods = rowsOf(d.modules).map(m => ({ ...m, Used: Math.max(0, (+m.Total || 0) - (+m.Available || 0)) }));
+      const sum = k => mods.reduce((t, m) => t + (+m[k] || 0), 0);
+      const today = new Date().toISOString().slice(0, 10);
+      const state = m => m.IsExpired === "true" || (m.ExpirationDate && m.ExpirationDate < today) ? `<span class="badge danger">Kedaluwarsa</span>`
+        : +m.Total > 0 && +m.Available <= 0 ? `<span class="badge warn">Habis</span>` : `<span class="badge yes">Tersedia</span>`;
+      return `<div class="kpis">${kpi(mods.length, "Tipe license")}${kpi(sum("Total"), "Dimiliki")}${kpi(sum("Used"), "Terpakai")}${kpi(sum("Available"), "Sisa")}
+          ${kpi(esc(u.Aktif ?? "–"), "User SAP aktif")}</div>`
+        + section("modules", "License per Tipe", (d.modules && d.modules.error ? "" : table([
+            { key: "Description", label: "Tipe License", fmt: (v, m) => `${esc(v || m.Type)}${v && m.Type && v !== m.Type ? `<span class="raw">${esc(m.Type)}</span>` : ""}` },
+            { key: "Total", label: "Dimiliki", num: 1 }, { key: "Used", label: "Terpakai", num: 1 }, { key: "Available", label: "Sisa", num: 1 },
+            { key: "StartDate", label: "Mulai" }, { key: "ExpirationDate", label: "Berlaku sampai" },
+            { key: "IsExpired", label: "Status", fmt: (v, m) => state(m) }], mods, { flag: m => +m.Total > 0 && +m.Available <= 0 })) + users,
+          { lead: "Terpakai = Dimiliki − Sisa, sesuai License Administration. Baris kuning = license habis terpakai." })
+        + section("files", "File License", d.files && d.files.error ? "" : table([{ key: "FileName", label: "File" },
+            { key: "InstallationNumber", label: "Installation Number" }, { key: "SystemNumber", label: "System Number" },
+            { key: "Version", label: "Versi" }, { key: "Localization", label: "Lokalisasi" }, { key: "ExpirationDate", label: "Berlaku sampai" }], rowsOf(d.files)));
+    }
+  },
+
   "users": {
     lead: "Akun yang bisa login ke SAP B1, beserta branch yang boleh diakses. Otorisasi per user ada di <a href=\"#/authorizations\">1.7</a>.",
     menu: "Administration › Setup › General › Users",

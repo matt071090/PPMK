@@ -240,6 +240,31 @@ export const TEMPLATES = [
       F("UDF (Tabel.Field)", "TableName.Name", { req: 1, ref: "udf_fields", note: "UDF yang ditambah valid value-nya. Pilih dari daftar UDF master data." }),
       F("Kode", "Value", { req: 1, sample: "PAKAN JADI INTERNAL BEBEK COMMERCIAL", note: "Nilai yang tersimpan di UDF." }),
       F("Deskripsi", "Description", { req: 1, sample: "PAKAN JADI INTERNAL BEBEK COMMERCIAL", note: "Label yang tampil di dropdown SAP." })] }] },
+
+  // Field dicocokkan ke $metadata SL entity Users (2026-10-18). Sheet Branch / Authorization Group / Authorization = koleksi
+  // UserBranchAssignment, UserGroupByUser, UserPermission di dalam user yang sama.
+  { no: "23", title: "User & Authorization", entity: "Users",
+    note: "Satu user per baris di sheet User. Branch, authorization group, dan izin per menu bisa lebih dari satu: satu baris per item. "
+      + "File ini berisi password awal, jangan disebar; minta user mengganti password saat login pertama.",
+    sheets: [{ name: "User", fields: [
+      F("Kode User", "UserCode", { req: 1, sample: "BUDI", note: "Kode untuk login SAP, maks 25 karakter. Tidak bisa diubah setelah dibuat." }),
+      F("Nama User", "UserName", { req: 1, sample: "BUDI SANTOSO", note: "Nama lengkap user." }),
+      F("Password Awal", "UserPassword", { req: 1, sample: "Ganti123!", note: "Password awal, ikuti aturan password SAP (panjang & karakter). User sebaiknya menggantinya saat login pertama." }),
+      F("Superuser", "Superuser", { sample: "N", enum: YN, note: "Y = akses penuh ke semua menu, authorization per menu diabaikan. Untuk go-live sebaiknya N kecuali admin." }),
+      F("Email", "eMail", { note: "Email user (opsional)." }),
+      F("HP", "MobilePhoneNumber", { note: "Nomor HP (opsional)." }),
+      F("Dikunci", "Locked", { sample: "N", enum: YN, note: "Y = user tidak bisa login." })] },
+    { name: "Branch", fields: [
+      F("Kode User", "UserCode", { req: 1, sample: "BUDI", parent: 1, note: "Sama dengan Kode User di sheet User." }),
+      F("Branch", "BPLID", { req: 1, ref: "branches", note: "Koleksi UserBranchAssignment. Satu baris per branch yang boleh diakses user; tanpa branch user tidak bisa membuat dokumen." })] },
+    { name: "Authorization Group", fields: [
+      F("Kode User", "UserCode", { req: 1, sample: "BUDI", parent: 1, note: "Sama dengan Kode User di sheet User." }),
+      F("Authorization Group", "GroupId", { req: 1, ref: "authgroups", note: "Koleksi UserGroupByUser. Grup otorisasi dari Administration › Authorizations › Authorization Groups; satu baris per grup." })] },
+    { name: "Authorization", fields: [
+      F("Kode User", "UserCode", { req: 1, sample: "BUDI", parent: 1, note: "Sama dengan Kode User di sheet User." }),
+      F("ID Izin", "PermissionID", { req: 1, noSample: 1, note: "Koleksi UserPermission. ID izin per menu / dokumen dari General Authorizations. Opsional: isi hanya untuk izin yang tidak cukup diatur lewat authorization group." }),
+      F("Izin", "Permission", { req: 1, sample: "Read Only", enum: { Full: "boper_Full", "Read Only": "boper_ReadOnly", "No Authorization": "boper_None" },
+        note: "Full, Read Only, atau No Authorization." })] }] },
 ];
 
 // ---------- data dropdown dari SAP (api/section/template-ref) ----------

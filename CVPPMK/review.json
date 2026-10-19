@@ -123,6 +123,15 @@
       "status" : "ok",
       "at" : "2026-10-16 15:34",
       "note" : "Diambil dari db komersial dan TRD"
+    },
+    "business-partners" : {
+      "status" : "ok",
+      "at" : "2026-10-16 23:26",
+      "note" : "Business partner sudah"
+    },
+    "warehouses" : {
+      "status" : "ok",
+      "at" : "2026-10-17 07:29"
     }
   },
   "exclusions" : { },

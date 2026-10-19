@@ -16,7 +16,9 @@ import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
@@ -26,10 +28,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Client Service Layer SAP B1, khusus baca. Login sekali, session (cookie B1SESSION, ROUTEID) dipakai ulang,
+ * Client Service Layer SAP B1. Login sekali, session (cookie B1SESSION, ROUTEID) dipakai ulang,
  * login ulang otomatis kalau session habis (HTTP 401).
  * Konfigurasi di ./application.properties: sap.sl.url, sap.sl.company-db, sap.sl.username, sap.sl.password.
  * Pakai HttpURLConnection (bukan java.net.http) supaya tetap jalan di Java 8.
+ * Menulis (write) hanya dipanggil dari SetupController.upload, yang dikunci ke mode edit.
  */
 @Component
 public class ServiceLayerClient {
@@ -71,6 +74,12 @@ public class ServiceLayerClient {
 
     public JsonNode get(String path) throws IOException {
         return call("GET", path, null, true);
+    }
+
+    /** Tulis data: POST (buat baru) atau PATCH (ubah sebagian field). Hasil POST = objek yang dibuat, PATCH = objek kosong. */
+    public JsonNode write(String method, String path, JsonNode body) throws IOException {
+        if (!"POST".equals(method) && !"PATCH".equals(method)) throw new IllegalArgumentException("Method tulis tidak didukung: " + method);
+        return call(method, path, json.writeValueAsString(body), true);
     }
 
     private synchronized JsonNode call(String method, String path, String body, boolean retry) throws IOException {
@@ -115,7 +124,7 @@ public class ServiceLayerClient {
         }
         con.setConnectTimeout(15_000);
         con.setReadTimeout(60_000);
-        con.setRequestMethod(method);
+        setMethod(con, method);
         con.setRequestProperty("Content-Type", "application/json");
         if (cookies != null) con.setRequestProperty("Cookie", cookies);
         try {
@@ -134,6 +143,28 @@ public class ServiceLayerClient {
             return res;
         } finally {
             con.disconnect();
+        }
+    }
+
+    /** HttpURLConnection di Java 8 menolak PATCH; method diisi lewat reflection (juga ke delegate koneksi HTTPS). */
+    private static void setMethod(HttpURLConnection con, String method) throws ProtocolException {
+        try {
+            con.setRequestMethod(method);
+        } catch (ProtocolException e) {
+            try {
+                Field f = HttpURLConnection.class.getDeclaredField("method");
+                f.setAccessible(true);
+                f.set(con, method);
+                try {
+                    Field d = con.getClass().getDeclaredField("delegate");
+                    d.setAccessible(true);
+                    f.set(d.get(con), method);
+                } catch (NoSuchFieldException ignore) {
+                    // koneksi HTTP biasa, tanpa delegate
+                }
+            } catch (ReflectiveOperationException r) {
+                throw e;
+            }
         }
     }
 

@@ -75,6 +75,15 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!-- War = web dokumentasi saja: halaman Setup & Cut Off beserta query-nya tidak ikut dibundel.
+                 Tetap tersedia saat dijalankan dari VS Code (mode dev). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <configuration>
+                    <packagingExcludes>WEB-INF/classes/static/setup.html,WEB-INF/classes/static/js/pages/setup.js,WEB-INF/classes/setup/**</packagingExcludes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
