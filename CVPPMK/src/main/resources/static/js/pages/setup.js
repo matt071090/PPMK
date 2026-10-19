@@ -249,6 +249,8 @@ function stepPage(step) {
           <li data-n="2"><span class="sx-num">2</span><span><b>Cek &amp; bandingkan</b><small>dengan data di SAP tujuan</small></span></li>
           <li data-n="3"><span class="sx-num">3</span><span><b>Upload ke SAP</b><small>baris yang dipilih</small></span></li>
         </ol>
+        <h2 class="sx-h">0. Yang sudah ada di DB tujuan</h2>
+        <div class="sx-now"><p class="sx-req">Memuat…</p></div>
         <h2 class="sx-h">1. Pilih cara isi data</h2>
         <div class="sx-ways" role="radiogroup" aria-label="Cara isi data">
           <div class="sx-way" data-way="db">
@@ -286,8 +288,33 @@ const stage = (box, n, done) => $$(".sx-steps li", box).forEach(li => {
   $(".sx-num", li).textContent = li.className === "done" ? "✓" : i;
 });
 
+// Isi DB tujuan saat ini: query langkah yang sama, hanya SELECT. Ditampilkan sebelum membandingkan dengan sumber,
+// supaya terlihat apa yang sudah ada di tujuan (mis. tabel addon sudah terisi dari DB lama atau masih kosong).
+async function showNow(step, el) {
+  if (!el) return;
+  el.innerHTML = `<p class="sx-req">Memuat…</p>`;
+  try {
+    const t = (await getJson(dataUrl(step.id, ""))).target || {};
+    if (t.error) {
+      el.innerHTML = `<div class="error">Tidak bisa membaca DB tujuan: ${esc(t.error)}<br>Kalau tabelnya belum ada, jalankan DBCreator addon di DB tujuan dulu.</div>`;
+      return;
+    }
+    const cols = (t.columns || []).filter(c => !c.startsWith("_")), idx = cols.map(c => t.columns.indexOf(c)), rows = t.rows || [], SHOW = 15;
+    if (!rows.length) {
+      el.innerHTML = `<p class="sx-req"><b>0</b> baris. Tabel ada tapi masih kosong, jadi semua data dari sumber akan berstatus baru.</p>`;
+      return;
+    }
+    el.innerHTML = `<p class="sx-req"><b>${rows.length}</b> baris sudah ada di DB tujuan${rows.length > SHOW ? `, menampilkan ${SHOW} pertama` : ""}. Nanti dibandingkan dengan sumber di langkah 2.</p>
+      <div class="table-wrap"><table class="data"><thead><tr>${cols.map(c => `<th>${esc(label(c))}</th>`).join("")}</tr></thead>
+      <tbody>${rows.slice(0, SHOW).map(r => `<tr>${idx.map(i => `<td>${esc(norm(r[i]))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="error">Gagal memuat: ${esc(e.message)}</div>`;
+  }
+}
+
 async function mountStep(step, box) {
   if (!box) return;
+  showNow(step, $(".sx-now", box));
   const sql = $(".sx-sql", box);
   sql.ontoggle = () => { if (sql.open && $("[data-sx-sql]", box).textContent === "Memuat…")
     fetch(`api/setup/${step.id}/sql`).then(r => r.text()).then(t => $("[data-sx-sql]", box).textContent = t); };
@@ -463,6 +490,7 @@ function drawStep(step, body, cmp, opt) {
       const results = out.results, ok = results.filter(x => x.ok).length;
       if (opt.box) stage(opt.box, 3, ok > 0);
       tgtCache.delete(step.id);
+      showNow(step, document.querySelector(`#sx-${step.id} .sx-now`));   // isi tujuan setelah upload
       res.innerHTML = `<h3>Hasil upload</h3>
         <p class="sx-req"><b>${ok}</b> berhasil, <b>${results.length - ok}</b> gagal. Baca ulang untuk membandingkan lagi dengan data terbaru.</p>
         <div class="table-wrap"><table class="data"><thead><tr><th>Hasil</th><th>Aksi</th>${step.match.map(f => `<th>${esc(label(f))}</th>`).join("")}<th>Pesan dari SAP</th></tr></thead>
