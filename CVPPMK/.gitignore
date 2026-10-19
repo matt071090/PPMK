@@ -2,3 +2,5 @@
 /application.properties
 target/
 .vscode/
+# data klien (master data LIVE), jangan di-push
+/DATA/
