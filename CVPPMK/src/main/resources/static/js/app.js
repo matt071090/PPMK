@@ -3,9 +3,10 @@ import { xlsxBlob, download } from "./xlsx.js";
 import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
 import { PAGES as UPLOAD } from "./pages/upload.js";
-import { PAGES as BREEDING } from "./pages/breeding.js";
+import { extendPages } from "./pages/addon-sections.js";
 
-const PAGES = { ...GENERAL, ...MODULES, ...UPLOAD, ...BREEDING };
+const PAGES = { ...GENERAL, ...MODULES, ...UPLOAD };
+extendPages(PAGES);   // section Addon STEM / Farm Breeding di halaman UDT, UDF, Validasi SP
 
 let chapters = [], pages = [];          // pages: daftar datar semua halaman, urut sesuai sidebar
 const cache = new Map();                // id halaman -> Promise data API

@@ -115,6 +115,14 @@
     "lookups": [{ "field": "BPLID", "from": "_Branch", "step": "branches", "by": "Name" }],
     "note": "Lewat aksi SeriesService_AddSeries (baru) dan SeriesService_UpdateSeries (ubah), bukan entity. Belum ada template Excel." },
 
+
+  { "id": "stem-params", "tier": "F", "kind": "data", "title": "Parameter STEM Addon", "doc": "udt", "ref": "5.2",
+    "entity": "U_ST_PARAM", "keyField": "Code", "keyString": true, "match": ["U_Key"], "required": ["U_Key"],
+    "note": "Key @ST_PARAM yang dibaca STEM Addon. Code dan Name diisi sama dengan U_Key. SAPPWDINT (password Service Layer) tidak ikut: isi manual di tujuan." },
+  { "id": "breeding-params", "tier": "F", "kind": "data", "title": "Parameter Farm Breeding Addon", "doc": "udt", "ref": "5.2",
+    "entity": "U_ST_PARAM", "keyField": "Code", "keyString": true, "match": ["U_Key"], "required": ["U_Key"], "requires": ["Parameter STEM Addon"],
+    "note": "Key @ST_PARAM yang dibaca Farm Breeding Addon. Banyak nilainya berupa kode dari @STEM_TYPEOFSTAT, jadi pastikan master itu sudah terisi di tujuan." },
+
   { "id": "branches", "kind": "ref", "title": "Branch (referensi)", "match": ["Name"] },
   { "id": "dimensions", "kind": "ref", "title": "Dimension (referensi)", "match": ["Name"] }
 ]
