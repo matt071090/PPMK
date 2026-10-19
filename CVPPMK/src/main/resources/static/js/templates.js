@@ -265,6 +265,26 @@ export const TEMPLATES = [
       F("ID Izin", "PermissionID", { req: 1, noSample: 1, note: "Koleksi UserPermission. ID izin per menu / dokumen dari General Authorizations. Opsional: isi hanya untuk izin yang tidak cukup diatur lewat authorization group." }),
       F("Izin", "Permission", { req: 1, sample: "Read Only", enum: { Full: "boper_Full", "Read Only": "boper_ReadOnly", "No Authorization": "boper_None" },
         note: "Full, Read Only, atau No Authorization." })] }] },
+  // Field dicocokkan ke aksi SeriesService_AddSeries / UpdateSeries (entity Series). Nama kolom sama dengan query langkah
+  // setup "Document Numbering" (setup/sql/document-numbering.sql), jadi template dan cara "copy dari database" saling cocok.
+  { no: "24", title: "Document Numbering", entity: "SeriesService",
+    note: "Satu baris = satu series. Document diisi kode objek SAP: 13 A/R Invoice, 14 A/R Credit Memo, 15 Delivery, 16 Returns, 17 Sales Order, "
+      + "18 A/P Invoice, 19 A/P Credit Memo, 20 Goods Receipt PO, 21 Goods Return, 22 Purchase Order, 23 Sales Quotation, 24 Incoming Payment, "
+      + "30 Journal Entry, 46 Outgoing Payment, 59 Goods Receipt, 60 Goods Issue, 67 Inventory Transfer, 1250000001 Inventory Transfer Request, "
+      + "1470000113 Purchase Request, 202 Production Order. Series addon (UDO) memakai kode UDO, mis. STEM_MPLAN atau STEM_MSTATISTIC.",
+    sheets: [{ name: "Document Numbering", fields: [
+      F("Document (kode objek)", "Document", { req: 1, sample: "13", note: "Kode objek dokumen, lihat daftar di atas. Untuk UDO addon isi kode UDO-nya." }),
+      F("Sub Type", "DocumentSubType", { sample: "--", note: "Biasanya -- (tanpa sub tipe). Nilai lain mengikuti kolom DocSubType di tabel NNM1, mis. DN untuk Down Payment. Kosong = --." }),
+      F("Nama Series", "Name", { req: 1, sample: "KOM-IN26", note: "Nama series, maks 8 karakter. Pola yang dipakai: kode branch + dokumen + tahun." }),
+      F("Period Indicator", "PeriodIndicator", { req: 1, ref: "indicators", note: "Indicator periode (biasanya tahun). Harus sama dengan Indicator di Posting Period." }),
+      F("Branch", "BPLID", { ref: "branches", note: "Branch pemilik series. Kosong = berlaku untuk semua branch. Pada DB berbranch, addon hanya memakai series yang BPLId-nya cocok." }),
+      F("Prefix", "Prefix", { note: "Teks di depan nomor, mis. INV/. Opsional." }),
+      F("Suffix", "Suffix", { note: "Teks di belakang nomor. Opsional." }),
+      F("Nomor Awal", "InitialNumber", { req: 1, sample: 1, kind: "num", note: "Nomor pertama series. Wajib berbeda antar series pada dokumen yang sama." }),
+      F("Nomor Terakhir", "LastNumber", { sample: 999999, kind: "num", note: "Batas atas nomor. Kosong = tanpa batas." }),
+      F("Manual", "IsManual", { sample: "N", enum: YN, note: "Y = nomor diketik manual, bukan otomatis. Kosong = N." }),
+      F("Dikunci", "Locked", { sample: "N", enum: YN, note: "Y = series tidak bisa dipakai membuat dokumen baru. Kosong = N." }),
+      F("Catatan (Remark)", "Remarks", { note: "Remark series. Addon Farm Breeding membaca 2 huruf awal Remark untuk series IT (TO atau TI), jadi isi sesuai konvensi: TO-Transfer OUT, TI-Transfer IN." })] }] },
 ];
 
 // ---------- data dropdown dari SAP (api/section/template-ref) ----------

@@ -108,12 +108,12 @@
     "requires": ["Asset Class", "Item Group"],
     "lookups": [{ "field": "ItemsGroupCode", "from": "_ItemGroup", "step": "item-groups", "by": "GroupName" }],
     "note": "Item tipe Fixed Asset. Belum ada template Excel tersendiri." },
-  { "id": "document-numbering", "tier": "E", "kind": "data", "title": "Document Numbering", "doc": "document-numbering", "ref": "1.9",
+  { "id": "document-numbering", "tier": "E", "kind": "data", "title": "Document Numbering", "doc": "document-numbering", "ref": "1.9", "template": "T24",
     "entity": "SeriesService", "action": { "create": "SeriesService_AddSeries", "update": "SeriesService_UpdateSeries", "wrap": "Series" },
     "keyField": "Series", "match": ["Document", "DocumentSubType", "Name"], "required": ["Document", "Name", "PeriodIndicator"],
     "numeric": ["InitialNumber", "LastNumber"], "alwaysSend": ["Document", "DocumentSubType"], "requires": ["Branch", "Posting Period"],
     "lookups": [{ "field": "BPLID", "from": "_Branch", "step": "branches", "by": "Name" }],
-    "note": "Lewat aksi SeriesService_AddSeries (baru) dan SeriesService_UpdateSeries (ubah), bukan entity. Belum ada template Excel." },
+    "note": "Lewat aksi SeriesService_AddSeries (baru) dan SeriesService_UpdateSeries (ubah), bukan entity. Template Excel: T24." },
 
 
   { "id": "stem-params", "tier": "F", "kind": "data", "title": "Parameter STEM Addon", "doc": "udt", "ref": "@ST_PARAM", "entity": "U_ST_PARAM", "keyField": "Code", "keyString": true, "match": ["U_Key"], "required": ["U_Key"], "note": "Key @ST_PARAM yang dibaca STEM Addon. Code dan Name diisi sama dengan U_Key. SAPPWDINT (password Service Layer) tidak ikut: isi manual di tujuan." },
