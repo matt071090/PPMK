@@ -377,16 +377,18 @@ async function mountStep(step, box) {
     catch (e) { body.innerHTML = `<div class="error">Gagal membaca branch / period indicator tujuan: ${esc(e.message)}</div>`; return; }
     const all = brs.map(b => ({ id: String(b._key), name: b.Name }));
     let cfg = {}; try { cfg = JSON.parse(store.get(`setup-gen:${step.id}`) || "{}"); } catch { }
-    const from = +cfg.from || 2026, to = +cfg.to || 2040, sel = new Set(cfg.sel || all.map(b => b.id));
-    gBody.innerHTML = `<div class="sx-row"><label>Dari tahun <input type="number" min="2000" max="2099" value="${from}" data-g-from style="width:84px"></label>
-        <label>sampai <input type="number" min="2000" max="2099" value="${to}" data-g-to style="width:84px"></label></div>
+    // batas atas = Period Indicator terakhir di tujuan (series tidak bisa dibuat untuk tahun tanpa indikator)
+    const maxYear = Math.max(2026, ...(refs.indicators || []).map(Number).filter(n => n >= 2000 && n < 2100));
+    const from = Math.min(+cfg.from || 2026, maxYear), to = Math.min(+cfg.to || maxYear, maxYear), sel = new Set(cfg.sel || all.map(b => b.id));
+    gBody.innerHTML = `<div class="sx-row"><label>Dari tahun <input type="number" min="2026" max="${maxYear}" value="${from}" data-g-from style="width:84px"></label>
+        <label>sampai <input type="number" min="2026" max="${maxYear}" value="${to}" data-g-to style="width:84px"></label></div>
       <div class="sx-row">${all.map(b => `<label><input type="checkbox" data-g-br value="${esc(b.id)}"${sel.has(b.id) ? " checked" : ""}> ${esc(b.name)}</label>`).join(" ")}</div>
-      <small class="muted">Period Indicator di tujuan hanya sampai tahun tertentu; tahun di luar itu ditandai Error sampai dibuat di Posting Period.</small>
+      <small class="muted">Tahun dibatasi sampai ${maxYear}, Period Indicator terakhir di tujuan. Untuk tahun berikutnya buat dulu indikatornya di Posting Period.</small>
       <details class="grp"><summary><span>${FAMILIES.length} series per branch per tahun</span></summary>
         <div class="table-wrap"><table class="data"><thead><tr><th>Dokumen</th><th>Nama</th><th>Remark</th><th>Untuk</th></tr></thead><tbody>${FAMILIES.map(f =>
           `<tr><td><code>${esc(f.doc)}</code></td><td><code>x-${esc(f.code)}yy</code></td><td>${esc(f.remark)}${f.addBranch ? " + branch" : ""}</td><td>${esc(f.why)}</td></tr>`).join("")}</tbody></table></div></details>`;
     const save = () => {
-      const f = +$("[data-g-from]", gBody).value || 2026, t = +$("[data-g-to]", gBody).value || 2040;
+      const f = Math.min(+$("[data-g-from]", gBody).value || 2026, maxYear), t = Math.min(+$("[data-g-to]", gBody).value || maxYear, maxYear);
       store.set(`setup-gen:${step.id}`, JSON.stringify({ from: f, to: Math.max(f, t), sel: $("[data-g-br]", gBody).filter(c => c.checked).map(c => c.value) }));
       mountStep(step, box);
     };
