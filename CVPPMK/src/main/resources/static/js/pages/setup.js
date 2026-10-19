@@ -9,7 +9,6 @@ import { $, $$, esc, isEmpty, onMount, flushMounts } from "../ui.js";
 import { xlsxBlob, download } from "../xlsx.js";
 import { readXlsx } from "../xlsx-read.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
-import { generate, FAMILIES } from "./numbering-gen.js";
 
 const PROJECT = "CVPPMK";
 const store = {
@@ -253,7 +252,7 @@ function stepPage(step) {
         <h2 class="sx-h">0. Yang sudah ada di DB tujuan</h2>
         <div class="sx-now"><p class="sx-req">Memuat…</p></div>
         <h2 class="sx-h">1. Pilih cara isi data</h2>
-        <div class="sx-ways${step.generator ? " three" : ""}" role="radiogroup" aria-label="Cara isi data">
+        <div class="sx-ways" role="radiogroup" aria-label="Cara isi data">
           <div class="sx-way" data-way="db">
             <label class="sx-way-h"><input type="radio" name="way-${step.id}" value="db"><b>Copy dari database lain</b></label>
             <p class="sx-way-d">Ambil ${esc(step.title)} langsung dari company DB lain, mis. DB lama untuk cut off.</p>
@@ -265,11 +264,6 @@ function stepPage(step) {
               : "Belum ada template Excel untuk langkah ini."}</p>
             <div class="sx-way-b" data-body="excel"></div>
           </div>
-          ${step.generator ? `<div class="sx-way" data-way="gen">
-            <label class="sx-way-h"><input type="radio" name="way-${step.id}" value="gen"><b>Buat otomatis</b></label>
-            <p class="sx-way-d">Series Farm Breeding dan iFlocs per branch per tahun, dihitung mengikuti konvensi yang sudah ada di tujuan.</p>
-            <div class="sx-way-b" data-body="gen"></div>
-          </div>` : ""}
         </div>
         <h2 class="sx-h">2. Cek &amp; bandingkan <span class="sx-cmp-label"></span></h2>
         <div class="sx-body"><p class="sx-req">Pilih cara isi data di atas.</p></div>
@@ -327,7 +321,6 @@ async function mountStep(step, box) {
   const tpl = tplOf(step);
   let way = store.get(`setup-way:${step.id}`) || "db";
   if (way === "excel" && !tpl) way = "db";
-  if (way === "gen" && !step.generator) way = "db";
   $$(".sx-way", box).forEach(c => {
     const on = c.dataset.way === way;
     c.classList.toggle("on", on);
@@ -366,46 +359,6 @@ async function mountStep(step, box) {
     if (errs.length) { body.innerHTML = `<div class="error">${errs.map(([w, r]) => `Query di ${w} gagal: ${esc(r.error)}`).join("<br>")}</div>`; return; }
     $("[data-sx-info]", dbBody).textContent = `${data.source.rows.length} baris dibaca dari ${srcName(src, list)}, ${data.generatedAt.replace("T", " ")}`;
     drawStep(step, body, compare(step, data, lookups), { hasSrc: true, way, target: list.target, tpl, lookups, box });
-    return;
-  }
-
-  // cara "Buat otomatis" (hanya langkah dengan step.generator): baris dihitung di browser, lalu dibandingkan dengan tujuan seperti cara lain
-  if (way === "gen") {
-    const gBody = $('[data-body="gen"]', box);
-    let brs, refs;
-    try { [brs, refs] = await Promise.all([targetRows("branches"), loadRef()]); }
-    catch (e) { body.innerHTML = `<div class="error">Gagal membaca branch / period indicator tujuan: ${esc(e.message)}</div>`; return; }
-    const all = brs.map(b => ({ id: String(b._key), name: b.Name }));
-    let cfg = {}; try { cfg = JSON.parse(store.get(`setup-gen:${step.id}`) || "{}"); } catch { }
-    // batas atas = Period Indicator terakhir di tujuan (series tidak bisa dibuat untuk tahun tanpa indikator)
-    const maxYear = Math.max(2026, ...(refs.indicators || []).map(Number).filter(n => n >= 2000 && n < 2100));
-    const from = Math.min(+cfg.from || 2026, maxYear), to = Math.min(+cfg.to || maxYear, maxYear), sel = new Set(cfg.sel || all.map(b => b.id));
-    gBody.innerHTML = `<div class="sx-row"><label>Dari tahun <input type="number" min="2026" max="${maxYear}" value="${from}" data-g-from style="width:84px"></label>
-        <label>sampai <input type="number" min="2026" max="${maxYear}" value="${to}" data-g-to style="width:84px"></label></div>
-      <div class="sx-row">${all.map(b => `<label><input type="checkbox" data-g-br value="${esc(b.id)}"${sel.has(b.id) ? " checked" : ""}> ${esc(b.name)}</label>`).join(" ")}</div>
-      <small class="muted">Tahun dibatasi sampai ${maxYear}, Period Indicator terakhir di tujuan. Untuk tahun berikutnya buat dulu indikatornya di Posting Period.</small>
-      <details class="grp"><summary><span>${FAMILIES.length} series per branch per tahun</span></summary>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Dokumen</th><th>Nama</th><th>Remark</th><th>Untuk</th></tr></thead><tbody>${FAMILIES.map(f =>
-          `<tr><td><code>${esc(f.doc)}</code></td><td><code>x-${esc(f.code)}yy</code></td><td>${esc(f.remark)}${f.addBranch ? " + branch" : ""}</td><td>${esc(f.why)}</td></tr>`).join("")}</tbody></table></div></details>`;
-    const save = () => {
-      const f = Math.min(+$("[data-g-from]", gBody).value || 2026, maxYear), t = Math.min(+$("[data-g-to]", gBody).value || maxYear, maxYear);
-      store.set(`setup-gen:${step.id}`, JSON.stringify({ from: f, to: Math.max(f, t), sel: $("[data-g-br]", gBody).filter(c => c.checked).map(c => c.value) }));
-      mountStep(step, box);
-    };
-    $("[data-g-from], [data-g-to], [data-g-br]", gBody).forEach(i => i.onchange = save);
-    let rows;
-    try { rows = generate({ from, to, branches: all, selected: sel, indicators: refs.indicators }); }
-    catch (e) { stage(box, 1, false); cmpLabel.textContent = ""; body.innerHTML = `<div class="error">${esc(e.message)}</div>`; return; }
-    $("[data-sx-s1]", box).textContent = `Dihitung otomatis: ${rows.length} series`;
-    stage(box, 2, false);
-    cmpLabel.textContent = `· dihitung otomatis → ${list.target}`;
-    body.innerHTML = `<div class="skeleton"><div></div><div></div><div></div></div>`;
-    let data, lookups;
-    try { [data, lookups] = await Promise.all([getJson(dataUrl(step.id, "")), loadLookups(step)]); }
-    catch (e) { body.innerHTML = `<div class="error">Gagal membaca data tujuan: ${esc(e.message)}</div>`; return; }
-    if (data.target.error) { body.innerHTML = `<div class="error">Query di tujuan gagal: ${esc(data.target.error)}</div>`; return; }
-    drawStep(step, body, compare(step, { ...data, sourceRows: rows }, lookups), { hasSrc: true, way, target: list.target, tpl, lookups, box,
-      fileErrors: rows.filter(r => r._errors.length).length });
     return;
   }
 
