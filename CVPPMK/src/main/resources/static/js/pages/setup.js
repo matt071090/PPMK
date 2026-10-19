@@ -577,6 +577,33 @@ function wireOverviewSearch(box) {
   q.onkeydown = e => { if (e.key === "Escape" && q.value) { q.value = ""; draw(); } };
   draw();
 }
+// Pencarian di sidebar: menyembunyikan langkah yang tidak cocok (dan tahap yang habis), membuka semua tahap selama mencari.
+// Enter membuka langkah pertama yang cocok, Esc mengosongkan.
+function wireNavSearch(nav) {
+  const q = $("#nav-q", nav);
+  if (!q) return;
+  const groups = $$(".nav-group:not(.flat)", nav);
+  const draw = () => {
+    const on = q.value.trim() !== "";
+    nav.classList.toggle("searching", on);
+    groups.forEach(g => {
+      const items = $$("li", g), head = $("button", g) ? $("button", g).textContent : "";
+      items.forEach(li => {
+        const link = $("a", li), id = link && link.dataset ? link.dataset.id : "";   // kode langkah ikut dicari (mis. uom, stem-params)
+        li.hidden = on && !matchQuery(`${li.textContent} ${id} ${head}`, q.value);
+      });
+      g.hidden = on && !items.some(li => !li.hidden);
+    });
+  };
+  q.oninput = draw;
+  q.onkeydown = e => {
+    if (e.key === "Escape" && q.value) { q.value = ""; draw(); }
+    else if (e.key === "Enter") {
+      const first = $$("li", nav).find(li => !li.hidden && !li.closest("[hidden]"));
+      if (first) { const a = $("a", first); if (a) location.hash = a.getAttribute("href"); }
+    }
+  };
+}
 async function mountOverview(steps, box) {
   if (!box) return;
   // dimuat 4 langkah sekaligus supaya server & DB tidak dibanjiri query
@@ -616,12 +643,14 @@ export async function startSetupApp() {
   steps.forEach(s => pages[s.id] = { title: s.title, no: String(s.order), chapter: `${s.tier} · ${TIERS[s.tier][0]}`, def: stepPage(s) });
   const tiers = Object.keys(TIERS).filter(t => steps.some(s => s.tier === t));
   nav.innerHTML = `<div class="nav-group flat"><a href="#/" data-id="" class="chapter-link"><span class="gno">⌂</span><span>Urutan Setup</span></a></div>`
+    + `<div class="nav-search"><input type="search" id="nav-q" placeholder="Cari langkah…" aria-label="Cari langkah di sidebar" autocomplete="off"></div>`
     + tiers.map(t => `<div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">${t}</span>${esc(TIERS[t][0])}</button>
       <ul>${steps.filter(s => s.tier === t).map(s => `<li><a href="#/${s.id}" data-id="${s.id}"${s.kind === "setting" ? ` class="todo"` : ""}>
         <span class="no">${s.order}</span><span>${esc(s.title)}</span></a></li>`).join("")}</ul></div>`).join("");
   $$(".nav-group > button", nav).forEach(b => b.onclick = () => {
     const g = b.parentElement; g.classList.toggle("collapsed"); b.setAttribute("aria-expanded", !g.classList.contains("collapsed"));
   });
+  wireNavSearch(nav);
   const route = () => {
     const id = (location.hash.match(/^#\/([a-z0-9-]*)/) || [])[1] || "", page = pages[id] || pages[""];
     document.body.classList.remove("nav-open");

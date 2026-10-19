@@ -522,3 +522,10 @@ a.edit-btn:hover { text-decoration: none; }
 
 /* pencarian di Urutan Setup: elemen yang disembunyikan tidak boleh kalah oleh aturan display lain */
 .sx [hidden] { display: none !important; }
+
+/* pencarian di sidebar Setup */
+.nav-search { margin: 0 0 10px; }
+.nav-search input[type=search] { width: 100%; font: inherit; font-size: 13.5px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+.nav-search input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#nav [hidden] { display: none !important; }
+#nav.searching .nav-group.collapsed > ul { display: block; }
