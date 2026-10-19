@@ -485,7 +485,7 @@ function drawStep(step, body, cmp, opt) {
     </table></div>
     <div class="sx-bar">
       ${hasSrc ? `<b class="sx-bar-h">3. Upload ke SAP</b>` : ""}<span class="sx-count"></span>
-      ${(opt.way === "db" || opt.way === "gen") && opt.tpl ? `<button type="button" class="xbtn" data-sx-totpl title="Simpan data sumber ke format template ${esc(step.template)}, bisa diedit lalu di-upload lewat cara Excel">⤓ Export ke template Excel</button>` : ""}
+      ${opt.way === "db" && opt.tpl ? `<button type="button" class="xbtn" data-sx-totpl title="Simpan data sumber ke format template ${esc(step.template)}, bisa diedit lalu di-upload lewat cara Excel">⤓ Export ke template Excel</button>` : ""}
       <button type="button" class="xbtn" data-sx-export>⤓ Export hasil cek</button>
       ${upl ? `<button type="button" class="cbtn primary" data-sx-upload>Upload ke SAP…</button>` : hasSrc ? `<span class="badge">Upload menyusul</span>` : ""}
     </div>
