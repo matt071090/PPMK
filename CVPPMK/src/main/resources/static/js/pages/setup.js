@@ -28,7 +28,8 @@ const TIERS = {
   C: ["Chart of Accounts", "Fondasi semua langkah berikutnya."],
   D: ["Butuh Chart of Accounts", "Memakai akun G/L. Baris yang merujuk akun yang belum ada di COA tujuan ditandai Error."],
   E: ["Master data utama", "Paling akhir karena merujuk hampir semua langkah di atas."],
-  F: ["Addon STEM & Farm Breeding", "Parameter addon di @ST_PARAM. Dikerjakan setelah DBCreator STEM dan Farm Breeding dijalankan di DB tujuan."]
+  F: ["Addon STEM", "Parameter dan master STEM Addon. Dikerjakan setelah DBCreator STEM dijalankan di DB tujuan, dan setelah Document Numbering serta Chart of Accounts."],
+  G: ["Addon Farm Breeding", "Parameter dan master Farm Breeding Addon. Dikerjakan setelah DBCreator Farm Breeding (yang berjalan sesudah DBCreator STEM) dan setelah tahap Addon STEM."]
 };
 const label = f => f.startsWith("_") ? f.slice(1) : f;
 const tplOf = step => step.template && TEMPLATES.find(t => `T${t.no}` === step.template);
