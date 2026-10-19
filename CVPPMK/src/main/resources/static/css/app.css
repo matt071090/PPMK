@@ -486,6 +486,8 @@ a.edit-btn:hover { text-decoration: none; }
 .sx-h { font-size: 17px; margin: 22px 0 10px; }
 .sx-h .sx-cmp-label { font-size: 13.5px; font-weight: 400; color: var(--muted); }
 .sx-ways { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sx-ways.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) { .sx-ways.three { grid-template-columns: 1fr; } }
 .sx-way { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .sx-way.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .sx-way-h { display: flex; align-items: center; gap: 10px; font-size: 15px; cursor: pointer; }

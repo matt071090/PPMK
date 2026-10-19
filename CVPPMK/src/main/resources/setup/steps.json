@@ -108,7 +108,7 @@
     "requires": ["Asset Class", "Item Group"],
     "lookups": [{ "field": "ItemsGroupCode", "from": "_ItemGroup", "step": "item-groups", "by": "GroupName" }],
     "note": "Item tipe Fixed Asset. Belum ada template Excel tersendiri." },
-  { "id": "document-numbering", "tier": "E", "kind": "data", "title": "Document Numbering", "doc": "document-numbering", "ref": "1.9", "template": "T24",
+  { "id": "document-numbering", "tier": "E", "kind": "data", "title": "Document Numbering", "doc": "document-numbering", "ref": "1.9", "template": "T24", "generator": "farm-breeding",
     "entity": "SeriesService", "action": { "create": "SeriesService_AddSeries", "update": "SeriesService_UpdateSeries", "wrap": "Series" },
     "keyField": "Series", "match": ["Document", "DocumentSubType", "Name"], "required": ["Document", "Name", "PeriodIndicator"],
     "numeric": ["InitialNumber", "LastNumber"], "alwaysSend": ["Document", "DocumentSubType"], "requires": ["Branch", "Posting Period"],
