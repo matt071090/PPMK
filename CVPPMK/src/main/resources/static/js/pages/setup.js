@@ -561,13 +561,13 @@ export function matchQuery(text, query) {
 // Kotak cari di halaman Urutan Setup: menyembunyikan baris yang tidak cocok dan tahap yang barisnya habis; Esc mengosongkan.
 function wireOverviewSearch(box) {
   if (!box) return;
-  const q = $("#sx-q", box), cnt = $("#sx-qc", box), rows = $("tbody tr[data-step]", box);
+  const q = $("#sx-q", box), cnt = $("#sx-qc", box), rows = $$("tbody tr[data-step]", box);
   const text = new Map(rows.map(tr => [tr, `${tr.textContent} ${tr.dataset.step} ${tr.dataset.tier || ""}`]));
   const draw = () => {
     let shown = 0;
     rows.forEach(tr => { const ok = matchQuery(text.get(tr), q.value); tr.hidden = !ok; if (ok) shown++; });
-    $("table.sx-overview", box).forEach(tb => {
-      const any = $("tbody tr[data-step]", tb).some(tr => !tr.hidden), wrap = tb.closest(".table-wrap");
+    $$("table.sx-overview", box).forEach(tb => {
+      const any = $$("tbody tr[data-step]", tb).some(tr => !tr.hidden), wrap = tb.closest(".table-wrap");
       [wrap, wrap && wrap.previousElementSibling, wrap && wrap.previousElementSibling && wrap.previousElementSibling.previousElementSibling]
         .forEach(el => { if (el) el.hidden = !any; });
     });
