@@ -4,6 +4,8 @@
 import { esc, rowsOf, section, searchable, expandList, table, tabs, exportSheets, autoCols, kv, isEmpty } from "../ui.js";
 
 export const UNCAT = "Belum dikategorikan";
+// hasil api/addon/objects terakhir (diisi app.js saat start), dipakai juga tabel Daftar UDO (tombol Jadikan menu)
+export const addonState = { objects: null, categories: [], editable: false };
 export const KIND = { m: "UDO Master Data", d: "UDO Document", t: "UDT No Object" };
 export const addonPageId = code => "addon-" + code.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 export const objTitle = o => o.title || o.name.replace(/_/g, " ");

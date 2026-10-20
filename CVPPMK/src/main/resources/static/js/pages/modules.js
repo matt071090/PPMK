@@ -3,6 +3,7 @@
 import { mainTable, tableName, tableModule } from "../sap-tables.js";
 import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, kv, settings, table, tabs, searchable, tags, udfCols, expandList, exportButton, exportSheets, sqlSheets, autoCols, VALUATION, GL_METHOD } from "../ui.js";
 import { SP_PAGE } from "./sp-validation.js";
+import { addonState } from "./addon.js";
 
 const one = r => rowsOf(r)[0] || {};
 const num = v => isEmpty(v) ? val(v) : esc((+v).toLocaleString("id-ID"));
@@ -276,6 +277,15 @@ function itemDetail(r, udf) {
     ...(udf.length ? [["UDF", fieldList(udf.map(u => [u.label, r[u.col] === "-" ? null : r[u.col]]))]] : [])
   ];
   return head + tabs("item-detail", list);
+}
+
+// kolom "Menu 7 Addon" di Daftar UDO: status dari mapping (addonState); tombol hanya di mode dev karena mapping ikut dibundel ke war
+function udoMenu(r) {
+  const o = (addonState.objects || []).find(x => x.code === r.Code);
+  if (!o) return `<span class="muted">–</span>`;
+  if (r.TYPE !== "3") return o.shown ? `<span class="badge yes">Otomatis</span>` : `<span class="badge">Disembunyikan</span>`;
+  const btn = (act, lbl) => addonState.editable ? ` <button type="button" class="cbtn" data-act="${act}" data-code="${esc(o.code)}">${lbl}</button>` : "";
+  return o.shown ? `<span class="badge yes">Menu</span>${btn("udo-unmenu", "Batalkan")}` : (btn("udo-menu", "Jadikan menu").trim() || `<span class="muted">Tidak</span>`);
 }
 
 export const PAGES = {
@@ -607,7 +617,9 @@ export const PAGES = {
         + section("list", "Daftar UDO", searchable("udo-t", [{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
           { key: "TYPE", label: "Tipe", fmt: codedCell(UDO_TYPE) }, { key: "TableName", label: "Tabel header", fmt: v => `<code>@${esc(v)}</code>` },
           { key: "ChildTables", label: "Tabel baris", fmt: v => isEmpty(v) ? "" : v.split(", ").map(t => `<code>@${esc(t)}</code>`).join(" ") },
-          { key: "MngSeries", label: "Series", fmt: badgeYN }, { key: "CanCancel", label: "Cancel", fmt: badgeYN }, { key: "CanLog", label: "Log", fmt: badgeYN }], u));
+          { key: "MngSeries", label: "Series", fmt: badgeYN }, { key: "CanCancel", label: "Cancel", fmt: badgeYN }, { key: "CanLog", label: "Log", fmt: badgeYN },
+          { key: "_menu", label: "Menu 7 Addon", fmt: (_, r) => udoMenu(r) }], u),
+          { lead: "UDO Master Data otomatis jadi menu di bab 7 Addon. UDO Document bisa dijadikan menu kalau isinya lebih cocok dicek sebagai master data (mode dev); sub kategorinya diatur di Setup › Mapping Add-on." });
     }
   },
 

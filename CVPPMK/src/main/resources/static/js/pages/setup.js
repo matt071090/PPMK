@@ -622,6 +622,31 @@ async function mountOverview(steps, box) {
   await Promise.all([work(), work(), work(), work()]);
 }
 
+// ---------- kunci Setup (war): password dicek di server, sesi browser ini terbuka sampai kembali ke Dokumentasi ----------
+function lockScreen(art, configured) {
+  $("#nav").innerHTML = "";
+  art.innerHTML = `<h1>Setup &amp; Cut Off</h1>
+    <p class="lead">Menu ini bisa menulis data ke SAP lewat Service Layer, jadi dikunci dengan password Setup.</p>
+    ${configured ? `<form class="lock-form" id="lock-form" novalidate>
+        <label class="fld"><span>Password Setup</span><input type="password" id="lock-pw" autocomplete="current-password" aria-describedby="lock-msg"></label>
+        <p class="fld-msg" id="lock-msg">Password diatur di application.properties server (docs.setup.password).</p>
+        <button class="btn primary" type="submit">Buka Setup</button></form>`
+      : `<div class="error">Password Setup belum diatur di server. Isi docs.setup.password di application.properties, lalu restart aplikasi.</div>`}`;
+  const f = $("#lock-form", art);
+  if (!f) return;
+  const input = $("#lock-pw", f), msg = $("#lock-msg", f);
+  input.focus();
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const fail = t => { input.classList.add("err"); msg.className = "fld-msg err"; msg.textContent = t; input.select(); };
+    if (!input.value) return fail("Password wajib diisi.");
+    try {
+      await getJson("api/setup-access/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: input.value }) });
+      location.reload();
+    } catch (err) { fail(err.message); }
+  };
+}
+
 // ---------- aplikasi setup.html: sidebar per tahap + routing #/ (ringkasan) dan #/<langkah> ----------
 export async function startSetupApp() {
   const art = $("#article"), nav = $("#nav");
@@ -633,11 +658,13 @@ export async function startSetupApp() {
   $("#menu-btn").onclick = () => document.body.classList.toggle("nav-open");
   let steps;
   try {
-    const mode = await getJson("api/review/mode");
-    if (!mode.editable) {
-      art.innerHTML = `<h1>Setup &amp; Cut Off</h1><div class="error">Halaman ini hanya tersedia di mode dev / edit, karena bisa menulis data ke SAP.</div>`;
-      return;
-    }
+    // mode debug: langsung terbuka; war: wajib password Setup (docs.setup.password), tertutup lagi saat kembali ke Dokumentasi
+    const access = await getJson("api/setup-access");
+    if (!access.dev) $(".back-btn").onclick = e => {
+      e.preventDefault();
+      fetch("api/setup-access/logout", { method: "POST" }).finally(() => { location.href = "index.html"; });
+    };
+    if (!access.unlocked) return lockScreen(art, access.configured);
     steps = (await getJson("api/setup/steps")).filter(s => s.kind !== "ref");   // langkah referensi tidak ditampilkan
   } catch (e) {
     art.innerHTML = `<h1>Setup &amp; Cut Off</h1><div class="error">Gagal memuat langkah setup: ${esc(e.message)}</div>`;

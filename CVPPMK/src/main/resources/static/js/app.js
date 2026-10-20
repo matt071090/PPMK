@@ -4,7 +4,7 @@ import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
 import { PAGES as UPLOAD } from "./pages/upload.js";
 import { extendPages } from "./pages/addon-sections.js";
-import { addonPages, addonPage, addonEmptyPage, UNCAT } from "./pages/addon.js";
+import { addonPages, addonPage, addonEmptyPage, addonState, UNCAT } from "./pages/addon.js";
 
 const PAGES = { ...GENERAL, ...MODULES, ...UPLOAD };
 extendPages(PAGES);   // section Addon STEM / Farm Breeding di halaman UDT, UDF, Validasi SP
@@ -336,6 +336,19 @@ document.addEventListener("click", async e => {
   else if (act === "rv-done") { editPage = null; document.body.classList.remove("edit"); rerender(); toast("Review selesai. Mode lihat aktif lagi."); }
   else if (act === "rv-log") openHistory(current);
   else if (act === "log-close" || act === "dlg-cancel") b.closest("dialog").close();
+  else if (act === "udo-menu" || act === "udo-unmenu") { // Daftar UDO: UDO Document dijadikan / batal jadi menu bab 7 (mapping "anggap master")
+    const on = act === "udo-menu", o = (addonState.objects || []).find(x => x.code === b.dataset.code);
+    if (!o) return;
+    b.disabled = true;
+    try {
+      const r = await fetch("api/addon/mapping", { method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categories: addonState.categories, objects: { [o.code]: { cat: o.cat, title: o.title, master: on, hide: on ? false : o.hide } } }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.message || `HTTP ${r.status}`);
+      toast(on ? `${o.code} jadi menu di 7 Addon › ${o.cat || UNCAT}. Halaman dimuat ulang…` : `${o.code} tidak jadi menu lagi. Halaman dimuat ulang…`);
+      setTimeout(() => location.reload(), 1200);
+    } catch (err) { b.disabled = false; toast(`Gagal mengubah mapping. ${err.message}`, true); }
+  }
   else if (act === "exclude") { // form alasan muncul di dalam callout; alasan wajib karena temuan hilang dari halaman
     const callout = b.closest(".callout");
     if ($(".ex-form", callout)) return $(".ex-form input", callout).focus();
@@ -594,14 +607,13 @@ function toggleTheme() {
   let editable;
   [chapters, editable] = await Promise.all([
     fetch("sections.json").then(r => r.json()),
-    // mode dev (VS Code) vs war di Tomcat: Setup, Template Upload, dan Remarks hanya di mode dev; review bisa di keduanya
+    // mode debug (VS Code) vs war di Tomcat: Template Upload dan Remarks hanya di debug; review dan Setup (pakai password) di keduanya
     getJson("api/review/mode").then(m => m.editable).catch(() => false),
     getJson("api/review").then(r => { review = { pages: {}, exclusions: {}, ...r }; reviewLoaded = true; })
       .catch(e => console.warn("Data review gagal dimuat", e))
   ]);
-  // tombol Setup (halaman terpisah setup.html, bisa upload ke SAP) hanya di mode dev
-  if (!editable) $("#setup-btn").remove();
-  else remarks = await getJson("api/review/remarks").then(r => Object.keys(r).length ? r : null).catch(() => null);
+  // tombol Setup tampil di debug maupun war (di war Setup dikunci password, lihat setup.js); Remarks hanya di mode debug
+  if (editable) remarks = await getJson("api/review/remarks").then(r => Object.keys(r).length ? r : null).catch(() => null);
   // bab / halaman bertanda devOnly (mis. Template Upload, Remarks) hanya tampil di mode dev
   if (!editable) chapters = chapters.filter(c => !c.devOnly).map(c => ({ ...c, pages: c.pages.filter(p => !p.devOnly) }));
   // bab / halaman yang disembunyikan dulu (mis. 6 Template Upload, License); nomor halaman di sections.json sudah digeser
@@ -610,7 +622,7 @@ function toggleTheme() {
   const addonCh = chapters.find(c => c.dynamic === "addon");
   if (addonCh) {
     try {
-      const { objects } = await getJson("api/addon/objects");
+      const { objects } = Object.assign(addonState, await getJson("api/addon/objects"));
       addonCh.pages = addonPages(objects);
       objects.filter(o => o.shown).forEach(o => { PAGES[addonCh.pages.find(p => p.addon === o.code).id] = addonPage(o); });
       if (!addonCh.pages.length) { addonCh.pages = [{ id: "addon", title: addonCh.title }]; PAGES.addon = addonEmptyPage(); }

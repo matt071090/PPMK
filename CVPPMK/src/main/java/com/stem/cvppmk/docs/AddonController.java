@@ -2,7 +2,9 @@ package com.stem.cvppmk.docs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -11,6 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
@@ -22,8 +25,9 @@ import java.util.regex.Pattern;
  * Bab 7 Addon: daftar objek add-on dibaca dinamis dari DB, bukan daftar tetap.
  * - Isi bab: UDO Master Data (OUDO.TYPE 1) + UDT yang bukan bagian UDO (OUTB.ObjectType 0 / 5 = No Object)
  *   + UDO Document (TYPE 3) yang di mapping ditandai sebagai master data. Child table UDO tampil di halaman UDO-nya.
- * - Mapping add-on (sub kategori, judul, hide, anggap master) di docs.addon.mapping (default ./addon-mapping.json),
- *   diedit dari menu Setup (mode dev) dan dibundel ke war (read-only di server).
+ * - Mapping add-on (sub kategori, judul, hide, anggap master), diedit dari menu Setup:
+ *   mode debug = docs.addon.mapping (default ./addon-mapping.json, ikut di-commit & dibundel ke war sebagai isi awal);
+ *   war = {folder data}/addon-mapping-{waktu build}.json (lihat DataFiles), mulai dari isi awal yang dibundel setiap build baru.
  * - Data halaman: isi tabel apa adanya (kolom kunci + semua UDF dari CUFD, lihat UdfExpander), maksimal MAX_ROWS baris per tabel.
  */
 @RestController
@@ -45,17 +49,22 @@ public class AddonController {
     private final JdbcTemplate jdbc;
     private final UdfExpander udf;
     private final SectionController section;
+    private final SetupAccessController access;
     private final Path mappingFile;
     private final boolean editable;
     private final ObjectMapper json = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
-    public AddonController(JdbcTemplate jdbc, UdfExpander udf, SectionController section,
+    public AddonController(JdbcTemplate jdbc, UdfExpander udf, SectionController section, SetupAccessController access,
                            @Value("${docs.addon.mapping:addon-mapping.json}") String mappingFile,
-                           @Value("${docs.edit.enabled:true}") boolean editable) {
+                           @Value("${docs.data.dir:}") String dataDir,
+                           @Value("${docs.edit.enabled:true}") boolean editable,
+                           ObjectProvider<BuildProperties> build) throws IOException {
         this.jdbc = jdbc;
         this.udf = udf;
         this.section = section;
-        this.mappingFile = Paths.get(mappingFile).toAbsolutePath();
+        this.access = access;
+        this.mappingFile = editable ? Paths.get(mappingFile).toAbsolutePath()
+                : DataFiles.perBuild(DataFiles.dir(dataDir), "addon-mapping", "json", DataFiles.buildId(build.getIfAvailable()));
         this.editable = editable;
     }
 
@@ -120,13 +129,13 @@ public class AddonController {
     }
 
     /**
-     * Simpan mapping (hanya mode dev): {categories: [...], objects: {KODE: {cat, title, hide, master}}, remove: [KODE]}.
+     * Simpan mapping (Setup terbuka: mode debug, atau war setelah password Setup): {categories: [...], objects: {KODE: {cat, title, hide, master}}, remove: [KODE]}.
      * Mapping lama yang tidak dikirim (mis. kode yang tidak ada di DB ini) tetap disimpan, kecuali ada di remove.
      */
     @PutMapping("/mapping")
     @SuppressWarnings("unchecked")
-    public synchronized Map<String, Object> putMapping(@RequestBody Map<String, Object> body) throws IOException {
-        if (!editable) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Mapping add-on hanya bisa diubah di mode dev.");
+    public synchronized Map<String, Object> putMapping(@RequestBody Map<String, Object> body, HttpServletRequest req) throws IOException {
+        access.require(req);
         Map<String, Object> objs = new TreeMap<>();
         Object rm = body.get("remove");
         Set<Object> remove = rm instanceof List ? new HashSet<>((List<Object>) rm) : Collections.emptySet();
@@ -212,10 +221,10 @@ public class AddonController {
         return o;
     }
 
-    // mode dev: file di folder project; war: salinan yang dibundel saat build
+    // file mapping (debug: folder project, war: folder data per build); belum ada = isi awal yang dibundel saat build
     @SuppressWarnings("unchecked")
     private Map<String, Object> mapping() throws IOException {
-        if (editable && Files.exists(mappingFile)) return json.readValue(mappingFile.toFile(), Map.class);
+        if (Files.exists(mappingFile)) return json.readValue(mappingFile.toFile(), Map.class);
         ClassPathResource bundled = new ClassPathResource("addon-mapping.json");
         if (bundled.exists()) try (InputStream in = bundled.getInputStream()) { return json.readValue(in, Map.class); }
         return Collections.emptyMap();

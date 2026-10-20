@@ -19,14 +19,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 /**
  * Review manual per halaman: status (sesuai / belum sesuai / belum direview), catatan, dan exclusion temuan otomatis.
  * Semua perubahan dicatat sebagai log CSV (waktu, editor, halaman, aksi, nilai lama → baru); state terkini dihitung dari log itu.
  * - File log per build: {docs.data.dir}/review-log-{waktu build}.csv. Build baru = file baru (kosong), file build lama dihapus saat start.
- * - docs.data.dir default: {catalina.base}/data/cvppmk di Tomcat, ./review-data saat dijalankan dari VS Code
- *   (bukan ./data: di Windows sama dengan folder DATA berisi data klien).
+ *   Lokasi folder: lihat DataFiles.
  * - Edit review boleh di war juga (user client menyatakan data sudah sesuai), wajib nama editor.
  * Remarks (catatan project internal STEM) hanya di mode dev, disimpan di docs.remarks.file (default ./remarks.json).
  */
@@ -49,23 +47,11 @@ public class ReviewController {
                             @Value("${docs.remarks.file:remarks.json}") String remarksFile,
                             @Value("${docs.edit.enabled:true}") boolean editable,
                             ObjectProvider<BuildProperties> build) throws IOException {
-        Path dir = dataDir.isEmpty()
-                ? (System.getProperty("catalina.base") != null ? Paths.get(System.getProperty("catalina.base"), "data", "cvppmk") : Paths.get("review-data"))
-                : Paths.get(dataDir);
-        dir = dir.toAbsolutePath();
-        BuildProperties b = build.getIfAvailable();
-        String buildId = b != null && b.getTime() != null ? String.valueOf(b.getTime().toEpochMilli()) : "dev";
-        this.logFile = dir.resolve("review-log-" + buildId + ".csv");
+        // review dikosongkan setiap build: log milik build lain dihapus (lihat DataFiles)
+        this.logFile = DataFiles.perBuild(DataFiles.dir(dataDir), "review-log", "csv", DataFiles.buildId(build.getIfAvailable()));
         this.remarksFile = Paths.get(remarksFile).toAbsolutePath();
         this.editable = editable;
 
-        Files.createDirectories(dir);
-        // review dikosongkan setiap build: log milik build lain dihapus
-        try (Stream<Path> old = Files.list(dir)) {
-            old.filter(p -> p.getFileName().toString().matches("review-log-.*\\.csv") && !p.equals(logFile)).forEach(p -> {
-                try { Files.delete(p); log.info("Log review build lama dihapus: {}", p); } catch (IOException e) { log.warn("Gagal hapus {}: {}", p, e.getMessage()); }
-            });
-        }
         if (Files.exists(logFile)) {
             List<List<String>> rows = parseCsv(new String(Files.readAllBytes(logFile), StandardCharsets.UTF_8));
             for (List<String> r : rows.subList(Math.min(1, rows.size()), rows.size())) {   // baris 1 = header

@@ -491,6 +491,11 @@ dialog.history::backdrop { background: rgba(10, 16, 20, .2); }
 .subcat.new > button { color: var(--warn); }
 @media (max-width: 900px) { .subcat > button { min-height: 40px; font-size: 12.5px; } }
 
+/* setup: kunci password (war) */
+.lock-form { display: grid; gap: 4px; max-width: 360px; margin-top: 8px; }
+.lock-form .btn { justify-self: start; margin-top: 10px; }
+@media (max-width: 720px) { .lock-form { max-width: none; } .lock-form .btn { justify-self: stretch; height: 48px; } }
+
 /* setup: Mapping Add-on */
 .am-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
 .chip .n { font-variant-numeric: tabular-nums; margin-left: 2px; color: var(--muted); } .chip.on .n { color: inherit; }
