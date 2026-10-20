@@ -152,6 +152,16 @@ export function exportButton(cols, rows, title) {
   return `<div class="xbar">${exportBtn(id).replace("<button ", `<button data-title="${esc(title || "")}" `)}</div>`;
 }
 
+// Tombol Excel satu file berisi beberapa sheet. sheets: [{ name, cols, rows }].
+export function exportSheets(sheets, title) {
+  const id = `x${++exportSeq}`;
+  exportsReg.set(id, { sheets });
+  return `<div class="xbar">${exportBtn(id).replace("<button ", `<button data-title="${esc(title || "")}" `).replace("Excel</button>", `Excel (${sheets.length} sheet)</button>`)}</div>`;
+}
+// Satu sheet per file SQL halaman, kolom apa adanya dari query (autoCols). names: { keyHasilQuery: "Nama sheet" }
+export const sqlSheets = (d, names) => Object.entries(names).filter(([k]) => d[k] && d[k].columns)
+  .map(([k, name]) => ({ name, cols: autoCols(d[k]), rows: rowsOf(d[k]) }));
+
 // ---------- tabel data ----------
 // xid: id export tetap (dipakai searchable); allRows: baris yang diekspor kalau berbeda dari yang dirender (mis. dibatasi limit)
 // expand(r): HTML detail baris; baris jadi bisa diklik untuk buka/tutup detail di bawahnya.

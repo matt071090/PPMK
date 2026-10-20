@@ -529,3 +529,59 @@ a.edit-btn:hover { text-decoration: none; }
 .nav-search input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 #nav [hidden] { display: none !important; }
 #nav.searching .nav-group.collapsed > ul { display: block; }
+
+/* ---------- 4.4 Stored Procedure & Validasi SP ---------- */
+.kpi.danger b { color: var(--danger); } .kpi.info b { color: var(--info); }
+#sp-bd [hidden] { display: none !important; }
+.sp-bar { position: sticky; top: calc(var(--top-h) + var(--bar-h)); z-index: 2; background: var(--bg); padding: 8px 0; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.sp-bar .toolbar input[type=search] { max-width: none; }
+.sp-filters { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.sp-fg { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; }
+.sp-fg > span { color: var(--muted); }
+.sp-chip { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 999px; padding: 2px 11px; font-size: 13px; }
+.sp-chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); font-weight: 600; }
+.sp-obj { margin: 0 0 26px; display: grid; gap: 10px; }
+.sp-oh { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.sp-oh b { font-size: 16px; }
+.sp-obj > .src { margin-top: -6px; }
+.sp-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-grp { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
+.sp-grp span { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); margin-left: 6px; }
+.sp-grp.danger { color: var(--danger); } .sp-grp.info { color: var(--info); }
+.sp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 10px; }
+.sp-card { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--danger); border-radius: var(--radius);
+  padding: 12px 14px; display: grid; gap: 8px; align-content: start; min-width: 0; font-size: 14px; }
+.sp-card.proc { border-top-color: var(--info); }
+.sp-card.off { opacity: .62; border-top-color: var(--border-strong); }
+.sp-card.off:hover, .sp-card.off:focus-within { opacity: 1; }
+.sp-ct { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+.sp-card h4 { margin: 0; font-size: 14.5px; line-height: 1.4; }
+.sp-card h4 .no { color: var(--muted); font-weight: 500; margin-right: 6px; font-variant-numeric: tabular-nums; }
+.sp-card p { margin: 0; color: var(--text-2); }
+.sp-card .muted { color: var(--muted); font-size: 12.5px; }
+.sp-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
+.sp-msg { display: flex; gap: 8px; align-items: start; background: var(--danger-soft); border-radius: 6px; padding: 7px 9px; }
+.sp-msg code { background: none; padding: 0; color: var(--danger); font-size: 12.5px; line-height: 1.5; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sp-var { font-style: normal; font-weight: 700; }
+.sp-copy { flex: none; border: 1px solid var(--border-strong); background: var(--surface); border-radius: 5px; padding: 0 8px; font-size: 12px; }
+.sp-does { background: var(--info-soft); border-radius: 6px; padding: 7px 9px; color: var(--text); overflow-wrap: anywhere; }
+.sp-does code { background: none; padding: 0; font-size: 12px; }
+.sp-conds { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.sp-conds code { font-size: 12px; overflow-wrap: anywhere; }
+.sp-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.sp-tag { font-size: 12px; border: 1px solid var(--border); background: var(--surface-2); padding: 0 8px; border-radius: 5px; color: var(--text-2); }
+.sp-tag.mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 11.5px; }
+.sp-tag b { color: var(--accent-strong); }
+.sp-card details { border-top: 1px dashed var(--border); padding-top: 4px; }
+.sp-card details + details { border-top: 0; padding-top: 0; }
+.sp-card summary { cursor: pointer; font-size: 13px; color: var(--accent-strong); }
+.sp-card details > div { padding: 6px 0 2px; display: grid; gap: 6px; font-size: 13px; color: var(--text-2); min-width: 0; }
+.sp-card pre, .proc-src { margin: 0; background: var(--code-bg); border-radius: 6px; padding: 10px 12px; overflow: auto; max-height: 420px;
+  font: 12px/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--text); }
+details.grp > .proc-src { border-radius: 0; border-top: 1px solid var(--border); max-height: 520px; }
+@media print { .sp-bar { display: none; } .sp-card.off { opacity: 1; } .sp-card details { display: none; } }
+
+/* ---------- 7 Addon Farm Breeding (tampilan langkah Setup) ---------- */
+.sv-detail { padding: 10px 12px; display: grid; gap: 6px; }
+.sv-detail + .sv-detail { border-top: 1px solid var(--border); }
+.sv-detail .muted { color: var(--muted); font-size: 12.5px; }

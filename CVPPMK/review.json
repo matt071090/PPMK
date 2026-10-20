@@ -132,6 +132,26 @@
     "warehouses" : {
       "status" : "ok",
       "at" : "2026-10-17 07:29"
+    },
+    "breeding-stem-typeofstat" : {
+      "status" : "ok",
+      "at" : "2026-10-20 13:06"
+    },
+    "breeding-st-statgrp" : {
+      "status" : "ok",
+      "at" : "2026-10-20 13:06"
+    },
+    "breeding-stem-mstd" : {
+      "status" : "ok",
+      "at" : "2026-10-20 13:06"
+    },
+    "breeding-stem-mstdanalysis" : {
+      "status" : "ok",
+      "at" : "2026-10-20 13:06"
+    },
+    "breeding-stem-mstataudit" : {
+      "status" : "ok",
+      "at" : "2026-10-20 13:06"
     }
   },
   "exclusions" : { },

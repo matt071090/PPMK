@@ -75,13 +75,14 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
-            <!-- War = web dokumentasi saja: halaman Setup & Cut Off beserta query-nya tidak ikut dibundel.
+            <!-- War = web dokumentasi saja: halaman Setup & Cut Off tidak ikut dibundel (endpoint /api/setup juga tertutup di war).
+                 setup/** (steps.json + query SELECT) tetap ikut karena dipakai menu baca-saja "Addon Farm Breeding" (/api/section/setup/{id}).
                  Tetap tersedia saat dijalankan dari VS Code (mode dev). -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
                 <configuration>
-                    <packagingExcludes>WEB-INF/classes/static/setup.html,WEB-INF/classes/static/js/pages/setup.js,WEB-INF/classes/setup/**</packagingExcludes>
+                    <packagingExcludes>WEB-INF/classes/static/setup.html,WEB-INF/classes/static/js/pages/setup.js</packagingExcludes>
                 </configuration>
             </plugin>
         </plugins>

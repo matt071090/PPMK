@@ -1,7 +1,8 @@
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
 import { mainTable, tableName, tableModule } from "../sap-tables.js";
-import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, kv, settings, table, tabs, searchable, tags, udfCols, expandList, exportButton, autoCols, VALUATION, GL_METHOD } from "../ui.js";
+import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, kv, settings, table, tabs, searchable, tags, udfCols, expandList, exportButton, exportSheets, sqlSheets, autoCols, VALUATION, GL_METHOD } from "../ui.js";
+import { SP_PAGE } from "./sp-validation.js";
 
 const one = r => rowsOf(r)[0] || {};
 const num = v => isEmpty(v) ? val(v) : esc((+v).toLocaleString("id-ID"));
@@ -511,23 +512,25 @@ export const PAGES = {
       const byCode = rows => rows.reduce((m, r) => (m.get(r.CardCode) || m.set(r.CardCode, []).get(r.CardCode)).push(r) && m, new Map());
       const ctx = { contacts: byCode(rowsOf(d.contacts)), addresses: byCode(rowsOf(d.addresses)), udf: d.bp?.udf || [],
         branches: [...new Set(bp.flatMap(b => String(b.Branches || "").split("|")).filter(Boolean))] };
-      // Excel tetap satu sheet per tipe: semua BP + group-nya
-      const xCols = [{ key: "CardCode", label: "Kode" }, { key: "CardName", label: "Nama" }, { key: "Type", label: "Tipe" }, { key: "GroupName", label: "Group" },
-        { key: "Currency", label: "Mata uang", fmt: v => v === "##" ? "Semua" : val(v) }, { key: "LicTradNum", label: "NPWP" },
-        { key: "frozenFor", label: "Inactive", fmt: badgeYN }, { key: "Branches", label: "Branch", fmt: v => tags(v) }, ...udfCols(d.bp)];
       const tab = (t, name) => {
         const list = bp.filter(b => (b.CardType === "L" ? "C" : b.CardType) === t); // lead memakai customer group
-        return exportButton(xCols, list, name) + bpView(t, name, list, groups, ctx);
+        return bpView(t, name, list, groups, ctx);
       };
+      // Excel BP Master Data: satu file, satu sheet per query xl_* (sql/business-partners/1x_xl_*.sql), mengikuti tab layar BP Master Data
+      const xlsx = exportSheets(sqlSheets(d, { xl_general: "General", xl_contacts: "Contact Persons", xl_addresses: "Addresses",
+        xl_payment_terms: "Payment Terms", xl_bank_accounts: "Bank Accounts", xl_payment_run: "Payment Run",
+        xl_accounting_general: "Accounting - General", xl_accounting_tax: "Accounting - Tax", xl_wtax_codes: "WTax Codes",
+        xl_branch_assignment: "Branch Assignment" }), "BP Master Data");
       // Shipping Type hanya dipakai di BP (tab General), jadi ditampilkan di halaman ini
       const ships = rowsOf(d.shipping).map(x => ({ ...x, Used: bp.filter(b => b.ShipType === x.TrnspName).length }));
       const shipping = section("shipping", "Shipping Type", table([{ key: "TrnspCode", label: "Kode", num: 1 }, { key: "TrnspName", label: "Shipping Type" },
           { key: "WebSite", label: "Website" }, { key: "Active", label: "Aktif", fmt: badgeYN },
-          { key: "Used", label: "Dipakai BP", num: 1, fmt: v => v ? num(v) : `<span class="muted">0</span>` }, ...udfCols(d.shipping)], ships),
+          { key: "Used", label: "Dipakai BP", num: 1, fmt: v => v ? num(v) : `<span class="muted">0</span>` }, ...udfCols(d.shipping)], ships, { noExport: true }),
         { lead: "Administration › Setup › General › Shipping Types. Cara pengiriman default BP (tab General), ikut terbawa ke dokumen." });
-      return shipping + section("list", "Business Partner", tabs("bp", Object.entries(BP_TYPE).map(([t, name]) => [name, tab(t, name)])),
+      return shipping + section("list", "Business Partner", xlsx + tabs("bp", Object.entries(BP_TYPE).map(([t, name]) => [name, tab(t, name)])),
         { lead: "Pilih group di chip atas untuk menyaring, lalu klik BP di daftar kiri untuk melihat detailnya seperti layar BP Master Data. "
-          + "Arahkan kursor ke chip group untuk melihat price list default-nya." });
+          + "Arahkan kursor ke chip group untuk melihat price list default-nya. Tombol Excel mengunduh BP Master Data per tab layar SAP: "
+          + "General, Contact Persons, Addresses, Payment Terms, Bank Accounts, Payment Run, Accounting - General, Accounting - Tax, WTax Codes, Branch Assignment." });
     }
   },
 
@@ -590,22 +593,8 @@ export const PAGES = {
         { key: "Category", label: "Jenis", fmt: codedCell(LAYOUT_CAT) }, { key: "Author", label: "Pembuat" }], rowsOf(d.custom)))
   },
 
-  "sp-validation": {
-    lead: "Stored procedure SAP yang dijalankan setiap kali dokumen disimpan. Dipakai untuk validasi bisnis (mis. qty GRPO melebihi toleransi PO).",
-    menu: "Database HANA › Procedures",
-    tables: ["SYS.PROCEDURES"],
-    checks(d) {
-      const tn = rowsOf(d.procs).find(p => p.Name === "SBO_SP_TRANSACTIONNOTIFICATION");
-      if (!tn) return [["warn", "SBO_SP_TransactionNotification tidak ditemukan."]];
-      return +tn.Len < 1500 ? [["warn", "SBO_SP_TransactionNotification masih template bawaan SAP, belum ada validasi. Di blueprint referensi ada validasi PO/GRPO/cost center di sini."]] : [];
-    },
-    render(d) {
-      const procs = rowsOf(d.procs);
-      return procs.map(p => section(p.Name.toLowerCase(), p.Name, `<p class="sec-lead">${num(p.Len)} karakter.</p>
-        <details class="grp"><summary><span>Lihat isi procedure</span></summary>
-        <pre class="proc-src" style="margin:0;padding:14px;overflow:auto;max-height:420px;font-size:12.5px;border-top:1px solid var(--border)">${esc(p.Definition)}</pre></details>`)).join("");
-    }
-  },
+  // 4.4 daftar SP + breakdown SBO_SP per object: lihat sp-validation.js
+  "sp-validation": SP_PAGE,
 
   // ================= 5. Add-on & Kustomisasi STEM =================
   "udo": {

@@ -1,6 +1,6 @@
 // Bab 1: General Parameter. Urutan dan nomor mengikuti blueprint "01.01 General Parameters".
 import {
-  $, $$, esc, val, YN, badgeYN, coded, rowsOf, isEmpty, onMount, section, kv, settings, table, searchable, tags, udfCols, hasUdf,
+  $, $$, esc, val, YN, badgeYN, coded, rowsOf, isEmpty, onMount, section, kv, settings, table, searchable, tags, udfCols, hasUdf, exportSheets, sqlSheets,
   VALUATION, GL_METHOD, DATE_FMT, TIME_FMT, PERIOD_STAT, OBJECTS, sapVersion
 } from "../ui.js";
 
@@ -744,9 +744,15 @@ sap.sld.password=[PASSWORD]</pre></div>`) + users;
     menu: "Administration › Setup › General › Users",
     tables: ["OUSR", "USR6"],
     checks: d => checkUsers(rowsOf(d.users)),
-    render: d => section("users", "User SAP B1", table([{ key: "USER_CODE", label: "User Code" }, { key: "U_NAME", label: "Nama" },
-      { key: "SUPERUSER", label: "Superuser", fmt: badgeYN }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
-      { key: "Branches", label: "Branch", fmt: v => tags(v) }, { key: "LastLogin", label: "Login terakhir" }, ...udfCols(d.users)], rowsOf(d.users)))
+    render(d) {
+      const cols = [{ key: "USER_CODE", label: "User Code" }, { key: "U_NAME", label: "Nama" },
+        { key: "SUPERUSER", label: "Superuser", fmt: badgeYN }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
+        { key: "Branches", label: "Branch", fmt: v => tags(v) }, { key: "LastLogin", label: "Login terakhir" }, ...udfCols(d.users)];
+      // Excel: branch bisa lebih dari satu per user, jadi dipisah ke sheet "Branch Assignment" (sql/users/02_branches.sql)
+      const xlsx = exportSheets([{ name: "Users", cols: cols.filter(c => c.key !== "Branches"), rows: rowsOf(d.users) },
+        ...sqlSheets(d, { branches: "Branch Assignment" })], "User");
+      return section("users", "User SAP B1", xlsx + table(cols, rowsOf(d.users), { noExport: true }));
+    }
   },
 
   "authorizations": {

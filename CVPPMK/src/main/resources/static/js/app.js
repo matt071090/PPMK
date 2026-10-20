@@ -4,6 +4,7 @@ import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
 import { PAGES as UPLOAD } from "./pages/upload.js";
 import { extendPages } from "./pages/addon-sections.js";
+import { setupViewPage } from "./pages/setup-view.js";
 
 const PAGES = { ...GENERAL, ...MODULES, ...UPLOAD };
 extendPages(PAGES);   // section Addon STEM / Farm Breeding di halaman UDT, UDF, Validasi SP
@@ -33,8 +34,10 @@ async function loadSl(name) {
 function load(id, fresh) {
   if (fresh || !cache.has(id)) {
     // sumber data halaman: query SQL (default), Service Layer (def.sl), License Server (def.sld); withSql = SQL ikut dimuat
-    const { sl, sld, withSql } = PAGES[id] || {};
-    const parts = [...(!sl && !sld) || withSql ? [getJson(`api/section/${id}`)] : [], ...sl ? [loadSl(sl)] : [], ...sld ? [getJson(`api/sld/${sld}`)] : []];
+    // def.setupStep: tampilan baca-saja langkah Setup (bab Addon Farm Breeding), metadata langkah ikut ke results.step
+    const { sl, sld, withSql, setupStep } = PAGES[id] || {};
+    const parts = setupStep ? [getJson(`api/section/setup/${setupStep}`).then(r => ({ ...r, results: { ...r.results, step: r.step } }))]
+      : [...(!sl && !sld) || withSql ? [getJson(`api/section/${id}`)] : [], ...sl ? [loadSl(sl)] : [], ...sld ? [getJson(`api/sld/${sld}`)] : []];
     const p = Promise.all(parts).then(rs => ({ ...rs[0], results: Object.assign({}, ...rs.map(r => r.results)) }));
     p.catch(() => cache.delete(id));
     cache.set(id, p);
@@ -330,11 +333,13 @@ function exportTitle(btn) {
   const hs = $$("#article h2[id], #article h3[id]").filter(h => h.compareDocumentPosition(btn) & Node.DOCUMENT_POSITION_FOLLOWING);
   return hs.length ? headingText(hs[hs.length - 1]) : "Data";
 }
-// buttons: tombol [data-export]; satu tombol = satu sheet. Nama file: "<no> <judul halaman> [- judul tabel].xlsx"
+// buttons: tombol [data-export]; satu tombol = satu sheet, kecuali tombol exportSheets (beberapa sheet sekaligus).
+// Nama file: "<no> <judul halaman> [- judul tabel].xlsx"
 function exportExcel(buttons) {
   const page = pages.find(p => p.id === current);
   const sheets = buttons.map(b => ({ b, x: exportOf(b.dataset.export) })).filter(s => s.x)
-    .map(({ b, x }) => ({ name: exportTitle(b), rows: exportRows(x.cols, x.rows) }));
+    .flatMap(({ b, x }) => x.sheets ? x.sheets.map(s => ({ name: s.name, rows: exportRows(s.cols, s.rows) }))
+      : [{ name: exportTitle(b), rows: exportRows(x.cols, x.rows) }]);
   if (!sheets.length) return;
   const base = `${page.no ? page.no + " " : ""}${page.title}`;
   download(xlsxBlob(sheets), `${sheets.length === 1 && buttons.length === 1 ? `${base} - ${sheets[0].name}` : base} - CVPPMK.xlsx`);
@@ -456,6 +461,8 @@ function toggleTheme() {
   else if (store.get("edit")) setEdit(true);
   // bab bertanda devOnly (mis. Template Upload) hanya tampil di mode dev, sama seperti Mode edit
   if (!editable) chapters = chapters.filter(c => !c.devOnly);
+  // halaman bertanda setupStep = tampilan baca-saja langkah Setup (bab Addon Farm Breeding)
+  chapters.flatMap(c => c.pages).filter(p => p.setupStep).forEach(p => { PAGES[p.id] = setupViewPage(p.setupStep, p.title); });
   // halaman bertanda onlyIfData (mis. UoM) hanya tampil kalau hasil query itu lebih dari 1 baris (bukan cuma "Manual")
   const optional = chapters.flatMap(c => c.pages).filter(p => p.onlyIfData);
   const hide = new Set((await Promise.all(optional.map(p => load(p.id).then(res => rowsOf(dataOf(res)[p.onlyIfData]).length > 1 ? null : p.id, () => null))))
