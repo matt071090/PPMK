@@ -1,10 +1,10 @@
-import { $, $$, esc, slug, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, revealTab } from "./ui.js";
+import { $, $$, esc, slug, company, showCompanyName, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, revealTab } from "./ui.js";
 import { xlsxBlob, download } from "./xlsx.js";
 import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
 import { PAGES as UPLOAD } from "./pages/upload.js";
 import { extendPages } from "./pages/addon-sections.js";
-import { setupViewPage } from "./pages/setup-view.js";
+import { addonPages, addonPage, addonEmptyPage, UNCAT } from "./pages/addon.js";
 
 const PAGES = { ...GENERAL, ...MODULES, ...UPLOAD };
 extendPages(PAGES);   // section Addon STEM / Farm Breeding di halaman UDT, UDF, Validasi SP
@@ -34,9 +34,9 @@ async function loadSl(name) {
 function load(id, fresh) {
   if (fresh || !cache.has(id)) {
     // sumber data halaman: query SQL (default), Service Layer (def.sl), License Server (def.sld); withSql = SQL ikut dimuat
-    // def.setupStep: tampilan baca-saja langkah Setup (bab Addon Farm Breeding), metadata langkah ikut ke results.step
-    const { sl, sld, withSql, setupStep } = PAGES[id] || {};
-    const parts = setupStep ? [getJson(`api/section/setup/${setupStep}`).then(r => ({ ...r, results: { ...r.results, step: r.step } }))]
+    // def.addon: halaman generik bab 7 Addon, isi tabel header + child dari api/addon/data/{kode}
+    const { sl, sld, withSql, addon } = PAGES[id] || {};
+    const parts = addon ? [getJson(`api/addon/data/${encodeURIComponent(addon)}`)]
       : [...(!sl && !sld) || withSql ? [getJson(`api/section/${id}`)] : [], ...sl ? [loadSl(sl)] : [], ...sld ? [getJson(`api/sld/${sld}`)] : []];
     const p = Promise.all(parts).then(rs => ({ ...rs[0], results: Object.assign({}, ...rs.map(r => r.results)) }));
     p.catch(() => cache.delete(id));
@@ -69,6 +69,16 @@ const queryErrors = res => Object.entries(res.results).filter(([, v]) => v.error
 
 // ---------- sidebar ----------
 const HOME_ICON = `<svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true" style="vertical-align:-2px"><path d="M3 9.5L10 4l7 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-5V17H4a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>`;
+const navItem = p => `<li><a href="#/${p.id}" data-id="${p.id}" class="${p.status === "todo" ? "todo" : ""}"${p.addon ? ` title="${esc(p.addon)}"` : ""}>
+  ${p.no ? `<span class="no">${esc(p.no)}</span>` : ""}<span class="t">${esc(p.title)}</span>${p.status ? `<span class="nav-st" data-dot="${p.id}"></span>` : ""}</a></li>`;
+// bab Addon: item dikelompokkan per sub kategori (urutan sudah dari addonPages), tiap sub kategori bisa dilipat
+function navSubcats(list) {
+  const cats = [...new Set(list.map(p => p.cat))];
+  return cats.map(c => { const items = list.filter(p => p.cat === c);
+    return `<li class="subcat${c === UNCAT ? " new" : ""}"><button type="button" aria-expanded="true">${esc(c)}<span class="cnt">${items.length}</span>
+      <svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+      <ul>${items.map(navItem).join("")}</ul></li>`; }).join("");
+}
 function buildNav() {
   $("#nav").innerHTML = `
     <div class="progress-box"><div class="lbl"><span>Menu sudah sesuai</span><b id="rv-count"></b></div>
@@ -78,84 +88,129 @@ function buildNav() {
       if (flat) { // bab satu halaman: tampil sebagai satu tautan saja
         const p = ch.pages[0];
         return `<div class="nav-group flat"><a href="#/${p.id}" data-id="${p.id}" class="chapter-link ${p.status === "todo" ? "todo" : ""}">
-          <span class="gno">${ch.home ? HOME_ICON : esc(ch.no || "")}</span><span>${esc(ch.title)}</span>${p.status ? `<span class="dot" data-dot="${p.id}"></span>` : ""}</a></div>`;
+          <span class="gno">${ch.home ? HOME_ICON : esc(ch.no || "")}</span><span>${esc(ch.title)}</span>${p.status ? `<span class="nav-st" data-dot="${p.id}"></span>` : ""}</a></div>`;
       }
       return `<div class="nav-group" data-no="${ch.no}">
         <button type="button" aria-expanded="true"><span class="gno">${esc(ch.no || "")}</span>${esc(ch.title)}
           <svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
-        <ul>${ch.pages.map(p => `<li><a href="#/${p.id}" data-id="${p.id}" class="${p.status === "todo" ? "todo" : ""}">
-          ${p.no ? `<span class="no">${esc(p.no)}</span>` : ""}<span>${esc(p.title)}</span>${p.status ? `<span class="dot" data-dot="${p.id}"></span>` : ""}</a></li>`).join("")}</ul>
+        <ul>${ch.dynamic ? navSubcats(ch.pages) : ch.pages.map(navItem).join("")}</ul>
       </div>`;
     }).join("")}
-    <div class="legend">${Object.entries(REVIEW).map(([k, [lbl]]) => `<span><i class="dot ${k}"></i>${lbl}</span>`).join("")}</div>`;
+    <div class="legend">${Object.entries(REVIEW).map(([k, [lbl]]) => `<span>${stIcon(k)}${lbl}</span>`).join("")}</div>`;
+  $$(".subcat > button").forEach(b => b.onclick = () => {
+    const open = b.getAttribute("aria-expanded") !== "true"; b.setAttribute("aria-expanded", open); b.nextElementSibling.hidden = !open;
+  });
   $$(".nav-group > button").forEach(b => b.onclick = () => {
     const g = b.parentElement; g.classList.toggle("collapsed"); b.setAttribute("aria-expanded", !g.classList.contains("collapsed"));
   });
   paintNav();
 }
-// warna titik & bar progres mengikuti status review manual (edit mode)
+// ikon status & bar progres mengikuti status review manual; menu Belum direview ditandai merah (data-s="none")
 function paintNav() {
   const menus = pages.filter(p => p.status), cnt = s => menus.filter(p => statusOf(p.id) === s).length;
   $$("#nav [data-dot]").forEach(d => {
     const s = statusOf(d.dataset.dot), note = review.pages[d.dataset.dot]?.note;
-    d.className = `dot ${s}`; d.title = REVIEW[s][0] + (note ? ` – ${note}` : "");
+    d.innerHTML = `${stIcon(s)}<span class="sr">${REVIEW[s][0]}</span>`; d.title = REVIEW[s][0] + (note ? ` – ${note}` : "");
+    d.closest("a").dataset.s = s;
   });
   $("#rv-count").textContent = `${cnt("ok")}/${menus.length}`;
   $("#rv-ok").style.width = `${cnt("ok") / menus.length * 100}%`;
   $("#rv-nok").style.width = `${cnt("nok") / menus.length * 100}%`;
 }
 
-// ---------- review manual: status menu & exclusion temuan ----------
-// review.json di server: { pages: {id: {status: "ok"|"nok", note, at}}, exclusions: {key: {page, msg, reason, at}} }
-const REVIEW = { ok: ["Sesuai", "yes"], nok: ["Belum sesuai", "danger"], none: ["Belum direview", ""] };
-let review = { pages: {}, exclusions: {} }, reviewLoaded = false;
+// ---------- review manual: status menu, catatan & exclusion temuan ----------
+// Data di server (log CSV per build, lihat ReviewController). State terkini dari GET api/review:
+//   { pages: {id: {status: "ok"|"nok", note, at, by}}, exclusions: {key: {page, msg, reason, at, by}} }
+// Review dimulai per halaman dari tombol Review di sebelah judul (wajib nama editor, diingat per browser);
+// setiap perubahan tercatat dan bisa dilihat siapa saja lewat tombol ? (Riwayat).
+const REVIEW = { ok: ["Sesuai"], nok: ["Belum sesuai"], none: ["Belum direview"] };
+// ikon status beda bentuk (lingkaran centang / segitiga seru / cincin strip), tidak hanya beda warna
+const ST_ICON = {
+  ok: '<circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M6.4 10.3l2.4 2.4 4.8-5.2" stroke="var(--surface)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  nok: '<path d="M10 2.2l8.3 14.6H1.7z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M10 7.6v4.2" stroke="var(--surface)" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="14.4" r="1.1" fill="var(--surface)"/>',
+  none: '<circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M6.6 10h6.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'
+};
+const stIcon = s => `<svg class="sti ${s}" viewBox="0 0 20 20" aria-hidden="true">${ST_ICON[s]}</svg>`;
+const stBadge = s => `<span class="sbadge s-${s}">${stIcon(s)}${REVIEW[s][0]}</span>`;
+const ICON = {
+  pencil: '<path d="M13.5 3.5l3 3L7 16H4v-3z"/>',
+  help: '<circle cx="10" cy="10" r="7.5"/><path d="M7.9 7.8a2.2 2.2 0 0 1 4.2.8c0 1.5-2.1 1.8-2.1 3.1"/><circle cx="10" cy="14.4" r=".7" fill="currentColor" stroke="none"/>',
+  check: '<path d="M4.5 10.5l3.5 3.5 7.5-8"/>',
+  x: '<path d="M5 5l10 10M15 5L5 15"/>',
+  undo: '<path d="M7 4.5L3.5 8 7 11.5"/><path d="M4 8h8a4.5 4.5 0 0 1 0 9H9"/>',
+  eyeoff: '<path d="M3 3l14 14"/><path d="M8.3 5.2A7.6 7.6 0 0 1 10 5c4.5 0 7.5 5 7.5 5a13 13 0 0 1-2.2 2.7M5.7 6.6A12.7 12.7 0 0 0 2.5 10s3 5 7.5 5a7 7 0 0 0 3-.7"/>',
+  note: '<path d="M5 3.5h7l3 3v10H5z"/><path d="M8 9.5h4M8 12.5h4"/>',
+  user: '<circle cx="10" cy="7" r="3"/><path d="M4 17c.8-3 3.2-4.5 6-4.5s5.2 1.5 6 4.5"/>'
+};
+const ic = n => `<svg viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICON[n]}</svg>`;
+
+let review = { pages: {}, exclusions: {} }, reviewLoaded = false, remarks = null;
+let editPage = null;   // id halaman yang sedang direview (null = mode lihat); mati saat pindah halaman
 const statusOf = id => review.pages[id]?.status || "none";
-const editing = () => document.body.classList.contains("edit");
+const editing = id => editPage !== null && editPage === id;
+const editorName = () => store.get("editor") || "";
 // key memuat teks pesan: kalau datanya berubah (mis. daftar field kosong berubah), temuan dianggap baru dan muncul lagi
 const exKey = (pageId, [t, msg]) => `${pageId}|${t}|${msg}`;
-const now = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16).replace("T", " "); };
+const hhmm = () => new Date().toTimeString().slice(0, 5);
 
-async function saveReview() {
-  if (!reviewLoaded) throw new Error("data review gagal dimuat saat start. Muat ulang halaman dulu supaya file review tidak tertimpa");
-  const r = await fetch("api/review", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(review) });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+function toast(msg, err) {
+  const t = document.createElement("div");
+  t.className = `toast${err ? " err" : ""}`; t.setAttribute("role", err ? "alert" : "status");
+  t.innerHTML = `${err ? "" : ic("check")}<span>${esc(msg)}</span>`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), err ? 6000 : 3000);
+}
+
+async function sendReview(ev) {
+  if (!reviewLoaded) throw new Error("Data review gagal dimuat. Muat ulang halaman dulu.");
+  const r = await fetch("api/review/event", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ editor: editorName(), ...ev }) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.message || `HTTP ${r.status}`);
+  review = { pages: {}, exclusions: {}, ...d };
   paintNav();
 }
 
-// temuan otomatis dibagi jadi aktif & dikecualikan
+// temuan otomatis: yang di-exclude tidak tampil lagi (jejaknya di Riwayat)
 function findings(pageId, list) {
-  const isEx = i => !!review.exclusions[exKey(pageId, i)];
-  const active = list.filter(i => !isEx(i)), excluded = list.filter(isEx);
-  const btn = (act, lbl, i) => `<button type="button" class="cbtn" data-act="${act}" data-key="${esc(exKey(pageId, i))}">${lbl}</button>`;
-  return callouts(active, { action: editing() ? i => btn("exclude", "Exclude", i) : null })
-    + (excluded.length ? `<details class="excluded"${editing() ? " open" : ""}><summary>Dikecualikan (${excluded.length})</summary>
-      ${callouts(excluded, {
-        note: i => { const x = review.exclusions[exKey(pageId, i)]; return `<span class="reason">Alasan: ${x.reason ? esc(x.reason) : "<i>tanpa alasan</i>"} · ${esc(x.at)}</span>`; },
-        action: editing() ? i => btn("restore", "Batalkan", i) : null
-      })}</details>` : "");
+  const active = list.filter(i => !review.exclusions[exKey(pageId, i)]);
+  return callouts(active, { action: editing(pageId)
+    ? i => `<button type="button" class="cbtn" data-act="exclude" data-key="${esc(exKey(pageId, i))}">${ic("eyeoff")}Exclude</button>` : null });
 }
 const activeCount = (pageId, list) => list.filter(i => !review.exclusions[exKey(pageId, i)]).length;
+
+// tombol di sebelah judul: Review / Selesai + ? (Riwayat)
+function titleActions(page) {
+  if (!page.status) return "";
+  const main = editing(page.id)
+    ? `<button class="t-btn primary hide-sm" type="button" data-act="rv-done">${ic("check")}<span>Selesai</span></button>`
+    : `<button class="t-btn" type="button" data-act="rv-start" ${reviewLoaded ? "" : 'disabled title="Data review gagal dimuat. Muat ulang halaman."'}>${ic("pencil")}<span>Review</span></button>`;
+  return `<div class="t-actions">${main}<button class="t-btn icon" type="button" data-act="rv-log" aria-label="Riwayat perubahan" title="Riwayat perubahan">${ic("help")}</button></div>`;
+}
 
 // kotak status review di bawah judul halaman
 function reviewBox(page) {
   if (!page.status) return "";
   const r = review.pages[page.id] || {}, s = statusOf(page.id);
-  if (!editing()) return s === "none" && !r.note ? "" : `<div class="review-view"><span class="badge ${REVIEW[s][1]}">${REVIEW[s][0]}</span>
-    ${r.note ? `<span>${esc(r.note)}</span>` : ""}${r.at ? `<small>${esc(r.at)}</small>` : ""}</div>`;
-  return `<div class="review-box" data-page="${page.id}"><div class="seg" role="radiogroup" aria-label="Status review">
-      ${Object.entries(REVIEW).map(([k, [lbl]]) => `<label class="${k}"><input type="radio" name="rv-status" value="${k}" ${k === s ? "checked" : ""}>${lbl}</label>`).join("")}</div>
-    <textarea rows="2" placeholder="Catatan review, mis. alamat & NPWP menunggu data dari client" aria-label="Catatan review">${esc(r.note || "")}</textarea></div>`;
+  if (!editing(page.id)) return `<div class="rv-card s-${s}"><div class="rv-top">${stBadge(s)}${r.at ? `<span class="rv-meta">oleh <b>${esc(r.by || "-")}</b>, ${esc(r.at)}</span>` : ""}</div>
+    ${r.note ? `<p class="rv-note">${esc(r.note)}</p>` : r.at ? "" : `<p class="rv-note muted">Belum ada review untuk halaman ini.</p>`}</div>`;
+  return `<div class="rv-box s-${s}" data-page="${page.id}" role="group" aria-label="Review halaman">
+    <div class="rv-head"><span>${ic("user")}Mengedit sebagai <b>${esc(editorName())}</b> &middot; <button class="link" type="button" data-act="rv-name">Ganti</button></span><span class="saved" id="rv-saved"></span></div>
+    <div class="seg" role="radiogroup" aria-label="Status review">
+      ${Object.entries(REVIEW).map(([k, [lbl]]) => `<label class="s-${k}"><input type="radio" name="rv-status" value="${k}" ${k === s ? "checked" : ""}>${stIcon(k)}${lbl}</label>`).join("")}</div>
+    <textarea rows="2" id="rv-note" placeholder="Catatan review, mis. alamat & NPWP menunggu data dari client" aria-label="Catatan review">${esc(r.note || "")}</textarea>
+    <p class="rv-hint">Tersimpan otomatis dan tercatat di Riwayat.</p></div>`;
 }
+// HP: Selesai pindah ke bar bawah
+const editBar = page => editing(page.id) ? `<div class="edit-bar"><span class="who">Mengedit sebagai<b>${esc(editorName())}</b></span>
+  <button class="btn primary" type="button" data-act="rv-done">${ic("check")}Selesai</button></div>` : "";
 
-function setPageReview(id, patch) {
-  const old = review.pages[id], r = { ...old, ...patch, at: now() };
-  if (r.status === "none") delete r.status;
-  if (!r.note) delete r.note;
-  if (r.status || r.note) review.pages[id] = r; else delete review.pages[id];
-  saveReview().catch(e => {
-    if (old) review.pages[id] = old; else delete review.pages[id];
-    alert(`Gagal menyimpan review: ${e.message}`); rerender();
-  });
+async function setPageReview(id, ev) {
+  try {
+    await sendReview({ page: id, ...ev });
+    const saved = $("#rv-saved"); if (saved) saved.innerHTML = `${ic("check")}Tersimpan ${hhmm()}`;
+    $(".rv-box")?.setAttribute("class", `rv-box s-${statusOf(id)}`);
+  } catch (e) { toast(`Gagal menyimpan review. ${e.message}`, true); rerender(); }
 }
 
 // render ulang halaman aktif tanpa ambil data lagi, posisi scroll dipertahankan
@@ -165,13 +220,94 @@ async function rerender() {
   window.scrollTo(0, y);
 }
 
-// ---------- 1.10 Remarks (Mode edit): isi disimpan di review.remarks ----------
+// ---------- dialog nama editor ----------
+function askEditor(then) {
+  const page = pages.find(p => p.id === current);
+  let dlg = $("#editor-dlg");
+  if (!dlg) { dlg = document.createElement("dialog"); dlg.id = "editor-dlg"; dlg.className = "dlg"; document.body.appendChild(dlg); }
+  dlg.innerHTML = `<form novalidate><h3 id="editor-t">Mulai review</h3><p class="sub">${esc(page ? `${page.no ? page.no + " " : ""}${page.title}` : "")}</p>
+    <label class="fld"><span>Nama editor</span><input type="text" id="editor-name" autocomplete="name" maxlength="60" value="${esc(editorName())}" aria-describedby="editor-h"></label>
+    <p class="fld-msg" id="editor-h">${editorName() ? "Terisi dari browser ini. Ganti kalau bukan Anda." : "Nama ini tercatat di Riwayat untuk setiap perubahan."}</p>
+    <p class="dlg-note">Perubahan status, catatan, dan exclusion dicatat atas nama ini di Riwayat.</p>
+    <div class="dlg-act"><button class="btn" type="button" data-act="dlg-cancel">Batal</button><button class="btn primary" type="submit">Mulai review</button></div></form>`;
+  dlg.setAttribute("aria-labelledby", "editor-t");
+  const input = $("#editor-name", dlg);
+  $("form", dlg).onsubmit = e => {
+    e.preventDefault();
+    const name = input.value.trim();
+    if (!name) {
+      input.classList.add("err"); $("#editor-h", dlg).className = "fld-msg err";
+      $("#editor-h", dlg).textContent = "Nama editor wajib diisi. Ketik nama Anda untuk melanjutkan.";
+      return input.focus();
+    }
+    store.set("editor", name); dlg.close(); then();
+  };
+  dlg.showModal(); input.focus(); input.select();
+}
+
+// ---------- Riwayat perubahan (per halaman, bisa dibuka siapa saja) ----------
+const LOG_FILTER = { all: "Semua", status: "Status", note: "Catatan", ex: "Exclusion" };
+let logFilter = "all";
+async function openHistory(pageId) {
+  const page = pages.find(p => p.id === pageId);
+  let dlg = $("#history-dlg");
+  if (!dlg) { dlg = document.createElement("dialog"); dlg.id = "history-dlg"; dlg.className = "history"; document.body.appendChild(dlg); }
+  dlg.dataset.page = pageId;
+  const shell = body => `<div class="dr-head"><div><h3>Riwayat perubahan</h3><small id="log-sub">${esc(`${page.no ? page.no + " " : ""}${page.title}`)}</small></div>
+      <button class="icon-btn" type="button" data-act="log-close" aria-label="Tutup">${ic("x")}</button></div>${body}`;
+  dlg.innerHTML = shell(`<div class="sk">${"<i></i>".repeat(9)}</div>`);
+  if (!dlg.open) dlg.showModal();
+  try {
+    const list = await getJson(`api/review/log?page=${encodeURIComponent(pageId)}`);
+    if (dlg.dataset.page !== pageId) return;
+    const draw = () => {
+      const shown = list.filter(e => logFilter === "all" || (logFilter === "ex" ? /exclude|restore/.test(e.action) : e.action === logFilter));
+      dlg.innerHTML = shell(`<div class="dr-filter">${Object.entries(LOG_FILTER).map(([k, l]) => `<button class="chip ${k === logFilter ? "on" : ""}" type="button" data-f="${k}">${l}</button>`).join("")}</div>
+        ${list.length ? `<ol class="logs">${shown.map(e => logRow(e, list, pageId)).join("") || `<li class="dr-state">Tidak ada perubahan untuk filter ini.</li>`}</ol>`
+          : `<div class="dr-state"><b>Belum ada perubahan</b>Status, catatan, dan exclusion di halaman ini akan tercatat di sini.</div>`}
+        ${!editing(pageId) && list.some(e => e.action === "exclude") ? `<div class="dr-foot">Membatalkan exclusion hanya bisa saat review.</div>` : ""}`);
+      $("#log-sub", dlg).insertAdjacentText("beforeend", list.length ? ` · ${list.length} perubahan` : "");
+      $$("[data-f]", dlg).forEach(b => b.onclick = () => { logFilter = b.dataset.f; draw(); });
+    };
+    draw();
+  } catch (e) {
+    dlg.innerHTML = shell(`<div class="dr-state"><div class="error">Riwayat gagal dimuat. ${esc(e.message)} <button class="cbtn" type="button" data-act="rv-log">Coba lagi</button></div></div>`);
+  }
+}
+function logRow(e, list, pageId) {
+  let icon, act, body = "";
+  const msg = e.key ? e.key.split("|").slice(2).join("|") : "";
+  if (e.action === "status") {
+    icon = stIcon(e.to); act = `Status ${stBadge(e.from || "none")}<span class="arr">&rarr;</span>${stBadge(e.to)}`;
+  } else if (e.action === "note") {
+    icon = ic("note"); act = e.to ? (e.from ? "Catatan diubah" : "Catatan ditambah") : "Catatan dihapus";
+    body = (e.from ? `<blockquote><s>${esc(e.from)}</s></blockquote>` : "") + (e.to ? `<p class="log-note"><span>Jadi:</span> ${esc(e.to)}</p>` : "");
+  } else if (e.action === "exclude") {
+    icon = ic("eyeoff"); act = "Temuan di-exclude";
+    // dibatalkan = ada restore untuk temuan yang sama setelah baris ini (list urut terbaru di atas)
+    const undo = list.slice(0, list.indexOf(e)).reverse().find(x => x.action === "restore" && x.key === e.key);
+    const active = !undo && review.exclusions[e.key];
+    body = `<blockquote>${esc(msg)}</blockquote><p class="log-note"><span>Alasan:</span> ${esc(e.note)}</p>
+      <div class="log-foot">${undo ? `<span class="log-tag">Dibatalkan ${esc(undo.at)} oleh ${esc(undo.editor)}</span>`
+        : active ? `<button class="cbtn" type="button" data-act="restore" data-key="${esc(e.key)}" ${editing(pageId) ? "" : 'disabled title="Mulai review dulu untuk membatalkan"'}>${ic("undo")}Batalkan</button>` : ""}</div>`;
+  } else {
+    icon = ic("undo"); act = "Exclusion dibatalkan"; body = `<blockquote>${esc(msg)}</blockquote><p class="log-note"><span>Temuan tampil lagi di halaman.</span></p>`;
+  }
+  return `<li class="log"><span class="log-ic">${icon}</span><div><div class="log-meta"><time>${esc(e.at)}</time> &middot; <b>${esc(e.editor)}</b></div>
+    <div class="log-act">${act}</div>${body}</div></li>`;
+}
+
+// ---------- 1.9 Remarks (hanya mode dev): disimpan di server lewat api/review/remarks ----------
 const RM = () => PAGES.remarks.remarks;
+const now = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 16).replace("T", " "); };
 async function saveRemarks(next, redraw) {
-  const old = review.remarks;
-  review.remarks = { ...next, at: now() };
-  try { await saveReview(); if (redraw) rerender(); }
-  catch (err) { review.remarks = old; alert(`Gagal menyimpan remarks: ${err.message}`); rerender(); }
+  const old = remarks;
+  remarks = { ...next, at: now() };
+  try {
+    const r = await fetch("api/review/remarks", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(remarks) });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    if (redraw) rerender();
+  } catch (err) { remarks = old; toast(`Gagal menyimpan remarks. ${err.message}`, true); rerender(); }
 }
 document.addEventListener("change", e => {
   const form = e.target.closest("#remarks-form");
@@ -187,37 +323,43 @@ document.addEventListener("click", e => {
 });
 
 document.addEventListener("change", e => {
-  const box = e.target.closest(".review-box"); if (!box) return;
-  if (e.target.name === "rv-status") setPageReview(box.dataset.page, { status: e.target.value });
-  else if (e.target.tagName === "TEXTAREA") setPageReview(box.dataset.page, { note: e.target.value.trim() });
+  const box = e.target.closest(".rv-box"); if (!box) return;
+  if (e.target.name === "rv-status") setPageReview(box.dataset.page, { action: "status", value: e.target.value });
+  else if (e.target.id === "rv-note") setPageReview(box.dataset.page, { action: "note", value: e.target.value.trim() });
 });
 
 document.addEventListener("click", async e => {
   const b = e.target.closest("[data-act]"); if (!b) return;
-  const key = b.dataset.key, callout = b.closest(".callout");
-  if (b.dataset.act === "exclude") { // form alasan muncul di dalam callout
+  const act = b.dataset.act, key = b.dataset.key;
+  if (act === "rv-start") askEditor(() => { editPage = current; document.body.classList.add("edit"); rerender(); });
+  else if (act === "rv-name") askEditor(() => rerender());
+  else if (act === "rv-done") { editPage = null; document.body.classList.remove("edit"); rerender(); toast("Review selesai. Mode lihat aktif lagi."); }
+  else if (act === "rv-log") openHistory(current);
+  else if (act === "log-close" || act === "dlg-cancel") b.closest("dialog").close();
+  else if (act === "exclude") { // form alasan muncul di dalam callout; alasan wajib karena temuan hilang dari halaman
+    const callout = b.closest(".callout");
     if ($(".ex-form", callout)) return $(".ex-form input", callout).focus();
-    $(".ct", callout).insertAdjacentHTML("beforeend", `<form class="ex-form"><input type="text" placeholder="Alasan, mis. sudah dikonfirmasi client tidak dipakai" aria-label="Alasan exclusion">
-      <button type="submit" class="cbtn primary">Simpan</button><button type="button" class="cbtn" data-act="cancel">Batal</button></form>`);
-    const f = $(".ex-form", callout); $("input", f).focus();
+    $(".ct", callout).insertAdjacentHTML("beforeend", `<form class="ex-form" novalidate><label>Alasan exclusion</label>
+      <div class="row"><input type="text" maxlength="300" placeholder="mis. sudah dikonfirmasi client tidak dipakai" aria-label="Alasan exclusion">
+      <button type="submit" class="cbtn primary">Exclude</button><button type="button" class="cbtn" data-act="cancel">Batal</button></div>
+      <p class="msg">Temuan akan hilang dari halaman. Bisa dibatalkan dari Riwayat.</p></form>`);
+    const f = $(".ex-form", callout), input = $("input", f); input.focus();
     f.onsubmit = async ev => {
       ev.preventDefault();
-      const [page, , ...msg] = key.split("|");
-      review.exclusions[key] = { page, msg: msg.join("|"), reason: $("input", f).value.trim(), at: now() };
-      try { await saveReview(); rerender(); } catch (err) { delete review.exclusions[key]; alert(`Gagal menyimpan: ${err.message}`); }
+      const reason = input.value.trim();
+      if (!reason) { input.classList.add("err"); $(".msg", f).className = "msg err"; $(".msg", f).textContent = "Alasan wajib diisi. Tulis alasan singkat sebelum menyimpan."; return input.focus(); }
+      try { await sendReview({ page: key.split("|")[0], action: "exclude", key, note: reason }); rerender(); toast("Temuan di-exclude. Jejaknya ada di Riwayat."); }
+      catch (err) { toast(`Gagal menyimpan exclusion. ${err.message}`, true); }
     };
-  } else if (b.dataset.act === "cancel") b.closest(".ex-form").remove();
-  else if (b.dataset.act === "restore") {
-    const old = review.exclusions[key]; delete review.exclusions[key];
-    try { await saveReview(); rerender(); } catch (err) { review.exclusions[key] = old; alert(`Gagal menyimpan: ${err.message}`); }
+  } else if (act === "cancel") b.closest(".ex-form").remove();
+  else if (act === "restore") {
+    try {
+      await sendReview({ page: key.split("|")[0], action: "restore", key });
+      toast("Temuan dikembalikan ke halaman."); rerender();
+      if ($("#history-dlg")?.open) openHistory($("#history-dlg").dataset.page);
+    } catch (err) { toast(`Gagal membatalkan exclusion. ${err.message}`, true); }
   }
 });
-
-function setEdit(on) {
-  document.body.classList.toggle("edit", on);
-  $("#edit-btn").setAttribute("aria-pressed", on);
-  store.set("edit", on ? "1" : "");
-}
 
 // ---------- routing ----------
 function parseHash() {
@@ -229,6 +371,7 @@ async function route(fresh = false, keepScroll = false) {
   const { id, anchor } = parseHash();
   if (current === id && !fresh) return scrollToAnchor(anchor);
   current = id;
+  if (editPage && editPage !== id) { editPage = null; document.body.classList.remove("edit"); }   // mode review per halaman
   document.body.classList.remove("nav-open");
   $$("#nav a[data-id]").forEach(a => a.classList.toggle("active", a.dataset.id === id));
   const page = pages.find(p => p.id === id);
@@ -237,14 +380,14 @@ async function route(fresh = false, keepScroll = false) {
   art.innerHTML = head(page) + `<div class="skeleton">${"<div></div>".repeat(6)}</div>`;
   $("#toc-list").innerHTML = ""; $("#toc-meta").innerHTML = "";
   if (!keepScroll) window.scrollTo(0, 0);
-  document.title = `${page.no ? page.no + " " : ""}${page.title} · Project Check List CVPPMK`;
+  document.title = `${page.no ? page.no + " " : ""}${page.title} · Project Check List`;
 
   let html, meta = "";
   resetExports();
   try {
     if (id === "ringkasan") ({ html, meta } = await renderSummary(fresh));
     else if (!PAGES[id]) html = renderTodo(page);
-    else if (PAGES[id].static) html = PAGES[id].render({}, { review, editing: editing() });
+    else if (PAGES[id].static) html = PAGES[id].render({}, { review: { ...review, remarks }, editing: editing(id) });
     else {
       const res = await load(id, fresh);
       const def = PAGES[id], d = dataOf(res), errs = queryErrors(res);
@@ -257,7 +400,7 @@ async function route(fresh = false, keepScroll = false) {
   }
   if (current !== id) return; // user sudah pindah halaman
   const def = id === "ringkasan" ? SUMMARY : PAGES[id];
-  art.innerHTML = head(page, def) + reviewBox(page) + html + pager(page);
+  art.innerHTML = head(page, def) + reviewBox(page) + html + pager(page) + editBar(page);
   flushMounts();
   buildToc(page, meta);
   scrollToAnchor(anchor, false);
@@ -265,8 +408,8 @@ async function route(fresh = false, keepScroll = false) {
 
 function head(page, def) {
   const ch = chapters.find(c => c.pages.includes(page));
-  return `<nav class="crumbs" aria-label="Breadcrumb"><span>Project Check List</span>${ch.home ? "" : `<span>${ch.no ? esc(ch.no) + ". " : ""}${esc(ch.title)}</span>`}${page.no ? `<span>${esc(page.no)}</span>` : ""}</nav>
-    <h1>${page.no ? `<span class="no">${esc(page.no)}</span>` : ""}${esc(page.title)}</h1>
+  return `<nav class="crumbs" aria-label="Breadcrumb"><span>Project Check List</span>${ch.home ? "" : `<span>${ch.no ? esc(ch.no) + ". " : ""}${esc(ch.title)}</span>`}${page.cat ? `<span>${esc(page.cat)}</span>` : ""}${page.no ? `<span>${esc(page.no)}</span>` : ""}</nav>
+    <div class="title-row"><h1>${page.no ? `<span class="no">${esc(page.no)}</span>` : ""}${esc(page.title)}</h1>${titleActions(page)}</div>
     ${def ? `<p class="lead">${def.lead}</p>` : ""}
     <div class="page-meta">${def?.menu ? `<span><b>Menu SAP B1:</b> ${esc(def.menu)}</span>` : ""}${def?.tables ? `<span><b>Sumber:</b> ${def.tables.map(t => `<code>${t}</code>`).join(" ")}</span>` : ""}</div>`;
 }
@@ -305,10 +448,10 @@ async function renderSummary(fresh) {
       ${kpi("document-numbering", n("document-numbering", "series"), "Numbering series")}
     </div>
     <h2 id="review">Status review menu</h2>
-    <div class="review-sum">${Object.entries(REVIEW).map(([k, [lbl]]) => `<span><i class="dot ${k}"></i><b>${cnt(k)}</b> ${lbl}</span>`).join("")}</div>
+    <div class="review-sum">${Object.entries(REVIEW).map(([k, [lbl]]) => `<span>${stIcon(k)}<b>${cnt(k)}</b> ${lbl}</span>`).join("")}</div>
     ${nok.length ? table([
       { key: "no", label: "No" }, { key: "title", label: "Menu belum sesuai", fmt: (v, r) => `<a href="#/${r.id}">${esc(v)}</a>` },
-      { key: "note", label: "Catatan" }, { key: "at", label: "Diubah" }
+      { key: "note", label: "Catatan" }, { key: "by", label: "Oleh" }, { key: "at", label: "Diubah" }
     ], nok.map(p => ({ ...p, ...review.pages[p.id] }))) : ""}
     <h2 id="temuan">Temuan otomatis <span class="no">${total}</span></h2>
     ${groups.length ? groups.map(([p, list]) => `<h3 id="t-${p.id}">${p.no ? `<span class="no">${p.no}</span> ` : ""}${esc(p.title)}</h3>
@@ -317,7 +460,7 @@ async function renderSummary(fresh) {
   return { html, meta: "" };
 }
 const SUMMARY = {
-  lead: "Gambaran konfigurasi di database SAP B1 dan temuan yang dicek otomatis dari semua bab. Temuan hilang sendiri kalau konfigurasinya sudah diperbaiki di SAP B1, atau bisa di-exclude lewat mode edit."
+  lead: "Gambaran konfigurasi di database SAP B1 dan temuan yang dicek otomatis dari semua bab. Temuan hilang sendiri kalau konfigurasinya sudah diperbaiki di SAP B1, atau bisa di-exclude lewat tombol Review di halaman masing-masing."
 };
 
 // ---------- panel "Di halaman ini" + scrollspy ----------
@@ -342,7 +485,7 @@ function exportExcel(buttons) {
       : [{ name: exportTitle(b), rows: exportRows(x.cols, x.rows) }]);
   if (!sheets.length) return;
   const base = `${page.no ? page.no + " " : ""}${page.title}`;
-  download(xlsxBlob(sheets), `${sheets.length === 1 && buttons.length === 1 ? `${base} - ${sheets[0].name}` : base} - CVPPMK.xlsx`);
+  download(xlsxBlob(sheets), `${sheets.length === 1 && buttons.length === 1 ? `${base} - ${sheets[0].name}` : base} - ${company.name}.xlsx`);
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("button[data-export]");
@@ -451,18 +594,28 @@ function toggleTheme() {
   let editable;
   [chapters, editable] = await Promise.all([
     fetch("sections.json").then(r => r.json()),
-    // war di Tomcat = web final read-only: tombol Mode edit tidak ditampilkan
+    // mode dev (VS Code) vs war di Tomcat: Setup, Template Upload, dan Remarks hanya di mode dev; review bisa di keduanya
     getJson("api/review/mode").then(m => m.editable).catch(() => false),
     getJson("api/review").then(r => { review = { pages: {}, exclusions: {}, ...r }; reviewLoaded = true; })
       .catch(e => console.warn("Data review gagal dimuat", e))
   ]);
-  // tombol Mode edit & Setup (halaman terpisah setup.html, bisa upload ke SAP) hanya di mode dev
-  if (!editable) { $("#edit-btn").remove(); $("#setup-btn").remove(); }
-  else if (store.get("edit")) setEdit(true);
-  // bab bertanda devOnly (mis. Template Upload) hanya tampil di mode dev, sama seperti Mode edit
-  if (!editable) chapters = chapters.filter(c => !c.devOnly);
-  // halaman bertanda setupStep = tampilan baca-saja langkah Setup (bab Addon Farm Breeding)
-  chapters.flatMap(c => c.pages).filter(p => p.setupStep).forEach(p => { PAGES[p.id] = setupViewPage(p.setupStep, p.title); });
+  // tombol Setup (halaman terpisah setup.html, bisa upload ke SAP) hanya di mode dev
+  if (!editable) $("#setup-btn").remove();
+  else remarks = await getJson("api/review/remarks").then(r => Object.keys(r).length ? r : null).catch(() => null);
+  // bab / halaman bertanda devOnly (mis. Template Upload, Remarks) hanya tampil di mode dev
+  if (!editable) chapters = chapters.filter(c => !c.devOnly).map(c => ({ ...c, pages: c.pages.filter(p => !p.devOnly) }));
+  // bab / halaman yang disembunyikan dulu (mis. 6 Template Upload, License); nomor halaman di sections.json sudah digeser
+  chapters = chapters.filter(c => !c.hidden).map(c => ({ ...c, pages: c.pages.filter(p => !p.hidden) }));
+  // bab "dynamic": "addon" = daftar UDO/UDT dari DB + mapping; kosong / gagal = satu halaman berisi pesannya
+  const addonCh = chapters.find(c => c.dynamic === "addon");
+  if (addonCh) {
+    try {
+      const { objects } = await getJson("api/addon/objects");
+      addonCh.pages = addonPages(objects);
+      objects.filter(o => o.shown).forEach(o => { PAGES[addonCh.pages.find(p => p.addon === o.code).id] = addonPage(o); });
+      if (!addonCh.pages.length) { addonCh.pages = [{ id: "addon", title: addonCh.title }]; PAGES.addon = addonEmptyPage(); }
+    } catch (e) { addonCh.pages = [{ id: "addon", title: addonCh.title }]; PAGES.addon = addonEmptyPage(e.message); }
+  }
   // halaman bertanda onlyIfData (mis. UoM) hanya tampil kalau hasil query itu lebih dari 1 baris (bukan cuma "Manual")
   const optional = chapters.flatMap(c => c.pages).filter(p => p.onlyIfData);
   const hide = new Set((await Promise.all(optional.map(p => load(p.id).then(res => rowsOf(dataOf(res)[p.onlyIfData]).length > 1 ? null : p.id, () => null))))
@@ -472,7 +625,6 @@ function toggleTheme() {
   buildNav(); buildIndex();
 
   $("#theme-btn").onclick = toggleTheme;
-  if (editable) $("#edit-btn").onclick = () => { setEdit(!editing()); rerender(); };
   $("#menu-btn").onclick = () => document.body.classList.toggle("nav-open");
   document.addEventListener("click", e => {
     if (document.body.classList.contains("nav-open") && !e.target.closest(".sidebar, #menu-btn")) document.body.classList.remove("nav-open");
@@ -492,6 +644,7 @@ function toggleTheme() {
     }
   });
 
+  showCompanyName();
   window.onhashchange = () => route();
   route();
 })();

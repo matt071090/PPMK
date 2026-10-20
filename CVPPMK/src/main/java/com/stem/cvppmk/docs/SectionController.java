@@ -1,7 +1,5 @@
 package com.stem.cvppmk.docs;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,20 +28,16 @@ import java.util.*;
 @RequestMapping("/api/section")
 public class SectionController {
     private static final Set<String> DEV_ONLY = Collections.singleton("template-ref");
-    // tahap Setup yang boleh dilihat di menu dokumentasi (baca DB company ini saja, tanpa DB sumber & upload)
-    private static final Set<String> VIEW_TIERS = Collections.singleton("G");
     private static final Logger log = LoggerFactory.getLogger(SectionController.class);
 
     private final JdbcTemplate jdbc;
     private final UdfExpander udf;
-    private final ObjectMapper json;
     private final boolean editable;
     private final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
-    public SectionController(JdbcTemplate jdbc, UdfExpander udf, ObjectMapper json, @Value("${docs.edit.enabled:true}") boolean editable) {
+    public SectionController(JdbcTemplate jdbc, UdfExpander udf, @Value("${docs.edit.enabled:true}") boolean editable) {
         this.jdbc = jdbc;
         this.udf = udf;
-        this.json = json;
         this.editable = editable;
     }
 
@@ -87,31 +81,14 @@ public class SectionController {
         return out;
     }
 
-    /**
-     * GET /api/section/setup/{id}: tampilan baca-saja satu langkah Setup tahap G (Addon Farm Breeding) dari DB company ini,
-     * memakai query yang sama dengan Setup (classpath:setup/sql/{id}.sql), supaya user bisa mengecek isinya tanpa mode edit.
-     * Hasil: {generatedAt, step: {title, ref, note, match, children}, results: {rows: {columns, rows, ms}}}.
-     */
-    @GetMapping("/setup/{id:[a-z0-9-]+}")
-    public Map<String, Object> setupView(@PathVariable String id) throws IOException {
-        JsonNode step = null;
-        try (java.io.InputStream in = new org.springframework.core.io.ClassPathResource("setup/steps.json").getInputStream()) {
-            for (JsonNode s : json.readTree(in)) if (id.equals(s.path("id").asText())) step = s;
-        }
-        if (step == null || !VIEW_TIERS.contains(step.path("tier").asText()) || !"data".equals(step.path("kind").asText()))
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Langkah '" + id + "' tidak punya tampilan");
-        Resource file = resolver.getResource("classpath:setup/sql/" + id + ".sql");
-        String sql = StreamUtils.copyToString(file.getInputStream(), StandardCharsets.UTF_8).replaceAll("(?m)^\\s*--.*$", "").trim();
-        Map<String, Object> meta = new LinkedHashMap<>();
-        for (String f : new String[]{"title", "ref", "note", "match", "children"}) if (step.has(f)) meta.put(f, step.get(f));
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("generatedAt", LocalDateTime.now().withNano(0).toString());
-        out.put("step", meta);
-        out.put("results", Collections.singletonMap("rows", run(id, sql)));
-        return out;
+    /** GET /api/section/company-name: nama company (OADM.CompnyName) untuk header halaman. */
+    @GetMapping("/company-name")
+    public Map<String, Object> companyName() {
+        return Collections.singletonMap("name", jdbc.queryForObject("SELECT \"CompnyName\" FROM OADM", String.class));
     }
 
-    private Map<String, Object> run(String key, String sql) {
+    // dipakai juga oleh AddonController (isi tabel add-on generik)
+    Map<String, Object> run(String key, String sql) {
         long start = System.currentTimeMillis();
         try {
             Map<String, Object> out = jdbc.query(sql, rs -> {

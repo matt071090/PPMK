@@ -1,9 +1,8 @@
 // Bab 6: Template Upload. Excel template dibuat di browser saat tombol diklik (tidak disimpan di server),
 // dropdown & kolom UDF diambil dari SAP saat itu lewat api/section/template-ref.
-import { $, $$, esc, section, onMount } from "../ui.js";
+import { $, $$, esc, section, onMount, company } from "../ui.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
 
-const PROJECT = "CVPPMK";
 let refCache = null;   // data dropdown dipakai ulang selama halaman tidak di-refresh
 
 async function loadRef() {
@@ -26,7 +25,7 @@ export const PAGES = {
         $$("[data-tpl]").forEach(b => b.onclick = async () => {
           const t = TEMPLATES[+b.dataset.tpl], label = b.innerHTML;
           b.disabled = true; b.textContent = "Menyiapkan…";
-          try { downloadTemplate(t, await loadRef(), PROJECT); }
+          try { downloadTemplate(t, await loadRef(), company.name); }
           catch (e) { alert(`Gagal membuat template: ${e.message}`); }
           finally { b.disabled = false; b.innerHTML = label; }
         });

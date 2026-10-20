@@ -5,13 +5,13 @@
 // Alias kolom query = nama field Service Layer = baris ke-2 template Excel, jadi ketiganya bisa dibandingkan langsung.
 // Kolom berawalan "_" = pembanding saja (tidak dikirim), mis. _ItemGroup: nama referensi yang kodenya bisa beda antar DB;
 // kode tujuannya dicari lewat step.lookups saat upload. Langkah kind "ref" (branch, dimension) hanya sumber pencarian, tidak tampil.
-import { $, $$, esc, isEmpty, onMount, flushMounts } from "../ui.js";
+import { $, $$, esc, isEmpty, onMount, flushMounts, company, showCompanyName } from "../ui.js";
 import { xlsxBlob, download } from "../xlsx.js";
 import { readXlsx } from "../xlsx-read.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
 import { uploadInChunks, progressUi, resultsTable } from "./upload-progress.js";
+import { mappingPage, uncategorized } from "./addon-mapping.js";
 
-const PROJECT = "CVPPMK";
 const store = {
   get: k => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { } }
@@ -290,7 +290,7 @@ function stepPage(step) {
 async function getTemplate(step, btn) {
   const text = btn.innerHTML;
   btn.disabled = true; btn.textContent = "Menyiapkan…";
-  try { downloadTemplate(tplOf(step), await loadRef(), PROJECT); }
+  try { downloadTemplate(tplOf(step), await loadRef(), company.name); }
   catch (e) { alert(`Gagal membuat template: ${e.message}`); }
   finally { btn.disabled = false; btn.innerHTML = text; }
 }
@@ -480,13 +480,13 @@ function drawStep(step, body, cmp, opt) {
     const list = picked();
     const head = [...(hasSrc ? ["Status"] : []), ...fields, ...(hasSrc ? ["Catatan"] : [])];
     const out = list.map(r => [...(hasSrc ? [STATUS[r.status][0]] : []), ...fields.map(f => norm((r.src || r.tgt)[f])), ...(hasSrc ? [r.errors.join("; ")] : [])]);
-    download(xlsxBlob([{ name: step.title.slice(0, 31), rows: [head, ...out] }]), `Setup ${step.order} ${step.title} - hasil cek - ${PROJECT}.xlsx`);
+    download(xlsxBlob([{ name: step.title.slice(0, 31), rows: [head, ...out] }]), `Setup ${step.order} ${step.title} - hasil cek - ${company.name}.xlsx`);
   };
   const toTpl = $("[data-sx-totpl]", body);
   if (toTpl) toTpl.onclick = () => {
     const list = picked().filter(r => r.src).map(r => r.src);
     if (!list.length) return alert("Belum ada baris sumber yang dipilih.");
-    download(xlsxBlob([templateSheet(step, opt.tpl, list)]), `${PROJECT} - ${opt.tpl.no} - ${opt.tpl.title} (dari database).xlsx`);
+    download(xlsxBlob([templateSheet(step, opt.tpl, list)]), `${company.name} - ${opt.tpl.no} - ${opt.tpl.title} (dari database).xlsx`);
   };
 
   const btn = $("[data-sx-upload]", body);
@@ -625,6 +625,7 @@ async function mountOverview(steps, box) {
 // ---------- aplikasi setup.html: sidebar per tahap + routing #/ (ringkasan) dan #/<langkah> ----------
 export async function startSetupApp() {
   const art = $("#article"), nav = $("#nav");
+  showCompanyName();
   $("#theme-btn").onclick = () => {
     const el = document.documentElement, dark = el.dataset.theme ? el.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     el.dataset.theme = dark ? "light" : "dark"; store.set("theme", el.dataset.theme);
@@ -643,10 +644,11 @@ export async function startSetupApp() {
     return;
   }
   steps.forEach((s, i) => s.order = i + 1);   // nomor urut = urutan di steps.json
-  const pages = { "": { title: "Urutan Setup", def: overviewPage(steps) } };
+  const pages = { "": { title: "Urutan Setup", def: overviewPage(steps) }, "addon-mapping": { title: "Mapping Add-on", def: mappingPage() } };
   steps.forEach(s => pages[s.id] = { title: s.title, no: String(s.order), chapter: `${s.tier} · ${TIERS[s.tier][0]}`, def: stepPage(s) });
   const tiers = Object.keys(TIERS).filter(t => steps.some(s => s.tier === t));
   nav.innerHTML = `<div class="nav-group flat"><a href="#/" data-id="" class="chapter-link"><span class="gno">⌂</span><span>Urutan Setup</span></a></div>`
+    + `<div class="nav-group flat"><a href="#/addon-mapping" data-id="addon-mapping" class="chapter-link"><span class="gno">#</span><span>Mapping Add-on</span><span class="badge warn" id="am-badge" hidden></span></a></div>`
     + `<div class="nav-search"><input type="search" id="nav-q" placeholder="Cari langkah…" aria-label="Cari langkah di sidebar" autocomplete="off"></div>`
     + tiers.map(t => `<div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">${t}</span>${esc(TIERS[t][0])}</button>
       <ul>${steps.filter(s => s.tier === t).map(s => `<li><a href="#/${s.id}" data-id="${s.id}"${s.kind === "setting" ? ` class="todo"` : ""}>
@@ -655,11 +657,13 @@ export async function startSetupApp() {
     const g = b.parentElement; g.classList.toggle("collapsed"); b.setAttribute("aria-expanded", !g.classList.contains("collapsed"));
   });
   wireNavSearch(nav);
+  // badge: objek add-on yang tampil di dokumentasi tapi belum dikategorikan
+  getJson("api/addon/objects").then(d => { const n = uncategorized(d), b = $("#am-badge"); if (n) { b.textContent = `${n} baru`; b.hidden = false; } }).catch(() => { });
   const route = () => {
     const id = (location.hash.match(/^#\/([a-z0-9-]*)/) || [])[1] || "", page = pages[id] || pages[""];
     document.body.classList.remove("nav-open");
     $$("#nav a[data-id]").forEach(a => a.classList.toggle("active", a.dataset.id === (pages[id] ? id : "")));
-    document.title = `${page.no ? page.no + " " : ""}${page.title} · Setup CVPPMK`;
+    document.title = `${page.no ? page.no + " " : ""}${page.title} · Setup & Cut Off`;
     art.innerHTML = `<nav class="crumbs" aria-label="Breadcrumb"><span>Setup &amp; Cut Off</span>${page.chapter ? `<span>${esc(page.chapter)}</span>` : ""}</nav>
       <h1>${page.no ? `<span class="no">${esc(page.no)}</span>` : ""}${esc(page.title)}</h1>
       <p class="lead">${page.def.lead}</p>

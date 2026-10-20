@@ -39,8 +39,8 @@ const DOC_SETTINGS = [
     fmt: d => +d.MaxDaysForCancel === 0 ? "0 (tanpa batas)" : d.MaxDaysForCancel }
 ];
 
-// 1.10 Remarks: catatan project (bukan dari database). Diedit lewat Mode edit dan disimpan di review.json (key "remarks").
-// Isi di bawah hanya data awal, dipakai selama review.json belum punya remarks.
+// 1.9 Remarks (hanya mode dev): catatan project internal (bukan dari database). Diedit lewat tombol Review di halamannya,
+// disimpan di server (api/review/remarks -> ./remarks.json). Isi di bawah hanya data awal, dipakai selama remarks belum pernah disimpan.
 const REMARKS_SEED = {
   facts: [{ label: "Go Live", value: "" }, { label: "Cut Off Beginning Balance", value: "" }],
   questions: [
@@ -305,11 +305,15 @@ const GS = GS_TABS.map(([id, title, lead, rows]) => {
 }).filter(([, , , rows]) => rows.some(r => !r.group));
 
 // ---------- pemeriksaan otomatis ----------
-function checkCompany(c) {
+// UDF ID TKU hanya dicek/ditampilkan kalau terdaftar di CUFD (OADM); kalau belum ada, baris jadi "na"
+const IDTKU = "U_STEM_IDTKU";
+const companyAccounting = r => hasUdf(r, IDTKU) ? COMPANY_ACCOUNTING
+  : COMPANY_ACCOUNTING.map(x => x.col === `OADM.${IDTKU}` ? { ...x, type: "na", note: "UDF belum dibuat di DB ini (CUFD OADM)" } : x);
+function checkCompany(c, r) {
   const out = [];
   const missing = [["Alamat (Street)", c.Street], ["Kota", c.City], ["Telepon", c.Phone1], ["Email", c.E_Mail],
     ["Nama alias", c.AliasName]].filter(([, v]) => isEmpty(v)).map(([k]) => k);
-  const tax = [["NPWP", c.TaxIdNum], ["ID TKU", c.U_STEM_IDTKU], ["Tax Office", c.RevOffice]].filter(([, v]) => isEmpty(v)).map(([k]) => k);
+  const tax = [["NPWP", c.TaxIdNum], ...hasUdf(r, IDTKU) ? [["ID TKU", c.U_STEM_IDTKU]] : [], ["Tax Office", c.RevOffice]].filter(([, v]) => isEmpty(v)).map(([k]) => k);
   if (tax.length) out.push(["warn", `Accounting Data belum lengkap: ${tax.join(", ")}. Data ini dipakai untuk faktur pajak / CoreTax.`]);
   if (missing.length) out.push(["warn", `Company Details belum lengkap: ${missing.join(", ")}.`]);
   return out;
@@ -376,13 +380,13 @@ export const PAGES = {
     lead: "Identitas perusahaan yang tercetak di dokumen dan laporan, data pajak, serta pengaturan dasar yang menentukan cara kerja SAP B1 di seluruh perusahaan.",
     menu: "Administration › System Initialization › Company Details",
     tables: ["OADM", "ADM1", "CINF"],
-    checks: d => checkCompany(one(d.company)),
+    checks: d => checkCompany(one(d.company), d.company),
     index: [["general", "General", COMPANY_GENERAL], ["accounting-data", "Accounting Data", COMPANY_ACCOUNTING], ["basic-initialization", "Basic Initialization", BASIC_INIT]],
     render(d) {
       const c = one(d.company);
       return section("general", "General", settings(COMPANY_GENERAL, c, "general"),
           { no: "1.1.1", lead: "Nama dan alamat perusahaan. Field <b>Print Header</b> yang tercetak di header dokumen." })
-        + section("accounting-data", "Accounting Data", settings(COMPANY_ACCOUNTING, c, "accounting-data"),
+        + section("accounting-data", "Accounting Data", settings(companyAccounting(d.company), c, "accounting-data"),
           { no: "1.1.2", lead: "Identitas pajak perusahaan, dipakai untuk e-Faktur / CoreTax." })
         + section("basic-initialization", "Basic Initialization", settings(BASIC_INIT, c, "basic-initialization"),
           { no: "1.1.3", lead: "Sebagian besar pengaturan di sini <b>tidak bisa diubah lagi</b> setelah ada transaksi." })
@@ -578,13 +582,13 @@ export const PAGES = {
             { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.employees)], emp)
           : `<div class="placeholder"><p style="margin:0;font-weight:600;color:var(--text)">Belum ada employee master data</p>
               <p style="margin:4px 0 0">Data akan tampil otomatis setelah karyawan diinput di Human Resources › Employee Master Data.</p></div>`,
-          { no: "1.5.1", lead: "Kolom Sales Employee dan User SAP menunjukkan ke mana employee ini dihubungkan." })
+          { no: "1.4.1", lead: "Kolom Sales Employee dan User SAP menunjukkan ke mana employee ini dihubungkan." })
         + section("sales", "Sales Employee / Buyer", table([{ key: "SlpCode", label: "Kode", num: 1 }, { key: "SlpName", label: "Nama" },
             { key: "Employee", label: "Employee", fmt: v => v ? esc(v) : `<span class="muted">belum dihubungkan</span>` },
             { key: "Memo", label: "Remarks", fmt: dash }, { key: "Commission", label: "Komisi %", num: 1, fmt: v => +v ? esc(+v) : `<span class="muted">0</span>` },
             { key: "Telephone", label: "Telepon", fmt: dash }, { key: "Email", label: "Email", fmt: dash },
             { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.slp)], slp),
-          { no: "1.5.2", lead: "Dipilih di dokumen sales & purchasing. Baris bawaan \"-No Sales Employee-\" tidak ditampilkan." });
+          { no: "1.4.2", lead: "Dipilih di dokumen sales & purchasing. Baris bawaan \"-No Sales Employee-\" tidak ditampilkan." });
     }
   },
 

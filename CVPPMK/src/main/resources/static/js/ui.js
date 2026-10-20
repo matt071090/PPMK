@@ -31,6 +31,18 @@ export function autoCols(r) {
     return { key: c, label: u ? u.label : c, num, fmt: num ? numText : undefined };
   });
 }
+// Header: nama company dari DB (OADM.CompnyName), juga dipakai di nama file export; kalau gagal tetap "No company".
+// Logo = huruf depan 2 kata pertama, tanpa bentuk badan usaha (CV. Putra Prima ... -> PP).
+export const company = { name: "No company" };
+export function showCompanyName() {
+  fetch("api/section/company-name").then(r => r.ok ? r.json() : null).then(d => {
+    if (!d || !d.name) return;
+    company.name = d.name;
+    $("#company-name").textContent = d.name;
+    const words = d.name.split(/\s+/).filter(w => !/^(CV|PT|UD|TBK)\.?$/i.test(w));
+    $("#company-logo").textContent = words.slice(0, 2).map(w => w[0]).join("").toUpperCase() || "NC";
+  }).catch(() => { });
+}
 export const rowsOf = r => r && r.rows ? r.rows.map(row => Object.fromEntries(r.columns.map((c, i) => [c, row[i]]))) : [];
 
 // ---------- tab seperti layar SAP B1 ----------
