@@ -10,6 +10,7 @@ import { xlsxBlob, download } from "../xlsx.js";
 import { readXlsx } from "../xlsx-read.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
 import { uploadInChunks, progressUi, resultsTable } from "./upload-progress.js";
+import { hanaPage } from "./hana.js";
 
 const PROJECT = "CVPPMK";
 const store = {
@@ -645,8 +646,9 @@ export async function startSetupApp() {
   steps.forEach((s, i) => s.order = i + 1);   // nomor urut = urutan di steps.json
   const pages = { "": { title: "Urutan Setup", def: overviewPage(steps) } };
   steps.forEach(s => pages[s.id] = { title: s.title, no: String(s.order), chapter: `${s.tier} · ${TIERS[s.tier][0]}`, def: stepPage(s) });
+  pages.hana = { title: "Backup & Restore HANA", chapter: "Utilitas", def: hanaPage() };
   const tiers = Object.keys(TIERS).filter(t => steps.some(s => s.tier === t));
-  nav.innerHTML = `<div class="nav-group flat"><a href="#/" data-id="" class="chapter-link"><span class="gno">⌂</span><span>Urutan Setup</span></a></div>`
+  nav.innerHTML = `<div class="nav-group flat"><a href="#/" data-id="" class="chapter-link"><span class="gno">⌂</span><span>Urutan Setup</span></a><a href="#/hana" data-id="hana" class="chapter-link"><span class="gno">⛁</span><span>Backup &amp; Restore HANA</span></a></div>`
     + `<div class="nav-search"><input type="search" id="nav-q" placeholder="Cari langkah…" aria-label="Cari langkah di sidebar" autocomplete="off"></div>`
     + tiers.map(t => `<div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">${t}</span>${esc(TIERS[t][0])}</button>
       <ul>${steps.filter(s => s.tier === t).map(s => `<li><a href="#/${s.id}" data-id="${s.id}"${s.kind === "setting" ? ` class="todo"` : ""}>
