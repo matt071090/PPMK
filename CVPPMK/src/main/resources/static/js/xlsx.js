@@ -54,7 +54,7 @@ function sheetNames(names) {
 }
 
 // Indeks style (lihat styles.xml di bawah). Dipakai template upload lewat cell { v, s }.
-export const S = { HEAD: 1, LABEL: 2, FIELD: 3, NOTE: 4, TEXT: 5, DATE: 6, BOLD: 7, SAMPLE_TEXT: 8, SAMPLE_DATE: 9, SAMPLE: 10 };
+export const S = { HEAD: 1, LABEL: 2, FIELD: 3, NOTE: 4, TEXT: 5, DATE: 6, BOLD: 7, SAMPLE_TEXT: 8, SAMPLE_DATE: 9, SAMPLE: 10, XHEAD: 11 };
 // Tanggal "YYYY-MM-DD" -> nomor seri Excel (dipakai dengan style DATE)
 export const excelDate = iso => (Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) - Date.UTC(1899, 11, 30)) / 864e5;
 
@@ -66,21 +66,28 @@ function cellXml(ref, c) {
   return `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${xml(v)}</t></is></c>`;
 }
 
-// Sheet export biasa: baris 1 header tebal + filter. Sheet template (sheet.template): style per cell, kolom bisa punya
+// Sheet export biasa (format BP Master Data): header putih tebal di biru tua + wrap, freeze header & 2 kolom pertama (kode, nama),
+// filter, lebar kolom dari isi (maks 50). Sheet template (sheet.template): style per cell, kolom bisa punya
 // style default (cols[i].style, mis. teks supaya kode 0123 tidak jadi angka), dropdown (validations), freeze sendiri.
 function sheetXml(sheet) {
   const rows = sheet.rows, tpl = !!sheet.template;
   const width = Math.max(1, ...rows.map(r => r.length));
   const text = c => String(c !== null && typeof c === "object" ? c.v ?? "" : c ?? "");
-  const cols = Array.from({ length: width }, (_, i) => {
+  // judul kolom boleh terbungkus 2 baris, jadi lebar cukup untuk kata terpanjangnya
+  const headW = i => Math.max(...text((rows[0] || [])[i]).split(/\s+/).map(s => s.length + 2));
+  const widths = Array.from({ length: width }, (_, i) => {
     const def = (sheet.cols || [])[i] || {};
-    const w = def.width || (tpl ? Math.min(45, Math.max(10, ...rows.slice(0, 3).map(r => text(r[i]).length + 2)))
-      : Math.min(60, Math.max(8, ...rows.map(r => text(r[i]).length + 2))));
+    return def.width || (tpl ? Math.min(45, Math.max(10, ...rows.slice(0, 3).map(r => text(r[i]).length + 2)))
+      : Math.min(50, Math.max(8, headW(i), ...rows.slice(1).map(r => text(r[i]).length + 2))));
+  });
+  const cols = widths.map((w, i) => {
+    const def = (sheet.cols || [])[i] || {};
     return `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"${def.style ? ` style="${def.style}"` : ""}/>`;
   }).join("");
-  const body = rows.map((r, y) => `<row r="${y + 1}">${r.map((c, x) =>
-    cellXml(`${colName(x)}${y + 1}`, !tpl && y === 0 && c !== null && c !== "" ? { v: c, s: S.HEAD } : c)).join("")}</row>`).join("");
-  const fr = tpl ? sheet.freeze : { row: 1, col: 0 };
+  const wrapHead = !tpl && (rows[0] || []).some((c, i) => text(c).length + 2 > widths[i]);
+  const body = rows.map((r, y) => `<row r="${y + 1}"${y === 0 && wrapHead ? ` ht="30" customHeight="1"` : ""}>${r.map((c, x) =>
+    cellXml(`${colName(x)}${y + 1}`, !tpl && y === 0 && c !== null && c !== "" ? { v: c, s: S.XHEAD } : c)).join("")}</row>`).join("");
+  const fr = tpl ? sheet.freeze : { row: 1, col: width > 3 ? 2 : 0 };
   const pane = !fr ? "" : `<pane${fr.col ? ` xSplit="${fr.col}"` : ""} ySplit="${fr.row}" topLeftCell="${colName(fr.col)}${fr.row + 1}" activePane="${fr.col ? "bottomRight" : "bottomLeft"}" state="frozen"/>`;
   const filter = !tpl && rows.length > 1 ? `<autoFilter ref="A1:${colName(width - 1)}${rows.length}"/>` : "";
   const dv = (sheet.validations || []).map(d => `<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="Nilai tidak valid" error="Pilih dari daftar dropdown." sqref="${d.sqref}"><formula1>${xml(d.formula)}</formula1></dataValidation>`);
@@ -118,7 +125,7 @@ ${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" Co
 <fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE4F5F1"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E1F2"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFB7B7B7"/></left><right style="thin"><color rgb="FFB7B7B7"/></right><top style="thin"><color rgb="FFB7B7B7"/></top><bottom style="thin"><color rgb="FFB7B7B7"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="11"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/></cellXfs>
+<cellXfs count="12"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="3" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf></cellXfs>
 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`],
     ...sheets.map((s, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(s)])
   ];

@@ -64,8 +64,9 @@
                 <directory>src/main/resources</directory>
             </resource>
             <!-- Dibundel ke war supaya cukup satu file di webapps:
-                 ./application.properties (koneksi DB & SL, tidak di-commit) -> classpath:config/, prioritasnya di atas application.properties bawaan;
-                 ./review.json (hasil review mode edit) -> dibaca read-only di server. -->
+                 ./application.properties (koneksi DB & SL, tidak di-commit) -> classpath:config/, prioritasnya di atas application.properties bawaan.
+                 ./addon-mapping.json (mapping bab Addon, diedit di menu Setup) -> dibaca read-only di server.
+                 Data review tidak ikut dibundel: dicatat app di server, file log per build (lihat ReviewController). -->
             <resource>
                 <directory>${project.basedir}</directory>
                 <includes><include>application.properties</include></includes>
@@ -73,22 +74,17 @@
             </resource>
             <resource>
                 <directory>${project.basedir}</directory>
-                <includes><include>review.json</include></includes>
+                <includes><include>addon-mapping.json</include></includes>
             </resource>
         </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-            <!-- War = web dokumentasi saja: halaman Setup & Cut Off beserta query-nya tidak ikut dibundel.
-                 Tetap tersedia saat dijalankan dari VS Code (mode dev). -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-war-plugin</artifactId>
-                <configuration>
-                    <packagingExcludes>WEB-INF/classes/static/setup.html,WEB-INF/classes/static/js/pages/setup.js,WEB-INF/classes/setup/**</packagingExcludes>
-                </configuration>
+                <!-- build-info (waktu build) = id file log review: build baru mulai dengan review kosong -->
+                <executions>
+                    <execution><goals><goal>build-info</goal></goals></execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

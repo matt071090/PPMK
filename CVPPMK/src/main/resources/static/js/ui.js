@@ -31,6 +31,18 @@ export function autoCols(r) {
     return { key: c, label: u ? u.label : c, num, fmt: num ? numText : undefined };
   });
 }
+// Header: nama company dari DB (OADM.CompnyName), juga dipakai di nama file export; kalau gagal tetap "No company".
+// Logo = huruf depan 2 kata pertama, tanpa bentuk badan usaha (CV. Putra Prima ... -> PP).
+export const company = { name: "No company" };
+export function showCompanyName() {
+  fetch("api/section/company-name").then(r => r.ok ? r.json() : null).then(d => {
+    if (!d || !d.name) return;
+    company.name = d.name;
+    $("#company-name").textContent = d.name;
+    const words = d.name.split(/\s+/).filter(w => !/^(CV|PT|UD|TBK)\.?$/i.test(w));
+    $("#company-logo").textContent = words.slice(0, 2).map(w => w[0]).join("").toUpperCase() || "NC";
+  }).catch(() => { });
+}
 export const rowsOf = r => r && r.rows ? r.rows.map(row => Object.fromEntries(r.columns.map((c, i) => [c, row[i]]))) : [];
 
 // ---------- tab seperti layar SAP B1 ----------
@@ -151,6 +163,16 @@ export function exportButton(cols, rows, title) {
   exportsReg.set(id, { cols, rows });
   return `<div class="xbar">${exportBtn(id).replace("<button ", `<button data-title="${esc(title || "")}" `)}</div>`;
 }
+
+// Tombol Excel satu file berisi beberapa sheet. sheets: [{ name, cols, rows }].
+export function exportSheets(sheets, title) {
+  const id = `x${++exportSeq}`;
+  exportsReg.set(id, { sheets });
+  return `<div class="xbar">${exportBtn(id).replace("<button ", `<button data-title="${esc(title || "")}" `).replace("Excel</button>", `Excel (${sheets.length} sheet)</button>`)}</div>`;
+}
+// Satu sheet per file SQL halaman, kolom apa adanya dari query (autoCols). names: { keyHasilQuery: "Nama sheet" }
+export const sqlSheets = (d, names) => Object.entries(names).filter(([k]) => d[k] && d[k].columns)
+  .map(([k, name]) => ({ name, cols: autoCols(d[k]), rows: rowsOf(d[k]) }));
 
 // ---------- tabel data ----------
 // xid: id export tetap (dipakai searchable); allRows: baris yang diekspor kalau berbeda dari yang dirender (mis. dibatasi limit)

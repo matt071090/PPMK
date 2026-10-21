@@ -39,15 +39,17 @@ public class HanaBackupController {
     private static final Pattern JDBC_SCHEMA = Pattern.compile("currentschema=([^&;]+)", Pattern.CASE_INSENSITIVE);
 
     private final HanaBackupService svc;
+    private final SetupAccessController access;
     private final boolean enabled, restoreEnabled, localOnly;
     private final String appHost, appSchema;
 
-    public HanaBackupController(HanaBackupService svc,
+    public HanaBackupController(HanaBackupService svc, SetupAccessController access,
                                 @Value("${hana.enabled:true}") boolean enabled,
                                 @Value("${hana.restore.enabled:true}") boolean restoreEnabled,
                                 @Value("${hana.local-only:false}") boolean localOnly,
                                 @Value("${spring.datasource.url:}") String dsUrl) {
         this.svc = svc;
+        this.access = access;
         this.enabled = enabled;
         this.restoreEnabled = restoreEnabled;
         this.localOnly = localOnly;
@@ -65,6 +67,8 @@ public class HanaBackupController {
 
     private void gate(HttpServletRequest req) {
         if (!enabled) throw new HanaException(404, "Fitur Backup & Restore HANA dimatikan (hana.enabled=false).");
+        // sama seperti menu Setup: mode debug selalu terbuka, di war harus memasukkan password Setup dulu
+        if (!access.unlocked(req)) throw new HanaException(403, "Tools terkunci. Buka lewat menu Setup dan masukkan password Setup dulu.");
         if (localOnly) {
             try {
                 if (!InetAddress.getByName(req.getRemoteAddr()).isLoopbackAddress())

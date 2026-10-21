@@ -5,14 +5,14 @@
 // Alias kolom query = nama field Service Layer = baris ke-2 template Excel, jadi ketiganya bisa dibandingkan langsung.
 // Kolom berawalan "_" = pembanding saja (tidak dikirim), mis. _ItemGroup: nama referensi yang kodenya bisa beda antar DB;
 // kode tujuannya dicari lewat step.lookups saat upload. Langkah kind "ref" (branch, dimension) hanya sumber pencarian, tidak tampil.
-import { $, $$, esc, isEmpty, onMount, flushMounts } from "../ui.js";
+import { $, $$, esc, isEmpty, onMount, flushMounts, company, showCompanyName } from "../ui.js";
 import { xlsxBlob, download } from "../xlsx.js";
 import { readXlsx } from "../xlsx-read.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
 import { uploadInChunks, progressUi, resultsTable } from "./upload-progress.js";
 import { hanaPage } from "./hana.js";
+import { mappingPage, uncategorized } from "./addon-mapping.js";
 
-const PROJECT = "CVPPMK";
 const store = {
   get: k => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { } }
@@ -291,7 +291,7 @@ function stepPage(step) {
 async function getTemplate(step, btn) {
   const text = btn.innerHTML;
   btn.disabled = true; btn.textContent = "Menyiapkan…";
-  try { downloadTemplate(tplOf(step), await loadRef(), PROJECT); }
+  try { downloadTemplate(tplOf(step), await loadRef(), company.name); }
   catch (e) { alert(`Gagal membuat template: ${e.message}`); }
   finally { btn.disabled = false; btn.innerHTML = text; }
 }
@@ -481,13 +481,13 @@ function drawStep(step, body, cmp, opt) {
     const list = picked();
     const head = [...(hasSrc ? ["Status"] : []), ...fields, ...(hasSrc ? ["Catatan"] : [])];
     const out = list.map(r => [...(hasSrc ? [STATUS[r.status][0]] : []), ...fields.map(f => norm((r.src || r.tgt)[f])), ...(hasSrc ? [r.errors.join("; ")] : [])]);
-    download(xlsxBlob([{ name: step.title.slice(0, 31), rows: [head, ...out] }]), `Setup ${step.order} ${step.title} - hasil cek - ${PROJECT}.xlsx`);
+    download(xlsxBlob([{ name: step.title.slice(0, 31), rows: [head, ...out] }]), `Setup ${step.order} ${step.title} - hasil cek - ${company.name}.xlsx`);
   };
   const toTpl = $("[data-sx-totpl]", body);
   if (toTpl) toTpl.onclick = () => {
     const list = picked().filter(r => r.src).map(r => r.src);
     if (!list.length) return alert("Belum ada baris sumber yang dipilih.");
-    download(xlsxBlob([templateSheet(step, opt.tpl, list)]), `${PROJECT} - ${opt.tpl.no} - ${opt.tpl.title} (dari database).xlsx`);
+    download(xlsxBlob([templateSheet(step, opt.tpl, list)]), `${company.name} - ${opt.tpl.no} - ${opt.tpl.title} (dari database).xlsx`);
   };
 
   const btn = $("[data-sx-upload]", body);
@@ -623,9 +623,35 @@ async function mountOverview(steps, box) {
   await Promise.all([work(), work(), work(), work()]);
 }
 
+// ---------- kunci Setup (war): password dicek di server, sesi browser ini terbuka sampai kembali ke Dokumentasi ----------
+function lockScreen(art, configured) {
+  $("#nav").innerHTML = "";
+  art.innerHTML = `<h1>Setup &amp; Cut Off</h1>
+    <p class="lead">Menu ini bisa menulis data ke SAP lewat Service Layer, jadi dikunci dengan password Setup.</p>
+    ${configured ? `<form class="lock-form" id="lock-form" novalidate>
+        <label class="fld"><span>Password Setup</span><input type="password" id="lock-pw" autocomplete="current-password" aria-describedby="lock-msg"></label>
+        <p class="fld-msg" id="lock-msg">Password diatur di application.properties server (docs.setup.password).</p>
+        <button class="btn primary" type="submit">Buka Setup</button></form>`
+      : `<div class="error">Password Setup belum diatur di server. Isi docs.setup.password di application.properties, lalu restart aplikasi.</div>`}`;
+  const f = $("#lock-form", art);
+  if (!f) return;
+  const input = $("#lock-pw", f), msg = $("#lock-msg", f);
+  input.focus();
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const fail = t => { input.classList.add("err"); msg.className = "fld-msg err"; msg.textContent = t; input.select(); };
+    if (!input.value) return fail("Password wajib diisi.");
+    try {
+      await getJson("api/setup-access/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: input.value }) });
+      location.reload();
+    } catch (err) { fail(err.message); }
+  };
+}
+
 // ---------- aplikasi setup.html: sidebar per tahap + routing #/ (ringkasan) dan #/<langkah> ----------
 export async function startSetupApp() {
   const art = $("#article"), nav = $("#nav");
+  showCompanyName();
   $("#theme-btn").onclick = () => {
     const el = document.documentElement, dark = el.dataset.theme ? el.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     el.dataset.theme = dark ? "light" : "dark"; store.set("theme", el.dataset.theme);
@@ -633,22 +659,25 @@ export async function startSetupApp() {
   $("#menu-btn").onclick = () => document.body.classList.toggle("nav-open");
   let steps;
   try {
-    const mode = await getJson("api/review/mode");
-    if (!mode.editable) {
-      art.innerHTML = `<h1>Setup &amp; Cut Off</h1><div class="error">Halaman ini hanya tersedia di mode dev / edit, karena bisa menulis data ke SAP.</div>`;
-      return;
-    }
+    // mode debug: langsung terbuka; war: wajib password Setup (docs.setup.password), tertutup lagi saat kembali ke Dokumentasi
+    const access = await getJson("api/setup-access");
+    if (!access.dev) $(".back-btn").onclick = e => {
+      e.preventDefault();
+      fetch("api/setup-access/logout", { method: "POST" }).finally(() => { location.href = "index.html"; });
+    };
+    if (!access.unlocked) return lockScreen(art, access.configured);
     steps = (await getJson("api/setup/steps")).filter(s => s.kind !== "ref");   // langkah referensi tidak ditampilkan
   } catch (e) {
     art.innerHTML = `<h1>Setup &amp; Cut Off</h1><div class="error">Gagal memuat langkah setup: ${esc(e.message)}</div>`;
     return;
   }
   steps.forEach((s, i) => s.order = i + 1);   // nomor urut = urutan di steps.json
-  const pages = { "": { title: "Urutan Setup", def: overviewPage(steps) } };
+  const pages = { "": { title: "Urutan Setup", def: overviewPage(steps) }, "addon-mapping": { title: "Mapping Add-on", def: mappingPage() } };
   steps.forEach(s => pages[s.id] = { title: s.title, no: String(s.order), chapter: `${s.tier} · ${TIERS[s.tier][0]}`, def: stepPage(s) });
   pages.hana = { title: "Backup & Restore HANA", chapter: "Utilitas", def: hanaPage() };
   const tiers = Object.keys(TIERS).filter(t => steps.some(s => s.tier === t));
   nav.innerHTML = `<div class="nav-group flat"><a href="#/" data-id="" class="chapter-link"><span class="gno">⌂</span><span>Urutan Setup</span></a><a href="#/hana" data-id="hana" class="chapter-link"><span class="gno">⛁</span><span>Backup &amp; Restore HANA</span></a></div>`
+    + `<div class="nav-group flat"><a href="#/addon-mapping" data-id="addon-mapping" class="chapter-link"><span class="gno">#</span><span>Mapping Add-on</span><span class="badge warn" id="am-badge" hidden></span></a></div>`
     + `<div class="nav-search"><input type="search" id="nav-q" placeholder="Cari langkah…" aria-label="Cari langkah di sidebar" autocomplete="off"></div>`
     + tiers.map(t => `<div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">${t}</span>${esc(TIERS[t][0])}</button>
       <ul>${steps.filter(s => s.tier === t).map(s => `<li><a href="#/${s.id}" data-id="${s.id}"${s.kind === "setting" ? ` class="todo"` : ""}>
@@ -657,11 +686,13 @@ export async function startSetupApp() {
     const g = b.parentElement; g.classList.toggle("collapsed"); b.setAttribute("aria-expanded", !g.classList.contains("collapsed"));
   });
   wireNavSearch(nav);
+  // badge: objek add-on yang tampil di dokumentasi tapi belum dikategorikan
+  getJson("api/addon/objects").then(d => { const n = uncategorized(d), b = $("#am-badge"); if (n) { b.textContent = `${n} baru`; b.hidden = false; } }).catch(() => { });
   const route = () => {
     const id = (location.hash.match(/^#\/([a-z0-9-]*)/) || [])[1] || "", page = pages[id] || pages[""];
     document.body.classList.remove("nav-open");
     $$("#nav a[data-id]").forEach(a => a.classList.toggle("active", a.dataset.id === (pages[id] ? id : "")));
-    document.title = `${page.no ? page.no + " " : ""}${page.title} · Setup CVPPMK`;
+    document.title = `${page.no ? page.no + " " : ""}${page.title} · Setup & Cut Off`;
     art.innerHTML = `<nav class="crumbs" aria-label="Breadcrumb"><span>Setup &amp; Cut Off</span>${page.chapter ? `<span>${esc(page.chapter)}</span>` : ""}</nav>
       <h1>${page.no ? `<span class="no">${esc(page.no)}</span>` : ""}${esc(page.title)}</h1>
       <p class="lead">${page.def.lead}</p>

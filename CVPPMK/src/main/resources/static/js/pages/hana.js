@@ -81,7 +81,10 @@ async function start(root, opts) {
     });
   }
   try { S.info = await call("info"); }
-  catch (e) { root.innerHTML = errBox(e); return; }
+  catch (e) {
+    root.innerHTML = errBox(e) + (e.status === 403 && /terkunci/.test(e.message) ? `<p><a class="cbtn primary" href="setup.html#/hana">Buka lewat Setup (masukkan password Setup)</a></p>` : "");
+    return;
+  }
   if (token()) {
     try { S.conn = JSON.parse(kv.get(sessionStorage, "hanaConn") || "null"); await call("history"); }   // cek token masih berlaku
     catch { S.conn = null; kv.set(sessionStorage, "hanaToken", null); }
