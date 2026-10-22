@@ -7,3 +7,6 @@ target/
 # log review & remarks (dibuat app saat jalan, dikosongkan tiap build)
 /review-data/
 /remarks.json
+
+# hasil compile agen Crystal
+/tools/rpt-agent/bin/

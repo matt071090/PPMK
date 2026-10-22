@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crystal RPT Editor · CVPPMK</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+body.setup-app .content { padding: 0 16px 24px; }
+.rp-head { display: flex; align-items: baseline; gap: 12px; margin: 12px 0 0; }
+.rp-head h1 { margin: 0; font-size: 20px; }
+.rp-head p { margin: 0; color: var(--muted); font-size: 13px; }
+.rp { display: grid; gap: 12px; align-items: start; }
+.rp-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0; }
+.rp-bar .edit-btn { height: 32px; padding: 0 10px; font-size: 13px; }
+.rp-bar .edit-btn[aria-pressed=true] { background: var(--accent-soft); }
+.rp-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+.rp-root { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; }
+.rp-zoom { min-width: 44px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+.rp-col { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2, var(--bg)); min-width: 0; }
+.rp-col > h3 { margin: 0; padding: 9px 12px; font-size: 13px; border-bottom: 1px solid var(--border); }
+.rp-files { max-height: calc(100vh - 230px); overflow: auto; }
+.rp-files button { display: block; width: 100%; text-align: left; padding: 7px 12px; border: 0; background: none; color: inherit; font: inherit; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.rp-files button:hover { background: var(--accent-soft); }
+.rp-tabs { display: flex; gap: 2px; overflow-x: auto; padding: 6px 6px 0; border-bottom: 1px solid var(--border); }
+.rp-tab { display: inline-flex; gap: 6px; align-items: center; padding: 6px 10px; border: 1px solid var(--border); border-bottom: 0; border-radius: 6px 6px 0 0; background: none; color: inherit; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.rp-tab[aria-selected=true] { background: var(--bg); font-weight: 650; }
+.rp-tab .dot { color: var(--warn); }
+.rp-tabw { display: inline-flex; } .rp-tabw .rp-tab { border-radius: 6px 0 0 0; border-right: 0; }
+.rp-x { border: 1px solid var(--border); border-bottom: 0; border-radius: 0 6px 0 0; background: none; color: inherit; font: inherit; font-size: 13px; opacity: .6; cursor: pointer; padding: 0 8px; } .rp-x:hover, .rp-x:focus-visible { opacity: 1; }
+.rp-bch td { background: var(--accent-soft); font-size: 12px; } .rp-bch ul { margin: 0; padding-left: 16px; } .rp-bch li { margin: 2px 0; overflow-wrap: anywhere; }
+.rp-rc { border-bottom: 1px solid var(--border); } .rp-rc .rp-note { padding: 0 12px; display: block; }
+/* kanvas ala Crystal: penggaris atas, label section di gutter kiri, kertas putih (tetap putih di dark mode) */
+.rp-scroll { overflow: auto; height: calc(100vh - 250px); min-height: 360px; background: var(--surface-2, #e9eef0); padding: 0 0 40px; }
+.rp-stage { padding: 0; }
+.rp-rrow { display: flex; position: sticky; top: 0; z-index: 3; background: var(--surface-2, #e9eef0); }
+.rp-corner { width: 96px; height: 20px; flex: none; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+.rp-ruler { display: block; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--surface-2, #e9eef0); }
+.rp-body { display: flex; }
+.rp-gutter { position: relative; width: 96px; flex: none; border-right: 1px solid var(--border); background: var(--surface-2, #e9eef0); }
+.rp-gl { position: absolute; left: 0; right: 0; padding: 4px 8px; font-size: 11.5px; font-weight: 600; color: var(--muted); border-bottom: 1px dashed var(--border); overflow: hidden; }
+.rp-paper { display: block; background: #fff; box-shadow: 0 1px 8px rgba(0, 0, 0, .25); flex: none; touch-action: none; }
+.rp-paper .ob { cursor: move; }
+.rp-paper .ob:hover rect[fill=transparent] { stroke: rgba(14, 134, 112, .45); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.rp-paper .selbox { fill: none; stroke: var(--accent, #14a085); stroke-width: 1.5px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.rp-status { padding: 5px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+.rp-props { padding: 10px 12px; font-size: 13px; }
+.rp-props label { display: grid; grid-template-columns: 52px 1fr; gap: 2px 6px; align-items: center; margin: 6px 0; }
+.rp-props label small { grid-column: 2; color: var(--muted); font-size: 11px; }
+.rp-props input { width: 100%; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: inherit; font: inherit; }
+.rp-note { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+.rp-primary { background: var(--accent-strong, #0e8670); color: #fff; border-color: transparent; }
+.rp-ok { color: var(--ok, #1a7f4b); font-weight: 650; } .rp-wn { color: var(--warn, #b45309); font-weight: 650; }
+/* bar format */
+.rp-fmt { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; min-height: 36px; padding: 4px 8px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2, var(--bg)); }
+.rp-fmt select, .rp-fmt input[type=number] { height: 28px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: inherit; font: inherit; font-size: 12.5px; }
+.rp-fmt input[type=color] { width: 26px; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: none; vertical-align: middle; }
+.rp-tg { min-width: 28px; height: 28px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: inherit; font: inherit; cursor: pointer; }
+.rp-tg[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); }
+.rp-tg:disabled, .rp-fmt select:disabled, .rp-fmt input:disabled { opacity: .4; cursor: default; }
+.rp-cl { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; }
+/* panel kiri bertab */
+.rp-ltabs { display: flex; border-bottom: 1px solid var(--border); }
+.rp-ltabs button { flex: 1; padding: 8px 4px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+.rp-ltabs button[aria-selected=true] { color: var(--accent-strong, #0e8670); border-bottom-color: var(--accent, #14a085); }
+.rp-sh { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--accent-soft); font-size: 12px; font-weight: 650; position: sticky; top: 0; }
+.rp-sh input { width: 56px; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: inherit; font: inherit; font-size: 12px; }
+.rp-files .rp-so { display: flex; align-items: center; gap: 6px; padding: 5px 12px; font-size: 12.5px; }
+.rp-files .rp-so.on { background: var(--accent-soft); font-weight: 650; }
+.rp-so small { margin-left: auto; color: var(--muted); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-k { width: 8px; height: 8px; border-radius: 2px; flex: none; background: #94a3b8; }
+.rp-k-Text { background: #60a5fa; } .rp-k-Field { background: #34d399; } .rp-k-Box { background: #f59e0b; } .rp-k-Line { background: #6b7280; }
+.rp-fs { width: calc(100% - 20px); margin: 8px 10px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: inherit; font: inherit; font-size: 12.5px; }
+.rp-fld { display: flex; justify-content: space-between; gap: 6px; padding: 4px 12px; font-size: 12.5px; cursor: grab; border-bottom: 1px solid var(--border); }
+.rp-fld:hover { background: var(--accent-soft); } .rp-fld small { color: var(--muted); }
+details > summary { padding: 6px 10px; font-size: 12.5px; font-weight: 650; cursor: pointer; background: var(--surface-2, transparent); }
+.rp-paper .grpbox { fill: none; stroke: var(--accent, #14a085); stroke-width: 1px; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; pointer-events: none; }
+.rp-paper .refbox { fill: none; stroke: #e0670a; stroke-width: 3px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.rp-al { display: inline-flex; align-items: center; justify-content: center; min-width: 30px; padding: 0 5px; }
+/* handle & kotak seleksi */
+.rp-paper .hdl { fill: transparent; stroke: none; pointer-events: all; }
+.rp-paper .hdv { fill: #fff; stroke: var(--accent, #14a085); stroke-width: 2px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.rp-paper .hdl[data-h=nw], .rp-paper .hdl[data-h=se] { cursor: nwse-resize; } .rp-paper .hdl[data-h=ne], .rp-paper .hdl[data-h=sw] { cursor: nesw-resize; }
+.rp-paper .hdl[data-h=n], .rp-paper .hdl[data-h=s] { cursor: ns-resize; } .rp-paper .hdl[data-h=e], .rp-paper .hdl[data-h=w] { cursor: ew-resize; }
+.rp-paper .ghost { fill: rgba(20, 160, 133, .08); stroke: var(--accent, #14a085); stroke-dasharray: 4 3; stroke-width: 1px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.rp-paper .band { fill: rgba(20, 160, 133, .1); stroke: var(--accent, #14a085); stroke-width: 1px; vector-effect: non-scaling-stroke; pointer-events: none; }
+/* dialog verify */
+.rp-ov { position: fixed; inset: 0; background: rgba(10, 16, 20, .45); z-index: 60; display: grid; place-items: center; }
+.rp-dlg { width: min(440px, 92vw); max-height: 90vh; overflow: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.rp-dlg h3 { margin: 0 0 6px; } .rp-dlg label { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: center; margin: 8px 0; font-size: 13px; }
+.rp-dlg input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: inherit; font: inherit; }
+.rp-dlg .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.rp-dlg.rp-view { width: 94vw; height: 92vh; display: flex; flex-direction: column; overflow: hidden; } .rp-pdf { flex: 1; width: 100%; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+/* dialog batch */
+.rp-dlg-wide { width: min(1040px, 96vw); }
+.rp-dlg-wide label.rp-bf, .rp-dlg-wide label.rp-bck { display: flex; grid-template-columns: none; gap: 6px; align-items: center; margin: 3px 0; }
+.rp-bgrid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; margin: 10px 0; }
+.rp-bfs { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-width: 0; margin: 0; }
+.rp-bfs legend { font-size: 12.5px; font-weight: 650; padding: 0 4px; }
+.rp-blist { max-height: 260px; border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; }
+.rp-brow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0 6px 22px; }
+.rp-dlg .rp-brow label { display: flex; grid-template-columns: none; gap: 4px; align-items: center; margin: 0; }
+.rp-brow input:not([type=color]) { flex: 1 1 140px; min-width: 0; } .rp-brow input[type=number] { flex: none; }
+.rp-brow select, .rp-bfs select { height: 30px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: inherit; font: inherit; font-size: 12.5px; }
+.rp-btw { max-height: 240px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+.rp-bt { width: 100%; border-collapse: collapse; font-size: 12.5px; } .rp-bt th, .rp-bt td { padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.rp-bt th { position: sticky; top: 0; background: var(--accent-soft); }
+.rp-er { color: var(--danger, #b91c1c); font-weight: 650; }
+.rp-dlg h4 { margin: 12px 0 4px; }
+.rp-dlg button:disabled { opacity: .45; cursor: default; }
+/* toolbox Alat (tahap 2) */
+.rp-tools { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+.rp-tools[hidden] { display: none; }
+.rp-tools .edit-btn { height: 30px; padding: 0 9px; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
+.rp-tools .edit-btn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); }
+.rp-tools .edit-btn[aria-disabled=true] { opacity: .65; }
+.rp-tlab { margin: 0 4px 0 0; font-weight: 650; }
+.rp-aiw { position: relative; }
+.rp-pop { position: absolute; right: 0; top: 36px; z-index: 20; width: 260px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); box-shadow: 0 4px 16px rgba(0, 0, 0, .2); font-size: 12.5px; }
+.rp-armed .rp-paper, .rp-armed .rp-paper .ob, .rp-armed .rp-paper .hdl { cursor: crosshair !important; }
+.rp-paper .tgh { fill: rgba(20, 160, 133, .1); stroke: var(--accent, #14a085); stroke-width: 1.5px; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
+.rp-paper line.tgh { stroke-width: 2px; stroke-dasharray: none; }
+.rp-paper .tgt { fill: var(--accent-strong, #0e8670); pointer-events: none; }
+.rp-paper .tsec { fill: rgba(20, 160, 133, .07); stroke: none; }
+.rp-tchip { position: fixed; z-index: 70; padding: 2px 7px; border-radius: 6px; background: var(--accent-strong, #0e8670); color: #fff; font-size: 12px; pointer-events: none; white-space: nowrap; }
+.rp-tchip[hidden] { display: none; }
+.rp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Suppress (tahap 3) */
+.rp-paper .ob-sup { opacity: .35; }
+.rp-paper .supo { fill: none; stroke: #6b7a80; stroke-dasharray: 4 3; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.rp-paper .supi { fill: none; stroke: #6b7a80; stroke-width: 1.4px; }
+.rp-paper .supb { fill: #6b7a80; }
+.rp-paper .supsec { fill: rgba(120, 140, 150, .08); stroke: #6b7a80; stroke-dasharray: 6 4; stroke-width: 1px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.rp-eye { position: absolute; right: 4px; top: 3px; width: 22px; height: 22px; padding: 2px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); color: var(--muted); cursor: pointer; display: inline-flex; }
+.rp-eye svg { width: 16px; height: 16px; }
+.rp-eye[aria-pressed=true] { background: var(--accent-soft); color: inherit; }
+.rp-gl.rp-supsec span { text-decoration: line-through; }
+.rp-sh .rp-eye { position: static; flex: none; } .rp-sha { display: inline-flex; gap: 6px; align-items: center; }
+.rp-sh .rp-sup, .rp-so.rp-sup .rp-nm { text-decoration: line-through; }
+.rp-eic { display: inline-flex; color: var(--muted); } .rp-eic svg { width: 13px; height: 13px; }
+.rp-card { margin-top: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; }
+.rp-props .rp-rd, .rp-props .rp-bck { display: flex; grid-template-columns: none; gap: 6px; align-items: center; margin: 4px 0; }
+.rp-props input[type=radio], .rp-props input[type=checkbox] { width: auto; }
+.rp-cr { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; } .rp-cr input, .rp-cr select { flex: 1 1 90px; min-width: 0; }
+.rp-cr select { height: 30px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: inherit; font: inherit; font-size: 12.5px; }
+.rp-code { display: block; margin: 4px 0; padding: 4px 6px; border-radius: 6px; background: var(--accent-soft); font-size: 11.5px; overflow-wrap: anywhere; }
+.rp-col1 { display: grid !important; grid-template-columns: 1fr !important; gap: 3px; margin: 8px 0; font-size: 12.5px; }
+.rp-col1 textarea { width: 100%; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: inherit; font: 12px Consolas, monospace; resize: vertical; }
+.rp-col1 select, .rp-col1 input { height: 30px; }
+/* wizard batch (tahap 4) */
+.rp-steps { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; margin: 8px 0 12px; padding: 0; font-size: 12.5px; color: var(--muted); }
+.rp-steps li[aria-current=step] { color: inherit; font-weight: 650; }
+.rp-steps li span { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); font-size: 11.5px; }
+.rp-steps li[aria-current=step] span, .rp-steps li.done span { background: var(--accent-strong, #0e8670); color: #fff; border-color: transparent; }
+.rp-wgrid { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 14px; }
+.rp-wmain { min-width: 0; } .rp-wmain h4 { margin-top: 0; outline: none; }
+.rp-wside { border: 1px solid var(--border); border-radius: 8px; padding: 4px 12px 10px; align-self: start; font-size: 12.5px; }
+.rp-sum dt { font-weight: 650; margin-top: 6px; } .rp-sum dd { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.rp-dlg label.rp-goal { display: flex; grid-template-columns: none; gap: 10px; align-items: flex-start; padding: 8px 10px; margin: 6px 0; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 13px; }
+.rp-goal.on { border-color: var(--accent); background: var(--accent-soft); } .rp-goal small { color: var(--muted); }
+.rp-pairs { display: grid; gap: 4px; margin: 8px 0; } .rp-pairs input { width: 44%; min-width: 120px; }
+.rp-dlg .rp-cr { margin: 6px 0; }
+@media (max-width: 800px) { .rp-bgrid, .rp-wgrid { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .rp { grid-template-columns: 1fr !important; } }
+</style>
+<script>try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch { }</script>
+</head>
+<body class="setup-app">
+<header class="top">
+  <a class="brand" href="index.html"><span class="logo">PP</span>
+    <span><small>Tools</small><span>Crystal RPT Editor</span></span></a>
+  <a class="edit-btn back-btn" href="hana.html" title="Kembali ke Tools"><span>Tools</span></a>
+  <a class="edit-btn back-btn" href="countdoc.html" title="Audit SAP: Count Document"><span>Count Document</span></a>
+  <span id="chip" class="sbadge" style="margin-left:auto">Agent: memeriksa…</span>
+  <button class="icon-btn" id="theme-btn" type="button" aria-label="Ganti tema terang/gelap">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
+  </button>
+</header>
+<main class="content"><div class="rp-head"><h1>Crystal RPT Editor</h1><p>Edit layout .rpt lewat agen lokal di PC Anda. Hasil selalu disimpan sebagai salinan _edit.rpt (file asli tidak diubah). Verify Database dan Preview dengan data asli tersedia di sini; keduanya butuh driver SAP HANA ODBC 64-bit (HDBODBC) di PC ini.</p></div><article class="article" id="article"></article></main>
+<script type="module">
+import { rptPage } from "./js/pages/rpt.js";
+const $ = s => document.querySelector(s);
+$("#theme-btn").onclick = () => {
+  const el = document.documentElement, dark = el.dataset.theme ? el.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  el.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", el.dataset.theme); } catch { }
+};
+rptPage($("#article"), $("#chip"));
+</script>
+</body>
+</html>
