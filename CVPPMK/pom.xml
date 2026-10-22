@@ -37,6 +37,12 @@
             <artifactId>ngdbc</artifactId>
             <version>2.28.6</version>
         </dependency>
+        <!-- SSH ke server HANA untuk Backup & Restore (tidak butuh klien ssh di komputer / server Tomcat) -->
+        <dependency>
+            <groupId>com.github.mwiede</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.2.18</version>
+        </dependency>
         <!-- disediakan Tomcat di server; tetap dipakai saat dijalankan dari VS Code / java -jar -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

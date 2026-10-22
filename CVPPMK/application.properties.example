@@ -1,0 +1,41 @@
+# Template konfigurasi lokal. Copy file ini jadi ./application.properties (folder CVPPMK, sejajar pom.xml), lalu isi nilai [..].
+# ./application.properties tidak di-commit (isinya kredensial); file ini yang di-commit.
+
+####################Database HANA
+spring.datasource.url=jdbc:sap://[HOST]:30015/?currentschema=[SCHEMA]
+spring.datasource.username=[USER]
+spring.datasource.password=[PASSWORD]
+spring.datasource.driver-class-name=com.sap.db.jdbc.Driver
+
+
+
+sap.use.branches=true
+
+
+####################Service Layer, host ditulis terpisah dari datasource
+sap.sl.host=[HOST]
+sap.sl.port=50000
+sap.sl.url=https://${sap.sl.host}:${sap.sl.port}/b1s/v1
+sap.sl.company-db=[SCHEMA]
+sap.sl.username=[USER]
+sap.sl.password=[PASSWORD]
+
+
+####################Setup & Cut Off: password untuk membuka menu Setup di war (Tomcat)
+# Mode debug (VS Code) tidak butuh password. Kosong = Setup di war terkunci total.
+docs.setup.password=[PASSWORD]
+
+####################Setup & Cut Off (menu mode edit): DB sumber yang boleh dibaca
+# Server yang sama: cukup nama DB (schema) sumber, dipisah koma. Login pakai user & password datasource di atas (DBADMIN).
+# Kosong = otomatis semua DB yang namanya diawali DB tujuan (mis. CVPPM_TEST).
+setup.source-dbs=[SCHEMA_SUMBER_1],[SCHEMA_SUMBER_2]
+# Server lain: daftar nama koneksi, lalu url/username/password per nama. Password tidak pernah dikirim ke browser.
+#setup.sources=LAMA
+#setup.source.LAMA.url=jdbc:sap://[host]:30015/?currentschema=[SCHEMA]
+#setup.source.LAMA.username=[USER]
+#setup.source.LAMA.password=[PASSWORD]
+
+####################License Server (SLD), hanya GET
+sap.sld.url=https://[HOST]:40000/sld/sld0100.svc
+sap.sld.username=[USER]
+sap.sld.password=[PASSWORD]

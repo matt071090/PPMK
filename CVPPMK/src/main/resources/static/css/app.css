@@ -758,3 +758,45 @@ a.edit-btn:hover { text-decoration: none; }
 details.grp > .proc-src { border-radius: 0; border-top: 1px solid var(--border); max-height: 520px; }
 @media print { .sp-bar { display: none; } .sp-card.off { opacity: 1; } .sp-card details { display: none; } }
 
+
+/* ---------- Backup & Restore HANA (hana.js): hanya form login, tombol bahaya, dan tata letak dialog; selebihnya komponen yang sudah ada ---------- */
+.hn-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 16px 18px; margin-bottom: 14px; max-width: 640px; }
+.hn-form { display: grid; grid-template-columns: 1fr 120px; gap: 12px 14px; }
+.hn-form label, .hn-conf { display: grid; gap: 4px; font-size: 13px; color: var(--text-2); }
+.hn-form .hn-chk, .hn-form .cbtn.primary, .hn-form .hn-wide { grid-column: 1 / -1; }
+.hn-form input, .hn-card input#hn-target, .hn-conf input { font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 6px;
+  background: var(--surface); color: var(--text); box-sizing: border-box; width: 100%; }
+.hn-form input:focus, .hn-card input:focus, .hn-conf input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.hn-card input:disabled { background: var(--surface-2); color: var(--muted); cursor: default; }
+.hn-pw { display: flex; gap: 8px; align-items: stretch; }
+.hn-pw .cbtn { align-self: stretch; }
+.hn-chk { display: flex !important; grid-auto-flow: column; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-2); cursor: pointer; }
+.hn-chk input { width: auto; }
+.hn-chk small { color: var(--muted); }
+.hn-list { max-height: 46vh; overflow-y: auto; }
+.hn-dlg { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.hn-dlg .callout { margin: 12px 0; }
+.hn-conf { margin: 10px 0; }
+.hn-conf .badge { justify-self: start; }
+.hn-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.cbtn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.cbtn.danger:hover { color: #fff; filter: brightness(1.08); }
+.cbtn:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 720px) {
+  .hn-form { grid-template-columns: 1fr; }
+  .hn .cbtn, .hn-dlg .cbtn, .hn .chip, .hn .md-item, .hn-form input, .hn-conf input { min-height: 44px; }
+  .hn-actions .cbtn { flex: 1 1 140px; }
+}
+
+.hn-load { display: flex; align-items: center; gap: 14px; padding: 18px 16px; border: 1px dashed var(--border-strong); border-radius: var(--radius); background: var(--bg-soft); }
+.hn-load p { margin: 2px 0 0; }
+.hn-spin { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--surface-2); border-top-color: var(--accent); animation: hn-rot .9s linear infinite; }
+@keyframes hn-rot { to { transform: rotate(360deg); } }
+.sx-prog-bar.hn-indet i { width: 35% !important; animation: hn-slide 1.4s ease-in-out infinite; }
+@keyframes hn-slide { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }
+.hn-set { border: 1px solid var(--border); border-radius: var(--radius); margin: 12px 0; padding: 8px 12px 12px; display: grid; gap: 6px; }
+.hn-set legend { padding: 0 6px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.hn-set input[data-target] { font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); box-sizing: border-box; width: 100%; }
+.hn-set input[data-target]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hn-set input[data-target]:disabled { background: var(--surface-2); color: var(--muted); cursor: default; }
+@media (prefers-reduced-motion: reduce) { .hn-spin { animation: none; } .sx-prog-bar.hn-indet i { animation: none; margin-left: 0; width: 100% !important; opacity: .5; } }
