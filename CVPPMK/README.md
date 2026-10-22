@@ -5,6 +5,7 @@ Database: SAP B1 HANA, schema `CVPPM` (QA). Struktur bab dan status pengerjaan a
 
 Jalankan `DocsApplication` (atau `mvnw spring-boot:run`), lalu buka http://127.0.0.1:8090.
 Koneksi DB dan Service Layer diatur di `./application.properties` (tidak di-commit, isinya kredensial).
+Pertama kali clone: copy `application.properties.example` jadi `application.properties`, lalu isi nilai `[..]`.
 
 ---
 
