@@ -585,8 +585,12 @@ export function countdocPage(root, printEl) {
   async function exportPng() {
     setStatus("Membuat PNG…");
     const { html, width } = RP.reportHtml(reportCtx(derive())), out = await RP.renderPng(html, width), n = out.blobs.length;
-    out.blobs.forEach((b, i) => download(b, `count-document_${st.resp.from}_${st.resp.to}${n > 1 ? `_bagian-${i + 1}-dari-${n}` : ""}.png`));
-    setStatus(`PNG selesai: ${out.width} x ${out.height} px (skala 2x)${n > 1 ? `, dibagi ${n} bagian berurutan karena sangat tinggi` : ""}.`);
+    // Chrome menolak unduhan otomatis beruntun yang terlalu rapat; beri jeda antar file.
+    for (let i = 0; i < n; i++) {
+      if (i) await new Promise(r => setTimeout(r, 900));
+      download(out.blobs[i], `count-document_${st.resp.from}_${st.resp.to}${n > 1 ? `_bagian-${i + 1}-dari-${n}` : ""}.png`);
+    }
+    setStatus(`PNG selesai: ${out.width} x ${out.height} px (skala 2x)${n > 1 ? `, dibagi ${n} gambar (1: ringkasan + grafik, 2: tabel), siap dikirim berurutan` : ""}.`);
   }
   function printReport() {
     const tpl = st.template, dv = derive(), k = E.kpis(dv.rows);

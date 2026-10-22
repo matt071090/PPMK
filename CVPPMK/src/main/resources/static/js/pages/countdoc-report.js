@@ -76,7 +76,7 @@ export function reportHtml(ctx) {
 ${k.documents ? `<div class="cd"><h2>Dokumen dibuat per ${dv.bucket === "day" ? "hari" : dv.bucket === "week" ? "minggu" : "bulan"}</h2>${chartSvg(dv, width - 72 - 34)}<p class="ft" style="margin:6px 0 0">${esc(ins.trim())}</p></div>
 <div class="two"><div class="cd"><h2>Pengguna teratas</h2>${listHtml(us.map(u => [u.name, u.counted]), us[0] ? us[0].counted : 1)}<p class="ft" style="margin:8px 0 0">${esc(ctx.note)}${ctx.mask ? " Nama disamarkan." : ""}</p></div>
 <div class="cd"><h2>Dokumen terbanyak</h2>${listHtml(objs.map(o => [o.id, o.counted]), objs[0] ? objs[0].counted : 1)}</div></div>
-<div class="cd" style="padding:14px 10px"><h2 style="padding-left:6px">Dokumen per ${tbl.bucket === "day" ? "hari" : tbl.bucket === "week" ? "minggu" : "bulan"}</h2>${tbl.html}</div>` : `<div class="cd"><p>Belum ada dokumen untuk filter ini.</p></div>`}
+<div class="cd tb" style="padding:14px 10px"><h2 style="padding-left:6px">Dokumen per ${tbl.bucket === "day" ? "hari" : tbl.bucket === "week" ? "minggu" : "bulan"}</h2>${tbl.html}</div>` : `<div class="cd"><p>Belum ada dokumen untuk filter ini.</p></div>`}
 <p class="ft">Sumber: SAP Business One. Diambil pada ${esc(ctx.taken.toLocaleString("id-ID"))}; data sampai pukul ${esc(E.fmtTime(ctx.taken))}. Filter aktif: ${esc(ctx.filterText)}. Dokumen = dokumen SAP yang dibuat pada periode (tanggal buat); dokumen batal belum disaring. ${esc(ctx.note)}<br>${esc(ctx.version)}</p></div>`;
   return { html, width };
 }
@@ -109,11 +109,14 @@ export async function renderPng(html, width, scale = 2) {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${h}"><foreignObject x="0" y="0" width="${width}" height="${h}">${css}${xml}</foreignObject></svg>`;
     const img = new Image();
     await new Promise((ok, no) => { img.onload = ok; img.onerror = () => { const pe = new DOMParser().parseFromString(svg, "image/svg+xml").querySelector("parsererror"); no(new Error("Gagal merender gambar laporan." + (pe ? " " + pe.textContent.slice(0, 160) : ""))); }; img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); });
+    // Dua gambar: (1) ringkasan + grafik + top list, (2) tabel + catatan kaki; dipotong tepat di kartu tabel. Tanpa tabel: bagi rata biasa.
+    const tb = el.querySelector(".tb"), cut = tb ? Math.round(tb.getBoundingClientRect().top - el.getBoundingClientRect().top) : 0;
+    const parts = cut > 0 && cut < h ? [{ y: 0, h: cut, pad: 0 }, { y: cut, h: h - cut, pad: 32 }] : pngParts(h).map(p => ({ ...p, pad: 0 }));
     const blobs = [];
-    for (const pt of pngParts(h)) {
-      const cv = document.createElement("canvas"); cv.width = width * scale; cv.height = pt.h * scale;
+    for (const pt of parts) {
+      const cv = document.createElement("canvas"); cv.width = width * scale; cv.height = (pt.h + pt.pad) * scale;
       const cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, cv.width, cv.height);
-      cx.drawImage(img, 0, pt.y, width, pt.h, 0, 0, cv.width, cv.height);
+      cx.drawImage(img, 0, pt.y, width, pt.h, 0, pt.pad * scale, cv.width, pt.h * scale);
       blobs.push(await new Promise((ok, no) => cv.toBlob(b => b ? ok(b) : no(new Error("Gagal membuat PNG.")), "image/png")));
     }
     return { blobs, width, height: h };
