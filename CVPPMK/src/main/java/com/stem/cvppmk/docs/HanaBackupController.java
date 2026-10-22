@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.LinkedHashMap;
@@ -29,6 +31,10 @@ import java.util.regex.Pattern;
  *   <li>POST /api/hana/restore           {source, file, target, confirmSchema, confirmWord, confirmIp} -> job</li>
  *   <li>GET  /api/hana/jobs/{id}?from=N  status + potongan log</li>
  *   <li>GET  /api/hana/history           riwayat (CSV di hana.data-dir)</li>
+ *   <li>GET  /api/hana/file-info?file=   ukuran file backup di server</li>
+ *   <li>POST /api/hana/download          form {token, file} -> stream file ke browser (SFTP, tanpa disimpan di mesin aplikasi)</li>
+ *   <li>POST /api/hana/upload?name=&folder=   isi file dari PC sebagai body mentah -> ditulis ke server (SFTP) + cek checksum</li>
+ *   <li>POST /api/hana/copy              {file, host, port, user, password, folder, mode} -> job salin ke server lain</li>
  * </ul>
  * hana.enabled=false mematikan semua endpoint; hana.local-only=true hanya melayani request dari mesin ini (disarankan bila tidak di-HTTPS-kan).
  */
@@ -168,6 +174,48 @@ public class HanaBackupController {
     public String savedLog(@PathVariable String id, HttpServletRequest req) {
         conn(req);
         return svc.savedLog(id);
+    }
+
+
+    /** Ukuran file backup di server ini, untuk konfirmasi sebelum unduh / salin. */
+    @GetMapping("/file-info")
+    public Map<String, Object> fileInfo(@RequestParam String file, HttpServletRequest req) {
+        Conn c = conn(req);
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("file", file); m.put("size", svc.fileSize(c, file)); m.put("host", c.host);
+        return m;
+    }
+
+    /**
+     * Unduh file backup ke PC. Dipanggil lewat form POST (token di field form, bukan di URL) supaya browser mengunduh langsung
+     * dengan progresnya sendiri; file dialirkan dari server HANA lewat SFTP, tidak disimpan di mesin aplikasi.
+     */
+    @PostMapping("/download")
+    public void download(@RequestParam String token, @RequestParam String file, HttpServletRequest req, HttpServletResponse res) throws IOException {
+        gate(req);
+        Conn c = svc.conn(token);
+        long size = svc.fileSize(c, file);
+        String name = file.substring(file.lastIndexOf('/') + 1);
+        res.setContentType("application/gzip");
+        res.setHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
+        res.setHeader("Content-Length", String.valueOf(size));
+        res.setHeader("Cache-Control", "no-store");
+        svc.download(c, file, res.getOutputStream());
+    }
+
+    /** Unggah file backup dari PC: isi file dikirim sebagai body mentah (XMLHttpRequest.send(file)), tanpa multipart. */
+    @PostMapping("/upload")
+    public Map<String, Object> upload(@RequestParam String name, @RequestParam(required = false) String folder, HttpServletRequest req) throws IOException {
+        Conn c = conn(req);
+        return svc.upload(c, folder, name, req.getInputStream(), req.getContentLengthLong());
+    }
+
+    @PostMapping("/copy")
+    public Map<String, Object> copy(@RequestBody Map<String, Object> b, HttpServletRequest req) {
+        Conn c = conn(req);
+        int port = 22;
+        try { String p = str(b, "port"); if (!p.isEmpty()) port = Integer.parseInt(p.trim()); } catch (NumberFormatException e) { throw new HanaException(400, "Port tujuan tidak valid."); }
+        return jobJson(svc.startCopy(c, str(b, "file").trim(), str(b, "host"), port, str(b, "user"), str(b, "password"), str(b, "folder"), str(b, "mode")), 0);
     }
 
     /** Info schema aktif aplikasi, supaya UI bisa memperingatkan sebelum restore. */

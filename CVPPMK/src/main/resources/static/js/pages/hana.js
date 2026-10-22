@@ -69,8 +69,8 @@ export function hanaPage(opts = {}) {
 }
 
 async function start(root, opts) {
-  const S = { info: null, conn: null, tab: "backup", schemas: null, backups: null, history: null, appSchema: null, selSchema: "", selFile: "", q: "" };
-  const hashTab = () => (location.hash.match(/^#\/?(backup|restore|riwayat)/) || [])[1] || "backup";
+  const S = { info: null, conn: null, tab: "backup", schemas: null, backups: null, history: null, appSchema: null, selSchema: "", selFile: "", mvFile: "", mvMode: "file", q: "" };
+  const hashTab = () => (location.hash.match(/^#\/?(backup|restore|pindah|riwayat)/) || [])[1] || "backup";
   if (opts.hashTabs) {
     S.tab = hashTab();
     window.addEventListener("hashchange", () => {
@@ -118,7 +118,7 @@ async function start(root, opts) {
     return `<div class="sx-head"><span class="badge yes">Terhubung</span> <b>${esc(c.user)}@${esc(c.host)}</b>${c.prod ? ` <span class="badge danger">Produksi</span>` : ""}
         <button type="button" class="cbtn" data-logout style="margin-left:auto">Keluar dari server</button></div>
       <div id="hn-ribbon"></div>
-      <div class="chips" role="tablist" aria-label="Menu backup dan restore">${[["backup", "Backup"], ["restore", "Restore"], ["riwayat", "Riwayat"]].map(([k, l]) =>
+      <div class="chips" role="tablist" aria-label="Menu backup dan restore">${[["backup", "Backup"], ["restore", "Restore"], ["pindah", "Pindahkan file"], ["riwayat", "Riwayat"]].map(([k, l]) =>
         `<button type="button" role="tab" class="chip" data-tab="${k}" aria-pressed="${S.tab === k}" aria-selected="${S.tab === k}">${l}</button>`).join("")}</div>
       <div id="hn-body"></div><div class="sx-result" id="hn-result"></div>`;
   }
@@ -127,13 +127,17 @@ async function start(root, opts) {
   async function loadTab() {
     const body = $("#hn-body", root);
     if (!body) return;
-    const stop = loading(body, S.tab === "backup" ? "Mengambil daftar schema" : S.tab === "restore" ? "Mengambil daftar file backup" : "Memuat riwayat");
+    const stop = loading(body, S.tab === "backup" ? "Mengambil daftar schema" : S.tab === "restore" || S.tab === "pindah" ? "Mengambil daftar file backup" : "Memuat riwayat");
     try {
       if (S.tab === "backup") { if (!S.schemas) S.schemas = await call("schemas"); body.innerHTML = backupView(); }
       else if (S.tab === "restore") {
         if (!S.backups) S.backups = await call("backups");
         if (!S.appSchema) S.appSchema = await call("app-schema");
         body.innerHTML = restoreView();
+      } else if (S.tab === "pindah") {
+        if (!S.backups) S.backups = await call("backups");
+        if (S.mvMode === "db" && !S.schemas) S.schemas = await call("schemas");
+        body.innerHTML = pindahView();
       } else { S.history = await call("history"); body.innerHTML = historyView(); }
       wireBody();
     } catch (e) {
@@ -172,6 +176,33 @@ async function start(root, opts) {
 
       <div class="sx-bar"><span class="sx-count">${sel ? `Dipilih: <b>${esc(sel.split("/").pop())}</b>` : "Pilih satu file backup"}</span>
         <button type="button" class="cbtn danger" data-do-restore${sel && S.info.restoreEnabled ? "" : " disabled"}>Restore…</button></div>`;
+  }
+
+  // ---------- pindahkan file backup: unduh ke PC, unggah dari PC, salin ke server lain ----------
+  function pindahView() {
+    // sumber: file backup yang sudah ada di server, atau backup database baru dulu (lalu file hasilnya otomatis terpilih)
+    const src = `<div class="chips" role="group" aria-label="Sumber file">${[["file", "Dari file backup yang sudah ada"], ["db", "Backup database baru dulu"]].map(([k, l]) =>
+      `<button type="button" class="chip" data-mvmode="${k}" aria-pressed="${S.mvMode === k}">${l}</button>`).join("")}</div>`;
+    if (S.mvMode === "db") {
+      const list = S.schemas.filter(x => x.toLowerCase().includes(S.q.toLowerCase()));
+      return `${src}<p class="sx-prog-s">Pilih database, klik "Backup sekarang". Setelah selesai, file backup-nya otomatis terpilih di sini untuk diunduh atau disalin ke server lain.</p>
+        <div class="toolbar"><input type="search" id="hn-q" placeholder="Cari schema…" aria-label="Cari schema" value="${esc(S.q)}"><span class="count">${list.length} dari ${S.schemas.length} schema</span></div>
+        <div class="table-wrap hn-list" role="listbox" aria-label="Schema">${list.map(x => `<button type="button" class="md-item${x === S.selSchema ? " on" : ""}" role="option" aria-selected="${x === S.selSchema}" data-schema="${esc(x)}"><span class="md-name">${esc(x)}</span></button>`).join("")}</div>
+        <div class="sx-bar"><span class="sx-count">${S.selSchema ? `Dipilih: <b>${esc(S.selSchema)}</b>` : "Pilih satu schema"}</span>
+          <button type="button" class="cbtn" data-do-up>Unggah dari PC…</button>
+          <button type="button" class="cbtn primary" data-do-backup${S.selSchema ? "" : " disabled"}>Backup sekarang</button></div>`;
+    }
+    const groups = {};
+    S.backups.forEach(f => (groups[f.split("/")[0]] = groups[f.split("/")[0]] || []).push(f));
+    const keys = Object.keys(groups).sort().reverse(), sel = S.mvFile;
+    return `${src}<div class="callout info"><span class="ci">i</span><div class="ct"><b>Backup berisi seluruh data perusahaan</b>Salinan di PC atau server lain ikut menjadi tanggung jawabmu: simpan di tempat aman dan hapus kalau sudah tidak dipakai. Semua pemindahan dicek dengan checksum SHA-256 dan dicatat di Riwayat.</div></div>
+      ${S.backups.length ? "" : `<div class="sx-note-box">Belum ada file backup di server ini. Kamu tetap bisa mengunggah file dari PC.</div>`}
+      ${keys.map((k, i) => `<details class="grp"${i === 0 || groups[k].includes(sel) ? " open" : ""}><summary><span><b>${esc(k)}</b></span><span class="muted">${groups[k].length} file</span></summary>
+        ${groups[k].map(f => `<button type="button" class="md-item${f === sel ? " on" : ""}" data-mvfile="${esc(f)}"><span class="md-name">${esc(f.split("/").pop())}</span><span class="muted">schema asal: ${esc(srcOf(f))}</span></button>`).join("")}</details>`).join("")}
+      <div class="sx-bar"><span class="sx-count">${sel ? `Dipilih: <b>${esc(sel.split("/").pop())}</b>` : "Pilih file untuk diunduh atau disalin"}</span>
+        <button type="button" class="cbtn" data-do-up>Unggah dari PC…</button>
+        <button type="button" class="cbtn" data-do-dl${sel ? "" : " disabled"}>Unduh ke PC</button>
+        <button type="button" class="cbtn primary" data-do-cp${sel ? "" : " disabled"}>Salin ke server lain…</button></div>`;
   }
 
   function historyView() {
@@ -221,9 +252,14 @@ async function start(root, opts) {
   function wireBody() {
     const body = $("#hn-body", root);
     const q = $("#hn-q", body);
-    if (q) q.oninput = () => { S.q = q.value; const pos = q.selectionStart; body.innerHTML = backupView(); wireBody(); const n = $("#hn-q", body); n.focus(); n.setSelectionRange(pos, pos); };
-    $$("[data-schema]", body).forEach(b => b.onclick = () => { S.selSchema = b.dataset.schema; body.innerHTML = backupView(); wireBody(); });
+    if (q) q.oninput = () => { S.q = q.value; const pos = q.selectionStart; body.innerHTML = (S.tab === "pindah" ? pindahView() : backupView()); wireBody(); const n = $("#hn-q", body); n.focus(); n.setSelectionRange(pos, pos); };
+    $$("[data-schema]", body).forEach(b => b.onclick = () => { S.selSchema = b.dataset.schema; body.innerHTML = (S.tab === "pindah" ? pindahView() : backupView()); wireBody(); });
     $$("[data-file]", body).forEach(b => b.onclick = () => { S.selFile = b.dataset.file; body.innerHTML = restoreView(); wireBody(); });
+    $$("[data-mvmode]", body).forEach(b => b.onclick = async () => { S.mvMode = b.dataset.mvmode; await loadTab(); });
+    $$("[data-mvfile]", body).forEach(b => b.onclick = () => { S.mvFile = b.dataset.mvfile; body.innerHTML = pindahView(); wireBody(); });
+    const dl = $("[data-do-dl]", body); if (dl) dl.onclick = () => confirmDownload();
+    const cp = $("[data-do-cp]", body); if (cp) cp.onclick = () => confirmCopy();
+    const up = $("[data-do-up]", body); if (up) up.onclick = () => dialogUpload();
     const bk = $("[data-do-backup]", body); if (bk) bk.onclick = () => confirmBackup();
     const rs = $("[data-do-restore]", body); if (rs) rs.onclick = () => confirmRestore();
     $$("[data-log]", body).forEach(b => b.onclick = async () => {
@@ -244,6 +280,123 @@ async function start(root, opts) {
       d.q("[data-go]").disabled = true;
       try { const job = await call("backup", { schema }); d.close(); followJob(job.id, `Backup ${schema}`); }
       catch (e) { d.close(); $("#hn-result", root).innerHTML = errBox(e); }
+    };
+  }
+
+  // ---------- pindah file ----------
+  const sizeOf = async file => { try { return (await call(`file-info?file=${encodeURIComponent(file)}`)).size; } catch (e) { if (e.status === 401) { expired(); } throw e; } };
+
+  async function confirmDownload() {
+    const file = S.mvFile;
+    let size;
+    try { size = await sizeOf(file); } catch (e) { $("#hn-result", root).innerHTML = errBox(e); return; }
+    const d = dialog(`<h3>Unduh ke PC?</h3>
+      <div class="sx-facts"><span>Server <b>${esc(S.conn.host)}</b></span><span>File <b>${esc(file.split("/").pop())}</b></span><span>Ukuran <b>${fmtBytes(size)}</b></span></div>
+      <p class="sx-prog-s">File dialirkan dari server ke browser ini dan masuk ke folder Unduhan. Selama berjalan, jangan menutup tab ini. Kalau PC terhubung lewat VPN, kecepatannya mengikuti VPN.</p>
+      <div class="hn-actions"><button type="button" class="cbtn" data-x>Batal</button><button type="button" class="cbtn primary" data-go>Mulai unduh</button></div>`, { label: "Konfirmasi unduh" });
+    d.q("[data-x]").onclick = d.close;
+    d.q("[data-go]").onclick = () => {
+      // form POST ke iframe tersembunyi: token tidak muncul di URL, browser mengunduh langsung dengan progresnya sendiri
+      let fr = document.getElementById("hn-dl-frame");
+      if (!fr) { fr = document.createElement("iframe"); fr.id = "hn-dl-frame"; fr.name = "hn-dl-frame"; fr.hidden = true; document.body.appendChild(fr); }
+      const f = document.createElement("form");
+      f.method = "POST"; f.action = `${API}/download`; f.target = "hn-dl-frame"; f.hidden = true;
+      [["token", token() || ""], ["file", file]].forEach(([k, v]) => { const i = document.createElement("input"); i.type = "hidden"; i.name = k; i.value = v; f.appendChild(i); });
+      document.body.appendChild(f); f.submit(); f.remove();
+      d.close();
+      $("#hn-result", root).innerHTML = `<div class="callout ok"><span class="ci">✓</span><div class="ct"><b>Unduhan dimulai</b>Lihat daftar unduhan browser untuk progresnya. Hasilnya tercatat di Riwayat setelah selesai.</div></div>`;
+    };
+  }
+
+  function dialogUpload() {
+    const d = dialog(`<h3>Unggah file backup dari PC</h3>
+      <p class="sx-prog-s">File .tar.gz hasil backup (nama dari alat ini, mis. <code>SCHEMA_20261021_1000.tar.gz</code>) ditulis ke server <b>${esc(S.conn.host)}</b> di <code>/hana/backup/&lt;folder&gt;/</code>, lalu muncul di tab Restore.</p>
+      <label class="hn-conf">File<input type="file" data-f accept=".gz,.tar.gz"></label>
+      <label class="hn-conf">Folder tujuan (nama tanggal)<input data-folder value="${today()}" autocomplete="off" spellcheck="false"></label>
+      <div data-note></div>
+      <div class="sx-prog-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" data-bar hidden><i></i></div>
+      <p class="sx-prog-s" data-pg></p>
+      <div class="hn-actions"><button type="button" class="cbtn" data-x>Tutup</button><button type="button" class="cbtn primary" data-go disabled>Unggah</button></div>`, { label: "Unggah file backup" });
+    d.q("[data-x]").onclick = d.close;
+    const NAME = /^[A-Za-z0-9_-]{1,150}\.tar\.gz$/, FOLDER = /^[A-Za-z0-9_-]{1,100}$/;
+    const check = () => {
+      const f = d.q("[data-f]").files[0], folder = d.q("[data-folder]").value.trim();
+      let msg = "";
+      if (f && !NAME.test(f.name)) msg = `Nama file harus berakhiran .tar.gz dan hanya berisi huruf, angka, - dan _ (sekarang: ${f.name}). Ganti nama dulu.`;
+      else if (!FOLDER.test(folder)) msg = "Nama folder hanya huruf, angka, - dan _.";
+      d.q("[data-note]").innerHTML = msg ? `<div class="error">${esc(msg)}</div>` : f ? `<p class="sx-prog-s">${esc(f.name)} · ${fmtBytes(f.size)}</p>` : "";
+      d.q("[data-go]").disabled = !f || !!msg;
+    };
+    d.el.querySelectorAll("input").forEach(i => { i.oninput = check; i.onchange = check; });
+    d.q("[data-go]").onclick = () => {
+      const f = d.q("[data-f]").files[0], folder = d.q("[data-folder]").value.trim();
+      const bar = d.q("[data-bar]"), pg = d.q("[data-pg]"), go = d.q("[data-go]");
+      go.disabled = true; bar.hidden = false; d.q("[data-f]").disabled = true; d.q("[data-folder]").disabled = true;
+      const t0 = Date.now(), xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API}/upload?name=${encodeURIComponent(f.name)}&folder=${encodeURIComponent(folder)}`);
+      xhr.setRequestHeader("X-Hana-Token", token() || "");
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");   // jangan sampai Tomcat membaca isi file sebagai form
+      xhr.upload.onprogress = e => {
+        if (!e.lengthComputable) return;
+        const pct = Math.min(99, Math.floor(e.loaded * 100 / e.total)), el = (Date.now() - t0) / 1000;
+        bar.firstElementChild.style.width = pct + "%";
+        pg.textContent = `${pct}% · ${fmtBytes(e.loaded)} dari ${fmtBytes(e.total)}` + (el > 8 && e.loaded > 0 ? ` · sisa sekitar ${mmss(el / e.loaded * (e.total - e.loaded))}` : "");
+      };
+      xhr.upload.onload = () => { pg.textContent = "Terkirim, server memeriksa checksum…"; };
+      xhr.onerror = () => { pg.innerHTML = `<span class="badge danger">Gagal</span> Koneksi ke aplikasi terputus.`; go.disabled = false; };
+      xhr.onload = () => {
+        let r = {}; try { r = JSON.parse(xhr.responseText); } catch { }
+        if (xhr.status >= 200 && xhr.status < 300) {
+          bar.firstElementChild.style.width = "100%";
+          pg.innerHTML = `<span class="badge yes">Selesai</span> ${esc(r.file)} · ${fmtBytes(r.bytes)} · checksum cocok (${esc((r.sha256 || "").slice(0, 12))}…). File sudah muncul di tab Restore.`;
+          S.backups = null; go.hidden = true;
+          if (xhr.status === 401) expired();
+        } else {
+          pg.innerHTML = `<span class="badge danger">Gagal</span> ${esc(r.message || "HTTP " + xhr.status)}`;
+          go.disabled = false; d.q("[data-f]").disabled = false; d.q("[data-folder]").disabled = false;
+          if (xhr.status === 401) { d.close(); expired(); }
+        }
+      };
+      xhr.send(f);
+    };
+  }
+
+  function confirmCopy() {
+    const file = S.mvFile, name = file.split("/").pop();
+    const saved = (() => { try { return JSON.parse(kv.get(localStorage, "hanaCopyTarget") || "{}"); } catch { return {}; } })();
+    const d = dialog(`<h3>Salin ke server lain</h3>
+      <div class="sx-facts"><span>Dari <b>${esc(S.conn.host)}</b></span><span>File <b>${esc(name)}</b></span><span data-size></span></div>
+      <p class="sx-prog-s">Isi server tujuan (satu jaringan dengan server ini). File tiba sebagai <code>.part</code> dulu, dicek checksum, baru diberi nama akhir. Setelah selesai, login ke server tujuan lalu buka tab Restore: file muncul di daftarnya.</p>
+      <form class="hn-form" data-f autocomplete="off">
+        <label>IP / host server tujuan<input name="host" required placeholder="IP server tujuan" inputmode="url" value="${esc(saved.host || "")}"></label>
+        <label>Port SSH<input name="port" value="${esc(saved.port || "22")}" inputmode="numeric" pattern="[0-9]{1,5}"></label>
+        <label class="hn-wide">Username<input name="user" required value="${esc(saved.user || "root")}" autocapitalize="off"></label>
+        <label class="hn-wide">Password<span class="hn-pw"><input name="password" type="password" required autocomplete="off"><button type="button" class="cbtn" data-show aria-pressed="false">Tampilkan</button></span></label>
+        <label class="hn-wide">Folder tujuan di /hana/backup/<input name="folder" value="${esc(file.split("/")[0])}" autocomplete="off" spellcheck="false"></label>
+        <label class="hn-wide">Cara salin<select name="mode" style="font:inherit;padding:8px 10px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);color:var(--text)">
+          <option value="auto">Otomatis: coba langsung server ke server, kalau gagal lewat aplikasi</option>
+          <option value="direct">Langsung server ke server saja (tercepat, tidak lewat PC)</option>
+          <option value="relay">Lewat aplikasi ini saja (server tujuan tidak perlu terjangkau dari server asal)</option></select></label>
+      </form>
+      <div class="callout warn"><span class="ci">!</span><div class="ct"><b>Password server tujuan</b>Dipakai hanya untuk salinan ini, disimpan di memori aplikasi sementara, tidak ditulis ke log atau disk. Mode langsung memberikannya ke server asal lewat stdin untuk sesaat.</div></div>
+      <div data-err></div>
+      <div class="hn-actions"><button type="button" class="cbtn" data-x>Batal</button><button type="button" class="cbtn primary" data-go>Mulai salin</button></div>`, { label: "Salin ke server lain" });
+    d.q("[data-x]").onclick = d.close;
+    sizeOf(file).then(n => { const e = d.q("[data-size]"); if (e) e.innerHTML = `Ukuran <b>${fmtBytes(n)}</b>`; }).catch(() => { });
+    const f = d.q("[data-f]"), show = d.q("[data-show]");
+    show.onclick = () => { const p = f.elements.password, on = p.type === "password"; p.type = on ? "text" : "password"; show.setAttribute("aria-pressed", on); show.textContent = on ? "Sembunyikan" : "Tampilkan"; };
+    d.q("[data-go]").onclick = async () => {
+      if (!f.reportValidity()) return;
+      const body = { file, host: f.elements.host.value, port: f.elements.port.value, user: f.elements.user.value, password: f.elements.password.value, folder: f.elements.folder.value, mode: f.elements.mode.value };
+      d.q("[data-go]").disabled = true;
+      try {
+        const job = await call("copy", body);
+        kv.set(localStorage, "hanaCopyTarget", JSON.stringify({ host: body.host, port: body.port, user: body.user }));   // password tidak pernah disimpan
+        d.close(); followJob(job.id, `Salin ${name} → ${body.host}`);
+      } catch (e) {
+        d.q("[data-err]").innerHTML = errBox(e); d.q("[data-go]").disabled = false;
+        if (e.status === 401) { d.close(); expired(); }
+      }
     };
   }
 
@@ -350,7 +503,10 @@ async function start(root, opts) {
         const lg = d.q("[data-lg]"); lg.hidden = false; lg.textContent = log.trim().split("\n").slice(-40).join("\n");
         d.q(".sx-prog-w").hidden = true;
         d.q("[data-hide]").textContent = "Tutup";
-        S.backups = null; S.schemas = null; if (S.tab !== "backup") loadTab();
+        S.backups = null; S.schemas = null;
+        const mm = ok && last.type === "Backup" && /DONE:\s*\/hana\/backup\/([^\s]+)/.exec(log);   // file hasil -> terpilih di tab Pindahkan
+        if (mm) { const parts = mm[1].split("/"); S.mvFile = parts.slice(-2).join("/"); if (S.tab === "pindah") S.mvMode = "file"; }
+        if (S.tab !== "backup") loadTab();
       } catch (e) {
         following = "";
         if (e.status === 401 || e.status === 404) { kv.set(localStorage, "hanaJob", null); hidden = true; d.close(); if (e.status === 401) expired(); else $("#hn-result", root).innerHTML = errBox(e); return; }

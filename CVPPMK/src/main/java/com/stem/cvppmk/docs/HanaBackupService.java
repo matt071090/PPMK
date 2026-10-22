@@ -4,6 +4,7 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.SftpException;
 import com.jcraft.jsch.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.security.MessageDigest;
+import java.util.concurrent.Future;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,6 +53,8 @@ public class HanaBackupService {
     static final Pattern HOST = Pattern.compile("[A-Za-z0-9.\\-]{1,253}");
     static final Pattern USER = Pattern.compile("[A-Za-z0-9_.\\-]{1,64}");
     static final Pattern BACKUP_PATH = Pattern.compile("([A-Za-z0-9_\\-]{1,100}/){1,2}[A-Za-z0-9_\\-]{1,150}\\.tar\\.gz");
+    static final Pattern FOLDER = Pattern.compile("[A-Za-z0-9_\\-]{1,100}");
+    static final Pattern FILENAME = Pattern.compile("[A-Za-z0-9_\\-]{1,150}\\.tar\\.gz");
     private static final Pattern STAGE = Pattern.compile("^STAGE:\\s*(\\d+)/(\\d+)\\|(.*)$");
     // PROGRESS: <selesai>/<total>|<satuan>; total 0 = tidak diketahui (UI tampil tanpa persen)
     private static final Pattern PROGRESS = Pattern.compile("^PROGRESS:\\s*(\\d*)/(\\d+)(?:\\|(\\w+))?\\s*$");
@@ -100,12 +106,14 @@ public class HanaBackupService {
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
     private final ExecutorService pool = Executors.newCachedThreadPool(r -> { Thread t = new Thread(r, "hana-job"); t.setDaemon(true); return t; });
     private final SecureRandom rnd = new SecureRandom();
-    private final String remoteDir;
+    private final String remoteDir, backupDir;
     private final Path dataDir;
 
     public HanaBackupService(@Value("${hana.remote-dir:/opt/cvppmk-hana}") String remoteDir,
+                             @Value("${hana.backup-dir:/hana/backup}") String backupDir,
                              @Value("${hana.data-dir:}") String dataDir) {
         this.remoteDir = remoteDir.replaceAll("/+$", "");
+        this.backupDir = backupDir.replaceAll("/+$", "");
         this.dataDir = Paths.get(dataDir.trim().isEmpty() ? System.getProperty("user.home") + "/cvppmk-data" : dataDir.trim());
     }
 
@@ -323,6 +331,300 @@ public class HanaBackupService {
         Job j = jobs.get(id);
         if (j == null) throw new HanaException(404, "Job tidak ditemukan (aplikasi mungkin sudah restart). Lihat Riwayat.");
         return j;
+    }
+
+
+    // ---------- pindah file backup: unduh ke PC, unggah dari PC, salin ke server lain ----------
+    private static void mustBackupPath(String rel) {
+        if (rel == null || !BACKUP_PATH.matcher(rel).matches()) throw new HanaException(400, "File backup tidak valid, pilih dari daftar.");
+    }
+
+    private static long toLong(String v, String what) {
+        try { return Long.parseLong(v.trim().split("\\s+")[0]); }
+        catch (Exception e) { throw new HanaException(502, "Jawaban server tidak terbaca (" + what + "): " + v); }
+    }
+
+    /** Jalankan perintah dan kumpulkan keluarannya; exit code bukan 0 = HanaException. */
+    private String execOut(Session s, String cmd, String what) {
+        List<String> out = new ArrayList<>();
+        int rc = exec(s, cmd, line -> { if (!line.trim().isEmpty()) out.add(line.trim()); });
+        if (rc != 0) throw new HanaException(502, what + " gagal (exit " + rc + "): " + String.join(" | ", out));
+        return String.join("\n", out);
+    }
+
+    /** Perintah dengan isi stdin (mis. password), supaya rahasia tidak muncul di baris perintah server. */
+    private int execWithInput(Session s, String cmd, String stdin, Consumer<String> sink) {
+        ChannelExec ch = null;
+        try {
+            ch = (ChannelExec) s.openChannel("exec");
+            ch.setCommand("(" + cmd + ") 2>&1");
+            ch.setInputStream(new ByteArrayInputStream((stdin + "\n").getBytes(StandardCharsets.UTF_8)));
+            InputStream in = ch.getInputStream();
+            ch.connect(15000);
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+                for (String line; (line = r.readLine()) != null; ) if (sink != null) sink.accept(line);
+            }
+            long until = System.currentTimeMillis() + 10000;
+            while (!ch.isClosed() && System.currentTimeMillis() < until) Thread.sleep(50);
+            return ch.getExitStatus();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new HanaException(500, "Dibatalkan.");
+        } catch (Exception e) {
+            throw new HanaException(502, "Perintah ke server gagal: " + e.getMessage());
+        } finally {
+            if (ch != null) ch.disconnect();
+        }
+    }
+
+    /** Catatan riwayat untuk operasi yang berjalan di dalam satu request (unduh / unggah). Tidak masuk daftar job aktif. */
+    private Job note(Conn c, String type, String file) {
+        return new Job(UUID.randomUUID().toString().replace("-", "").substring(0, 12), type, c, file.substring(file.lastIndexOf('/') + 1), "", file);
+    }
+
+    private void close(Job j, boolean ok, String error) {
+        j.status = ok ? "ok" : "failed"; j.exit = ok ? 0 : 1; j.error = error == null ? "" : error; j.endedAt = System.currentTimeMillis();
+        persist(j);
+    }
+
+    /** Ukuran file backup di server (byte); 404 kalau tidak ada. */
+    public long fileSize(Conn c, String rel) {
+        mustBackupPath(rel);
+        Session s = open(c);
+        try {
+            int[] rc = {0};
+            List<String> out = new ArrayList<>();
+            rc[0] = exec(s, "stat -c %s '" + backupDir + "/" + rel + "'", line -> out.add(line.trim()));
+            if (rc[0] != 0) throw new HanaException(404, "File " + rel + " tidak ada di server " + c.host + ".");
+            return toLong(out.isEmpty() ? "" : out.get(0), "ukuran file");
+        } finally {
+            s.disconnect();
+        }
+    }
+
+    /** Unduh: file backup di server dialirkan ke out (respons HTTP) lewat SFTP, tanpa disimpan di mesin aplikasi. */
+    public void download(Conn c, String rel, OutputStream out) {
+        mustBackupPath(rel);
+        Job j = note(c, "Unduh", rel);
+        Session s = open(c);
+        ChannelSftp sftp = null;
+        try {
+            sftp = (ChannelSftp) s.openChannel("sftp");
+            sftp.connect(10000);
+            sftp.get(backupDir + "/" + rel, out);
+            close(j, true, "");
+        } catch (SftpException | JSchException e) {
+            close(j, false, e.getMessage());
+            throw new HanaException(502, "Unduh gagal: " + e.getMessage());
+        } finally {
+            if (sftp != null) sftp.disconnect();
+            s.disconnect();
+        }
+    }
+
+    /**
+     * Unggah: isi file dari PC (stream) ditulis ke {backupDir}/{folder}/{name} lewat SFTP, ke nama sementara .part dulu.
+     * Ditolak kalau file sudah ada atau ruang tidak cukup; setelah selesai SHA-256 dibandingkan dengan yang dihitung di server.
+     */
+    public Map<String, Object> upload(Conn c, String folder, String name, InputStream in, long length) {
+        if (folder == null || folder.isEmpty()) folder = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        if (!FOLDER.matcher(folder).matches()) throw new HanaException(400, "Nama folder tujuan tidak valid (huruf, angka, - dan _).");
+        if (name == null || !FILENAME.matcher(name).matches()) throw new HanaException(400, "Nama file harus berakhiran .tar.gz (huruf, angka, - dan _).");
+        String dir = backupDir + "/" + folder, dst = dir + "/" + name, part = dst + ".part", rel = folder + "/" + name;
+        Job j = note(c, "Unggah", rel);
+        Session s = open(c);
+        ChannelSftp sftp = null;
+        try {
+            int exists = exec(s, "test -e '" + dst + "'", null);
+            if (exists == 0) throw new HanaException(409, "File " + rel + " sudah ada di server " + c.host + ". Ganti nama atau hapus dulu.");
+            if (length > 0) {
+                long free = toLong(execOut(s, "mkdir -p '" + dir + "' && df -B1 --output=avail '" + dir + "' | tail -1", "Cek ruang disk"), "ruang disk");
+                if (free < length + length / 20) throw new HanaException(507, "Ruang di server tidak cukup: tersisa " + free / 1048576 + " MB, butuh sekitar " + (length + length / 20) / 1048576 + " MB.");
+            } else execOut(s, "mkdir -p '" + dir + "'", "Membuat folder");
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            long sent = 0;
+            sftp = (ChannelSftp) s.openChannel("sftp");
+            sftp.connect(10000);
+            try (OutputStream out = sftp.put(part, ChannelSftp.OVERWRITE)) {
+                byte[] buf = new byte[256 * 1024];
+                for (int n; (n = in.read(buf)) > 0; ) { out.write(buf, 0, n); md.update(buf, 0, n); sent += n; }
+            }
+            if (length > 0 && sent != length) { exec(s, "rm -f '" + part + "'", null); throw new HanaException(502, "Unggahan terputus: diterima " + sent + " dari " + length + " byte."); }
+            String local = hex(md.digest());
+            String remote = execOut(s, "sha256sum '" + part + "' | cut -d' ' -f1", "Checksum di server");
+            if (!local.equalsIgnoreCase(remote.trim())) { exec(s, "rm -f '" + part + "'", null); throw new HanaException(502, "Checksum tidak cocok (PC " + local + ", server " + remote.trim() + "). File dibuang."); }
+            execOut(s, "mv '" + part + "' '" + dst + "'", "Memberi nama akhir");
+            close(j, true, "");
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("file", rel); m.put("bytes", sent); m.put("sha256", local); m.put("host", c.host);
+            return m;
+        } catch (HanaException e) {
+            if (e.status != 409) dropPart(s, part);   // 409 = file sudah ada, .part bukan milik kita
+            close(j, false, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            dropPart(s, part);
+            close(j, false, e.getMessage());
+            throw new HanaException(502, "Unggah gagal: " + e.getMessage());
+        } finally {
+            if (sftp != null) sftp.disconnect();
+            s.disconnect();
+        }
+    }
+
+    /** Hapus file sementara .part di server, sebisanya (kegagalan membersihkan tidak boleh menutupi error aslinya). */
+    private void dropPart(Session s, String part) {
+        try { if (s != null && s.isConnected()) exec(s, "rm -f '" + part + "'", null); } catch (Exception ignore) { /* sebisanya */ }
+    }
+
+    private static String hex(byte[] b) {
+        StringBuilder sb = new StringBuilder();
+        for (byte x : b) sb.append(String.format("%02x", x));
+        return sb.toString();
+    }
+
+    /**
+     * Salin file backup dari server ini (a) ke server lain (b) di jaringan yang sama. mode: direct = server a mengirim langsung ke b (scp, tercepat),
+     * relay = lewat aplikasi ini (a -> aplikasi -> b), auto = coba direct, kalau gagal lanjut relay. Tujuan selalu ke nama .part dulu,
+     * lalu checksum SHA-256 dua sisi dibandingkan sebelum diberi nama akhir. Password server tujuan hanya di memori, tidak masuk log.
+     */
+    public synchronized Job startCopy(Conn a, String rel, String host, int port, String user, String password, String folder, String mode) {
+        mustBackupPath(rel);
+        host = host == null ? "" : host.trim(); user = user == null ? "" : user.trim();
+        if (!HOST.matcher(host).matches()) throw new HanaException(400, "IP / host server tujuan tidak valid.");
+        if (!USER.matcher(user).matches()) throw new HanaException(400, "Username server tujuan tidak valid.");
+        if (password == null || password.isEmpty()) throw new HanaException(400, "Password server tujuan wajib diisi.");
+        if (port < 1 || port > 65535) throw new HanaException(400, "Port server tujuan tidak valid.");
+        if (host.equalsIgnoreCase(a.host)) throw new HanaException(400, "Server tujuan sama dengan server asal.");
+        if (folder == null || folder.trim().isEmpty()) folder = rel.substring(0, rel.indexOf('/'));
+        folder = folder.trim();
+        if (!FOLDER.matcher(folder).matches()) throw new HanaException(400, "Nama folder tujuan tidak valid (huruf, angka, - dan _).");
+        String m = mode == null ? "auto" : mode.trim();
+        if (!m.equals("auto") && !m.equals("direct") && !m.equals("relay")) throw new HanaException(400, "Mode salin tidak dikenal.");
+        Conn b = new Conn(newToken(), host, port, user, password, false);
+        String fFolder = folder;
+        return startTask(a, "Salin", rel.substring(rel.lastIndexOf('/') + 1), host, rel, job -> doCopy(a, b, job, rel, fFolder, m));
+    }
+
+    private Job startTask(Conn c, String type, String source, String target, String file, Consumer<Job> task) {
+        Job running = activeJob(c.host);
+        if (running != null) throw new HanaException(409, "Masih ada " + running.type + " yang berjalan di server ini (" + running.source + "). Tunggu selesai dulu.");
+        Job job = new Job(UUID.randomUUID().toString().replace("-", "").substring(0, 12), type, c, source, target, file);
+        jobs.put(job.id, job);
+        pool.submit(() -> {
+            try {
+                task.accept(job);
+                job.status = "ok"; job.exit = 0;
+            } catch (HanaException e) {
+                job.status = "failed"; job.exit = 1; job.error = e.getMessage(); job.append("ERROR: " + e.getMessage());
+            } catch (Throwable e) {
+                log.warn("job {} gagal", job.id, e);
+                job.status = "failed"; job.exit = 1; job.error = String.valueOf(e.getMessage()); job.append("ERROR: " + e);
+            } finally {
+                job.endedAt = System.currentTimeMillis();
+                persist(job);
+            }
+        });
+        return job;
+    }
+
+    private static void stage(Job j, int no, int total, String text) {
+        j.stageNo = no; j.stageTotal = total; j.stage = text; j.progDone = 0; j.progTotal = 0; j.progUnit = "";
+        j.append("STAGE: " + no + "/" + total + "|" + text);
+    }
+
+    private void doCopy(Conn a, Conn b, Job job, String rel, String folder, String mode) {
+        String name = rel.substring(rel.lastIndexOf('/') + 1);
+        String src = backupDir + "/" + rel, dir = backupDir + "/" + folder, dst = dir + "/" + name, part = dst + ".part";
+        Session sa = null, sb = null;
+        boolean ok = false;
+        try {
+            stage(job, 1, 5, "Memeriksa file asal dan ruang di server tujuan");
+            sa = open(a);
+            sb = open(b);
+            long size = toLong(execOut(sa, "stat -c %s '" + src + "'", "Membaca ukuran file asal"), "ukuran file");
+            if (exec(sb, "test -e '" + dst + "'", null) == 0) throw new HanaException(409, "File " + folder + "/" + name + " sudah ada di server tujuan " + b.host + ".");
+            long free = toLong(execOut(sb, "mkdir -p '" + dir + "' && df -B1 --output=avail '" + dir + "' | tail -1", "Cek ruang disk tujuan"), "ruang disk");
+            if (free < size + size / 20) throw new HanaException(507, "Ruang di server tujuan tidak cukup: tersisa " + free / 1048576 + " MB, butuh sekitar " + (size + size / 20) / 1048576 + " MB.");
+            job.append("Ukuran file " + size / 1048576 + " MB, ruang tujuan " + free / 1048576 + " MB. Tujuan: " + b.host + ":" + dst);
+
+            stage(job, 2, 5, "Menghitung checksum di server asal");
+            String hashA = execOut(sa, "sha256sum '" + src + "' | cut -d' ' -f1", "Checksum server asal").trim();
+
+            stage(job, 3, 5, "Menyalin file");
+            job.progTotal = size; job.progUnit = "bytes";
+            boolean done = false;
+            if (!"relay".equals(mode)) {
+                done = copyDirect(sa, sb, a, b, job, src, part, size);
+                if (!done && "direct".equals(mode)) throw new HanaException(502, "Salin langsung dari server asal ke tujuan gagal (lihat log). Coba mode otomatis atau lewat aplikasi.");
+                if (!done) { job.append("Lanjut lewat aplikasi (relay)."); exec(sb, "rm -f '" + part + "'", null); job.progDone = 0; }
+            }
+            if (!done) copyRelay(sa, sb, job, src, part);
+
+            stage(job, 4, 5, "Menghitung checksum di server tujuan");
+            String hashB = execOut(sb, "sha256sum '" + part + "' | cut -d' ' -f1", "Checksum server tujuan").trim();
+            if (!hashA.equalsIgnoreCase(hashB)) {
+                exec(sb, "rm -f '" + part + "'", null);
+                throw new HanaException(502, "Checksum tidak cocok (asal " + hashA + ", tujuan " + hashB + "). File di tujuan dibuang, salin ulang.");
+            }
+            stage(job, 5, 5, "Memberi nama akhir");
+            execOut(sb, "mv '" + part + "' '" + dst + "'", "Memberi nama akhir di tujuan");
+            job.append("Checksum cocok: " + hashA);
+            job.append("DONE: " + b.host + ":" + dst);
+            ok = true;
+        } finally {
+            if (!ok) dropPart(sb, part);   // salinan gagal / checksum tidak cocok: jangan tinggalkan .part setengah jadi di tujuan
+            if (sa != null) sa.disconnect();
+            if (sb != null) sb.disconnect();
+        }
+    }
+
+    /** scp dari server asal ke tujuan, password lewat stdin + SSH_ASKPASS sementara. true = berhasil; false = gagal (alasan di log), tanpa melempar. */
+    private boolean copyDirect(Session sa, Session sb, Conn a, Conn b, Job job, String src, String part, long size) {
+        job.append("Mencoba salin langsung " + a.host + " -> " + b.host + " (scp)...");
+        String cmd = "IFS= read -r HNPW; export HNPW; AS=$(mktemp /tmp/.hnask.XXXXXX) || exit 97; "
+                + "printf '#!/bin/sh\\necho \"$HNPW\"\\n' > \"$AS\"; chmod 700 \"$AS\"; "
+                + "DISPLAY=none:0 SSH_ASKPASS=\"$AS\" SSH_ASKPASS_REQUIRE=force setsid -w scp -q "
+                + "-o StrictHostKeyChecking=accept-new -o PreferredAuthentications=password,keyboard-interactive -o NumberOfPasswordPrompts=1 -o ConnectTimeout=10 "
+                + "-P " + b.port + " '" + src + "' " + b.user + "@" + b.host + ":'" + part + "' < /dev/null; RC=$?; rm -f \"$AS\"; exit $RC";
+        List<String> errs = new ArrayList<>();
+        Future<Integer> f = pool.submit(() -> execWithInput(sa, cmd, b.password, line -> { if (errs.size() < 20) errs.add(line); }));
+        try {
+            while (!f.isDone()) {
+                Thread.sleep(3000);
+                try {
+                    List<String> o = new ArrayList<>();
+                    exec(sb, "stat -c %s '" + part + "' 2>/dev/null || echo 0", l -> o.add(l.trim()));
+                    if (!o.isEmpty()) job.progDone = Math.min(size, Long.parseLong(o.get(0)));
+                } catch (Exception ignore) { /* pantauan ukuran tidak boleh menggagalkan salinan */ }
+            }
+            int rc = f.get();
+            if (rc == 0) return true;
+            job.append("Salin langsung gagal (exit " + rc + ")" + (errs.isEmpty() ? "" : ": " + String.join(" | ", errs)));
+            return false;
+        } catch (Exception e) {
+            job.append("Salin langsung gagal: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /** a -> aplikasi -> b: baca dari SFTP asal dan tulis ke SFTP tujuan tanpa menyimpan file di mesin aplikasi. */
+    private void copyRelay(Session sa, Session sb, Job job, String src, String part) {
+        job.append("Menyalin lewat aplikasi (relay)...");
+        ChannelSftp ca = null, cb = null;
+        try {
+            ca = (ChannelSftp) sa.openChannel("sftp"); ca.connect(10000);
+            cb = (ChannelSftp) sb.openChannel("sftp"); cb.connect(10000);
+            try (InputStream in = ca.get(src); OutputStream out = cb.put(part, ChannelSftp.OVERWRITE)) {
+                byte[] buf = new byte[256 * 1024];
+                for (int n; (n = in.read(buf)) > 0; ) { out.write(buf, 0, n); job.progDone += n; }
+            }
+        } catch (Exception e) {
+            throw new HanaException(502, "Salin lewat aplikasi gagal: " + e.getMessage());
+        } finally {
+            if (ca != null) ca.disconnect();
+            if (cb != null) cb.disconnect();
+        }
     }
 
     // ---------- riwayat (CSV) + log per job, di data-dir ----------
