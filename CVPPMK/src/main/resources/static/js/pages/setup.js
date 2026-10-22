@@ -8,6 +8,7 @@
 import { $, $$, esc, isEmpty, onMount, flushMounts, company, showCompanyName } from "../ui.js";
 import { xlsxBlob, download } from "../xlsx.js";
 import { readXlsx } from "../xlsx-read.js";
+import { dtwRows, dtwTemplateZip, txtContext } from "../dtw-txt.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
 import { uploadInChunks, progressUi, resultsTable } from "./upload-progress.js";
 import { hanaPage } from "./hana.js";
@@ -75,7 +76,7 @@ async function loadLookups(step) {
 
 // ---------- template Excel -> baris sumber ----------
 // Dropdown template: "kode - nama" (ambil kodenya) atau nama (dicari kodenya di data tujuan langkah referensi).
-const CODE_SPLIT = new Set(["accounts", "titles", "banks", "country"]);
+const CODE_SPLIT = new Set(["accounts", "titles", "banks", "country", "locations"]);
 const REF_STEPS = {
   vat_in: ["tax-groups", "Name", "Code"], vat_out: ["tax-groups", "Name", "Code"], dims: ["dimensions", "Name", "_key"],
   branches: ["branches", "Name", "_key"], pricelists: ["price-lists", "PriceListName", "_key"],
@@ -186,9 +187,12 @@ export function compare(step, data, lookups = {}) {
       errors.push(`Akun induk ${s[P.field]} tidak ada di tujuan maupun di data sumber`);
     if (accts) for (const f of step.accounts || [])
       if (touched(f) && !accts.has(norm(s[f]))) errors.push(`Akun ${s[f]} (${f}) tidak ada di COA tujuan`);
-    for (const l of step.lookups || [])
-      if (touched(l.from) && !(lookups[`${l.step}|${l.by}`] || new Map()).has(up(s[l.from])))
-        errors.push(`${label(l.from)} "${s[l.from]}" belum ada di tujuan`);
+    for (const l of step.lookups || []) {
+      if (!touched(l.from)) continue;
+      // l.sep: nilai berisi beberapa kode (mis. dokumen berisi banyak aset), semuanya harus ada di tujuan
+      const map = lookups[`${l.step}|${l.by}`] || new Map(), miss = (l.sep ? String(s[l.from]).split(l.sep) : [s[l.from]]).map(norm).filter(v => v && !map.has(up(v)));
+      if (miss.length) errors.push(`${label(l.from)} "${miss.join(", ")}" belum ada di tujuan`);
+    }
     // baris anak (step.children): upload tidak mengubah detail yang sudah ada (PATCH koleksi UDO bisa menggandakan baris)
     const childFrom = new Set((step.children || []).map(c => c.from));
     if (t && childFrom.size && diffs.size && [...diffs].every(f => childFrom.has(f)))
@@ -215,6 +219,7 @@ export function payload(step, r, lookups) {
   for (const l of step.lookups || []) {
     const v = norm(r.src[l.from]);
     if (!v || (r.status !== "new" && !r.diffs.has(l.from))) continue;
+    if (l.field.startsWith("_")) continue;   // lookup hanya untuk cek keberadaan di tujuan, tidak dikirim
     const k = lookups[`${l.step}|${l.by}`].get(v.toUpperCase());
     data[l.field] = numLike(String(k)) ? +k : k;
   }
@@ -226,6 +231,29 @@ export function payload(step, r, lookups) {
     if (c.fields) data[c.collection] = v.split(c.rowSep || "¦").map(row => Object.fromEntries(row.split(c.colSep || "^")
       .map((x, i) => [c.fields[i], x.trim()]).filter(([k, x]) => k && x !== "").map(([k, x]) => [k, (c.numeric || []).includes(k) ? +x : x]))).filter(o => Object.keys(o).length);
     else data[c.collection] = v.split(c.sep || "|").map(x => x.trim()).filter(Boolean).map(x => ({ [c.field]: x }));
+  }
+  // anak dari kolom "_..." di baris yang sama (step.flat): satu baris anak per dokumen/aset, hanya untuk baris baru.
+  // flat: [{collection, fields: {fieldSL: "_kolomExcel"}, numeric: [fieldSL]}]; kolom kosong tidak dikirim
+  if (r.status === "new") for (const c of step.flat || []) {
+    // c.rows: properti tak terlihat di baris sumber (mis. _Lines dari TXT DTW) berisi beberapa baris anak sekaligus
+    if (c.rows && Array.isArray(r.src[c.rows])) {
+      data[c.collection] = r.src[c.rows].map(o => Object.fromEntries(Object.entries(o).filter(([, x]) => norm(x) !== "")
+        .map(([k, x]) => [k, (c.numeric || []).includes(k) ? +x : x])));
+      continue;
+    }
+    const child = {};
+    for (const [f, col] of Object.entries(c.fields)) {
+      const v = norm(r.src[col]);
+      if (v !== "") child[f] = (c.numeric || []).includes(f) ? +v : v;
+    }
+    // c.when: anak hanya dikirim kalau salah satu field ini terisi (mis. cost center opsional). c.defaults: field -> "_kolom" atau "=nilai tetap"
+    if (c.when && !c.when.some(f => child[f] !== undefined)) continue;
+    for (const [f, src] of Object.entries(c.defaults || {})) {
+      if (child[f] !== undefined) continue;
+      const v = src.startsWith("=") ? src.slice(1) : norm(r.src[src]);
+      if (v !== "") child[f] = v;
+    }
+    if (Object.keys(child).length) data[c.collection] = [child];
   }
   return r.status === "new" ? { action: "create", data } : { action: "update", key: r.tgt._key, data };
 }
@@ -279,14 +307,50 @@ function stepPage(step) {
               : "Belum ada template Excel untuk langkah ini."}</p>
             <div class="sx-way-b" data-body="excel"></div>
           </div>
+          ${step.dtw ? `<div class="sx-way" data-way="txt">
+            <label class="sx-way-h"><input type="radio" name="way-${step.id}" value="txt"><b>Upload file TXT DTW</b></label>
+            <p class="sx-way-d">Pakai file TXT yang sama dengan yang disiapkan untuk DTW (HEADER, DEPRE, CAP_HEADER, CAP_DETAIL). Dicek dan dibandingkan dengan SAP tujuan sebelum di-upload.</p>
+            <div class="sx-way-b" data-body="txt"></div>
+          </div>` : ""}
         </div>
         <h2 class="sx-h">2. Cek &amp; bandingkan <span class="sx-cmp-label"></span></h2>
         <div class="sx-body"><p class="sx-req">Pilih cara isi data di atas.</p></div>
         <details class="grp sx-sql"><summary><span>Query &amp; mapping kolom <span class="muted">· untuk review: alias = nama field Service Layer = baris 2 template</span></span></summary>
           <pre class="sx-pre" data-sx-sql>Memuat…</pre></details>
+        ${step.flat ? `<details class="grp sx-slchk"><summary><span>Cek nama field Service Layer <span class="muted">\u00b7 membandingkan field yang dikirim upload dengan $metadata SAP</span></span></summary>
+          <div class="sx-slchk-b" style="padding:10px 14px"><button type="button" class="cbtn" data-sx-slchk>Cek sekarang</button><div data-sx-slres style="margin-top:10px"></div></div></details>` : ""}
       </div>`;
     }
   };
+}
+// Bandingkan field yang dikirim langkah ini (kolom template + step.flat) dengan $metadata Service Layer tujuan (api/sl/fields), hanya baca.
+async function slCheck(step, tpl, out, btn) {
+  const text = btn.innerHTML;
+  btn.disabled = true; btn.textContent = "Memeriksa\u2026";
+  const row = (t, msg) => `<div class="callout ${t}"><span class="ci">${t === "ok" ? "\u2713" : "!"}</span><div class="ct"><b>${t === "ok" ? "OK" : t === "warn" ? "Perlu dicek" : "Masalah"}</b>${msg}</div></div>`;
+  try {
+    const r = await getJson(`api/sl/fields?entity=${encodeURIComponent(step.entity)}`);
+    if (r.error) { out.innerHTML = `<div class="callouts">${row("danger", esc(r.error))}</div>`; return; }
+    const have = new Set((r.fields || []).map(f => f.name)), colls = r.collections || [], list = [];
+    const main = ((tpl && tpl.sheets[0].fields) || []).map(f => f.field).filter(f => !f.startsWith("_"));
+    const miss = main.filter(f => !have.has(f));
+    list.push(miss.length ? row("danger", `Field ${esc(step.entity)} yang dikirim tapi tidak ada di SAP: <code>${miss.map(esc).join(", ")}</code>`)
+      : row("ok", `${main.length} field utama ${esc(step.entity)} ada di SAP.`));
+    for (const c of step.flat || []) {
+      const real = colls.find(x => x.name === c.collection);
+      if (!real) {
+        const hint = colls.map(x => x.name);
+        list.push(row("danger", `Koleksi <code>${esc(c.collection)}</code> tidak ada di ${esc(step.entity)}. Koleksi yang ada: <span class="muted">${hint.map(esc).join(", ") || "(tidak ada)"}</span>`));
+        continue;
+      }
+      const names = new Set(real.fields.map(f => f.name)), bad = Object.keys(c.fields).filter(f => !names.has(f));
+      list.push(bad.length ? row("danger", `Koleksi <code>${esc(c.collection)}</code>: field tidak ada di SAP <code>${bad.map(esc).join(", ")}</code>. Field yang ada: <span class="muted">${[...names].map(esc).join(", ")}</span>`)
+        : row("ok", `Koleksi <code>${esc(c.collection)}</code>: ${Object.keys(c.fields).length} field ada di SAP.`));
+    }
+    out.innerHTML = `<div class="callouts">${list.join("")}</div>`;
+  } catch (e) {
+    out.innerHTML = `<div class="callouts">${row("danger", esc(e.message))}</div>`;
+  } finally { btn.disabled = false; btn.innerHTML = text; }
 }
 async function getTemplate(step, btn) {
   const text = btn.innerHTML;
@@ -296,6 +360,7 @@ async function getTemplate(step, btn) {
   finally { btn.disabled = false; btn.innerHTML = text; }
 }
 
+const txtState = new Map();     // step id -> { file, rows, sheet, notes } file TXT DTW terakhir
 const excelState = new Map();   // step id -> { file, rows, sheet } file Excel terakhir, tetap ada saat pindah cara
 const stage = (box, n, done) => $$(".sx-steps li", box).forEach(li => {
   const i = +li.dataset.n;
@@ -330,12 +395,15 @@ async function showNow(step, el) {
 async function mountStep(step, box) {
   if (!box) return;
   showNow(step, $(".sx-now", box));
+  const chk = $("[data-sx-slchk]", box);
+  if (chk) chk.onclick = () => slCheck(step, tplOf(step), $("[data-sx-slres]", box), chk);
   const sql = $(".sx-sql", box);
   sql.ontoggle = () => { if (sql.open && $("[data-sx-sql]", box).textContent === "Memuat…")
     fetch(`api/setup/${step.id}/sql`).then(r => r.text()).then(t => $("[data-sx-sql]", box).textContent = t); };
   const tpl = tplOf(step);
   let way = store.get(`setup-way:${step.id}`) || "db";
   if (way === "excel" && !tpl) way = "db";
+  if (way === "txt" && !step.dtw) way = "db";
   $$(".sx-way", box).forEach(c => {
     const on = c.dataset.way === way;
     c.classList.toggle("on", on);
@@ -350,6 +418,8 @@ async function mountStep(step, box) {
   const reload = () => { tgtCache.clear(); mountStep(step, box); };
 
   if (way === "db") {
+    // sumber yang diingat browser tapi sudah tidak diizinkan / tidak ada lagi (mis. setup.source-dbs berubah): dibuang, bukan error
+    if (currentSrc() && ![...list.same, ...list.others].some(x => x.id === currentSrc())) store.set("setup-src", "");
     const src = currentSrc(), dbBody = $('[data-body="db"]', box);
     dbBody.innerHTML = `<div class="sx-row">${sourceSelect(src, list)}<button type="button" class="cbtn" data-sx-reload>↻ Baca ulang</button></div>
       <small class="muted" data-sx-info></small>`;
@@ -377,26 +447,47 @@ async function mountStep(step, box) {
     return;
   }
 
-  // cara Excel
-  const xlBody = $('[data-body="excel"]', box), st = excelState.get(step.id);
-  xlBody.innerHTML = `<div class="sx-row"><button type="button" class="cbtn" data-sx-tpl>⤓ Download template ${esc(step.template)}</button>
-      <label class="cbtn primary sx-file">Pilih file .xlsx…<input type="file" accept=".xlsx" hidden></label></div>
-    ${st ? `<div class="sx-filechip"><b>${esc(st.file)}</b><span class="muted">· sheet ${esc(st.sheet)} · ${st.rows.length} baris terbaca</span></div>` : ""}`;
-  $("[data-sx-tpl]", xlBody).onclick = e => getTemplate(step, e.currentTarget);
+  // cara file: template Excel atau TXT DTW (bentuk baris hasilnya sama, jalur cek dan upload sama)
+  const isTxt = way === "txt", xlBody = $(`[data-body="${way}"]`, box), st = (isTxt ? txtState : excelState).get(step.id);
+  xlBody.innerHTML = `<div class="sx-row">${isTxt ? `<button type="button" class="cbtn" data-sx-txttpl>⤓ Download template TXT DTW</button><small class="muted">Pilih semua file DTW sekaligus (HEADER, DEPRE, ...), format tab-delimited .txt.</small>`
+      : `<button type="button" class="cbtn" data-sx-tpl>\u2913 Download template ${esc(step.template)}</button>`}
+      <label class="cbtn primary sx-file">${isTxt ? "Pilih file .txt\u2026" : "Pilih file .xlsx\u2026"}<input type="file" accept="${isTxt ? ".txt,.tsv,.csv" : ".xlsx"}"${isTxt ? " multiple" : ""} hidden></label></div>
+    ${st ? `<div class="sx-filechip"><b>${esc(st.file)}</b><span class="muted">\u00b7 ${esc(st.sheet)} \u00b7 ${st.rows.length} baris terbaca</span></div>` : ""}
+    ${st && st.notes ? `<small class="muted">${st.notes.map(esc).join("<br>")}</small>` : ""}`;
+  if (!isTxt) $("[data-sx-tpl]", xlBody).onclick = e => getTemplate(step, e.currentTarget);
+  else $("[data-sx-txttpl]", xlBody).onclick = async e => {
+    const b = e.currentTarget, text = b.innerHTML;
+    b.disabled = true; b.textContent = "Menyiapkan\u2026";
+    // kode contoh + REFERENSI.txt diambil dari DB tujuan; kalau gagal, template tetap dibuat dengan kode kosong
+    let ctx = null;
+    try { ctx = txtContext((await getJson("api/section/fixed-asset")).results); } catch (err) { ctx = null; }
+    try { const z = dtwTemplateZip(step.id, step.title, company.name, ctx); download(z.blob, z.filename); }
+    finally { b.disabled = false; b.innerHTML = text; }
+  };
   $("input[type=file]", xlBody).onchange = async e => {
-    const f = e.target.files[0];
-    if (!f) return;
+    const files = [...e.target.files];
+    if (!files.length) return;
     body.innerHTML = `<div class="skeleton"><div></div><div></div><div></div></div>`;
     try {
-      const { sheet, rows } = await excelRows(step, tpl, await readXlsx(f));
-      excelState.set(step.id, { file: f.name, sheet, rows });
+      if (isTxt) {
+        const r = await dtwRows(step.id, files);
+        txtState.set(step.id, { file: files.map(f => f.name).join(", "), sheet: "TXT DTW", rows: r.rows, notes: r.notes });
+      } else {
+        const { sheet, rows } = await excelRows(step, tpl, await readXlsx(files[0]));
+        excelState.set(step.id, { file: files[0].name, sheet, rows });
+      }
       mountStep(step, box);
     } catch (err) { body.innerHTML = `<div class="error">${esc(err.message)}</div>`; }
   };
-  $("[data-sx-s1]", box).textContent = st ? `File ${st.file}` : "database lain atau Excel";
-  if (!st) { stage(box, 1, false); cmpLabel.textContent = ""; body.innerHTML = `<p class="sx-req">Download template, isi datanya mulai baris 3, lalu pilih filenya di atas.</p>`; return; }
+  $("[data-sx-s1]", box).textContent = st ? `File ${st.file}` : "database lain, Excel, atau TXT DTW";
+  if (!st) {
+    stage(box, 1, false); cmpLabel.textContent = "";
+    body.innerHTML = isTxt ? `<p class="sx-req">Pilih file TXT DTW di atas (semua file sekaligus).</p>`
+      : `<p class="sx-req">Download template, isi datanya mulai baris 3, lalu pilih filenya di atas.</p>`;
+    return;
+  }
   stage(box, 2, false);
-  cmpLabel.textContent = `· file Excel → ${list.target}`;
+  cmpLabel.textContent = `\u00b7 ${isTxt ? "file TXT DTW" : "file Excel"} \u2192 ${list.target}`;
   body.innerHTML = `<div class="skeleton"><div></div><div></div><div></div></div>`;
   let data, lookups;
   try { [data, lookups] = await Promise.all([getJson(dataUrl(step.id, "")), loadLookups(step)]); }
@@ -674,9 +765,9 @@ export async function startSetupApp() {
   steps.forEach((s, i) => s.order = i + 1);   // nomor urut = urutan di steps.json
   const pages = { "": { title: "Urutan Setup", def: overviewPage(steps) }, "addon-mapping": { title: "Mapping Add-on", def: mappingPage() } };
   steps.forEach(s => pages[s.id] = { title: s.title, no: String(s.order), chapter: `${s.tier} · ${TIERS[s.tier][0]}`, def: stepPage(s) });
-  pages.hana = { title: "Backup & Restore HANA", chapter: "Utilitas", def: hanaPage() };
+  pages.hana = { title: "Backup & Restore HANA", chapter: "Utilitas", def: hanaPage() };   // tak ada di sidebar: menu ada di Tools (hana.html); rute ini hanya untuk buka kunci password Setup (hana.js)
   const tiers = Object.keys(TIERS).filter(t => steps.some(s => s.tier === t));
-  nav.innerHTML = `<div class="nav-group flat"><a href="#/" data-id="" class="chapter-link"><span class="gno">⌂</span><span>Urutan Setup</span></a><a href="#/hana" data-id="hana" class="chapter-link"><span class="gno">⛁</span><span>Backup &amp; Restore HANA</span></a></div>`
+  nav.innerHTML = `<div class="nav-group flat"><a href="#/" data-id="" class="chapter-link"><span class="gno">⌂</span><span>Urutan Setup</span></a></div>`
     + `<div class="nav-group flat"><a href="#/addon-mapping" data-id="addon-mapping" class="chapter-link"><span class="gno">#</span><span>Mapping Add-on</span><span class="badge warn" id="am-badge" hidden></span></a></div>`
     + `<div class="nav-search"><input type="search" id="nav-q" placeholder="Cari langkah…" aria-label="Cari langkah di sidebar" autocomplete="off"></div>`
     + tiers.map(t => `<div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">${t}</span>${esc(TIERS[t][0])}</button>

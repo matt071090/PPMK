@@ -285,6 +285,79 @@ export const TEMPLATES = [
       F("Manual", "IsManual", { sample: "N", enum: YN, note: "Y = nomor diketik manual, bukan otomatis. Kosong = N." }),
       F("Dikunci", "Locked", { sample: "N", enum: YN, note: "Y = series tidak bisa dipakai membuat dokumen baru. Kosong = N." }),
       F("Catatan (Remark)", "Remarks", { note: "Remark series. Addon Farm Breeding membaca 2 huruf awal Remark untuk series IT (TO atau TI), jadi isi sesuai konvensi: TO-Transfer OUT, TI-Transfer IN." })] }] },
+
+  // Aset tetap: Items (ItemType Fixed Assets) + satu baris parameter penyusutan per aset (koleksi ItemDepreciationParameters),
+  // dibuat dari kolom berawalan "_" di sheet yang sama. Nama field koleksi belum dicocokkan ke $metadata SL: uji satu baris dulu.
+  { no: "25", title: "Fixed Asset Master Data", entity: "Items",
+    note: "Satu baris = satu aset. Kolom berawalan _ (area, tanggal mulai, umur, tipe penyusutan) dikirim sebagai baris parameter penyusutan aset. "
+      + "Parameter penyusutan hanya dikirim untuk aset BARU; aset yang sudah ada tidak diubah. Nilai perolehan TIDAK masuk di sini: lanjut ke template 26 (Asset Capitalization).",
+    sheets: [{ name: "Asset", fields: [
+      F("Kode Aset", "ItemCode", { req: 1, sample: "F0223060917001", note: "Nomor aset, format FXX_TH_PT_DIVISI_LOKASI_URUT. Harus unik, tanpa spasi." }),
+      F("Nama Aset", "ItemName", { req: 1, sample: "BANGUNAN NGINO LAMA", note: "Deskripsi aset." }),
+      F("Item Group", "ItemsGroupCode", { req: 1, ref: "itemgroups", note: "Item group untuk aset tetap (nama group di SAP)." }),
+      F("Asset Class", "AssetClass", { req: 1, ref: "assetclasses", note: "Kode asset class (harus sudah ada, lihat Setup Asset Class)." }),
+      F("Tipe Item", "ItemType", { req: 1, sample: "Fixed Assets", enum: { "Fixed Assets": "itFixedAssets" }, note: "Selalu Fixed Assets." }),
+      F("Inventory Item", "InventoryItem", { sample: "N", enum: YN, note: "Aset bukan barang stok: N." }),
+      F("Sales Item", "SalesItem", { sample: "N", enum: YN, note: "N." }),
+      F("Purchasing Item", "PurchaseItem", { sample: "N", enum: YN, note: "N." }),
+      F("Serial Number Aset", "AssetSerialNumber", { note: "Nomor seri / MAC / plat. Boleh kosong." }),
+      F("Location", "Location", { ref: "locations", note: "Lokasi aset (Administration > Setup > General > Locations). Pilih dari daftar (kode - nama)." }),
+      F("Area Penyusutan", "_DepreciationArea", { req: 1, sample: "Main Area", ref: "dprareas", note: "Depreciation area, umumnya Main Area." }),
+      F("Mulai Penyusutan", "_DepreciationStartDate", { req: 1, sample: "2023-01-01", kind: "date", note: "Tanggal mulai penyusutan (YYYY-MM-DD)." }),
+      F("Masa Manfaat (bulan)", "_UsefulLife", { req: 1, sample: 96, kind: "num", note: "Umur ekonomis dalam bulan." }),
+      F("Tipe Penyusutan", "_DepreciationType", { req: 1, sample: "Straight Line", ref: "dprtypes", note: "Metode penyusutan." }),
+      F("Tahun Fiskal Parameter", "_FiscalYear", { kind: "num", noSample: 1, note: "Kosong = tidak dikirim. Template DTW teman memakai tahun fiskal 2026 untuk semua aset; untuk aset lama kemungkinan harus tahun mulai penyusutan. Uji di DB QA." }),
+      F("Cost Center Berlaku Dari", "_ValidFrom", { kind: "date", noSample: 1, note: "Opsional. Kosong = sama dengan Mulai Penyusutan. Hanya dipakai kalau salah satu kolom Dimension di kanan diisi." }),
+      F("Cost Center Berlaku Sampai", "_ValidTo", { kind: "date", noSample: 1, note: "Opsional. Kosong = 2099-12-31." }),
+      F("Dimension 1", "_DistributionRule", { ref: "ocr1", noSample: 1, note: "Opsional: kode distribution rule dimension 1 (cost center). Pilih dari daftar SAP." }),
+      F("Dimension 2", "_DistributionRule2", { ref: "ocr2", noSample: 1, note: "Opsional: dimension 2." }),
+      F("Dimension 3", "_DistributionRule3", { ref: "ocr3", noSample: 1, note: "Opsional: dimension 3." }),
+      F("Dimension 4", "_DistributionRule4", { ref: "ocr4", noSample: 1, note: "Opsional: dimension 4 (di PAS = lokasi)." }),
+      F("Dimension 5", "_DistributionRule5", { ref: "ocr5", noSample: 1, note: "Opsional: dimension 5." })] }] },
+
+  // Capitalization = nilai perolehan (APC) aset. Satu baris = satu dokumen berisi satu aset, supaya bisa dicocokkan dan diulang per aset.
+  { no: "26", title: "Asset Capitalization", entity: "AssetCapitalization",
+    note: "Satu baris = satu dokumen Capitalization dengan satu aset. Kolom Remarks dipakai untuk mencocokkan dokumen yang sudah ada, jadi isi unik per aset "
+      + "(mis. Opening Balance - <kode aset>). Opsi A: tanggal = tanggal perolehan asli (periode lama harus terbuka). Opsi B: semua baris memakai tanggal cutoff. "
+      + "Aset harus sudah dibuat lewat template 25. Cek juga SP Notif PAS: di URECEL ada aturan yang memblok Capitalization di bawah Rp 5.000.000.",
+    sheets: [{ name: "Capitalization", fields: [
+      F("Series", "Series", { kind: "num", noSample: 1, note: "Kode series nomor dokumen (Administration > Setup > Document Numbering, objek 1470000049). PAS: FACP26 = 624 untuk dokumen 2026. Kosong = series default SAP." }),
+      F("Posting Date", "PostingDate", { req: 1, sample: "2026-09-30", kind: "date", note: "Tanggal posting. Periode harus terbuka." }),
+      F("Document Date", "DocumentDate", { req: 1, sample: "2026-09-30", kind: "date", note: "Biasanya sama dengan Posting Date." }),
+      F("Asset Value Date", "AssetValueDate", { req: 1, sample: "2026-09-30", kind: "date", note: "Tanggal nilai aset; menentukan mulai penyusutan di dokumen." }),
+      F("Remarks", "Remarks", { req: 1, sample: "Opening Balance - F0223060917001", note: "Unik per aset. Dipakai sebagai pembanding dokumen yang sudah ada." }),
+      F("Kode Aset", "_AssetNumber", { req: 1, sample: "F0223060917001", note: "Kode aset (Item Code) yang sudah dibuat di template 25." }),
+      F("Quantity", "_Quantity", { req: 1, sample: 1, kind: "num", note: "Jumlah unit aset (umumnya 1)." }),
+      F("Nilai Perolehan (APC)", "_TotalLC", { req: 1, sample: 237376190, kind: "num", note: "Total nilai perolehan dokumen ini dalam mata uang lokal (bukan per unit)." })] }] },
+
+  // Manual Depreciation = akumulasi penyusutan aset lama (saldo awal). Satu baris = satu dokumen berisi satu aset, seperti Capitalization.
+  { no: "27", title: "Asset Manual Depreciation", entity: "AssetManualDepreciation",
+    note: "Satu baris = satu dokumen Penyusutan Manual dengan satu aset. Kolom Remarks dipakai untuk mencocokkan dokumen yang sudah ada, jadi isi unik per aset "
+      + "(mis. Penyusutan Manual - <kode aset>). Aset harus sudah dibuat (template 25) dan sudah di-Capitalization (template 26), dan posting period harus terbuka. "
+      + "SAP menolak bila nilai buku akhir tahun di bawah nol (NBV of asset ... cannot fall below zero), termasuk penyusutan terencana tahun berjalan: jumlah tidak boleh melebihi sisa nilai buku. "
+      + "Dokumen ini mencatat beban penyusutan, jadi finance perlu jurnal koreksi ke akun saldo awal. Isi dokumen belum pernah diposting dari web: uji satu baris dulu.",
+    sheets: [{ name: "Manual Depreciation", fields: [
+      F("Series", "Series", { kind: "num", noSample: 1, note: "Kode series nomor dokumen (mis. FADP26). Kosong = series default SAP." }),
+      F("Posting Date", "PostingDate", { req: 1, sample: "2026-10-01", kind: "date", note: "Tanggal posting. Periode harus terbuka." }),
+      F("Document Date", "DocumentDate", { req: 1, sample: "2026-10-01", kind: "date", note: "Biasanya sama dengan Posting Date." }),
+      F("Asset Value Date", "AssetValueDate", { req: 1, sample: "2026-10-01", kind: "date", note: "Tanggal nilai aset." }),
+      F("Depreciation Area", "DepreciationArea", { req: 1, sample: "Main Area", note: "Area penyusutan, mis. Main Area." }),
+      F("Remarks", "Remarks", { req: 1, sample: "Penyusutan Manual - F0223060917001", note: "Unik per aset. Dipakai sebagai pembanding dokumen yang sudah ada." }),
+      F("Kode Aset", "_AssetNumber", { req: 1, sample: "F0223060917001", note: "Kode aset (Item Code) yang sudah di-Capitalization." }),
+      F("Jumlah Penyusutan", "_TotalLC", { req: 1, sample: 12352536, kind: "num", note: "Akumulasi penyusutan dokumen ini dalam mata uang lokal. Tidak boleh membuat nilai buku di bawah nol." })] }] },
+
+  // Mapping series Rework -> series GI/GR. Semua kolom berisi NOMOR series (NNM1.Series), bukan nama series, jadi diisi setelah Document Numbering selesai.
+  { no: "28", title: "Series Rework Mapping", entity: "U_STEM_SERIESRWK",
+    note: "Satu baris = satu series Post Rework (STEM_MPREWORK) dan pasangan series Goods Issue (objek 60) dan Goods Receipt (objek 59) untuk branch dan tahun yang sama. "
+      + "Isi dengan NOMOR series (kolom Series di Document Numbering), bukan nama series. Addon STEM mencari baris ini lewat Series Post Rework yang dipilih user (PostRework.vb), "
+      + "jadi tiap series Post Rework per branch per tahun butuh satu baris. Document Numbering harus sudah selesai sebelum template ini diisi.",
+    sheets: [{ name: "Series Rework Mapping", fields: [
+      F("Code", "Code", { req: 1, sample: "923", note: "Kode unik baris. Disarankan sama dengan nomor series Post Rework." }),
+      F("Name", "Name", { req: 1, sample: "923", note: "Nama baris, boleh sama dengan Code." }),
+      F("Series Post Rework", "U_SeriesRework", { req: 1, sample: "923", note: "Nomor series Post Rework (objek STEM_MPREWORK), mis. T-INRP26. Angka, bukan nama." }),
+      F("Series Good Issue", "U_SeriesGI", { req: 1, sample: "3057", note: "Nomor series Goods Issue (objek 60) untuk branch dan tahun yang sama." }),
+      F("Series Good Receipt", "U_SeriesGR", { req: 1, sample: "3102", note: "Nomor series Goods Receipt (objek 59) untuk branch dan tahun yang sama." }),
+      F("Deskripsi", "U_Description", { sample: "Rework Trading 2026", note: "Keterangan bebas, mis. branch dan tahun." })] }] },
 ];
 
 // ---------- data dropdown dari SAP (api/section/template-ref) ----------
