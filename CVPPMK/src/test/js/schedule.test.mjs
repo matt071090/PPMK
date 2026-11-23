@@ -7,7 +7,7 @@ async function packagedRead(installed, packaged) {
   catch (e) { if(e.code !== 'ENOENT') throw e; return readFile(new URL(packaged, import.meta.url), 'utf8'); }
 }
 const source = await packagedRead('../../main/resources/static/js/pages/schedule.js', '../static/js/pages/schedule.js');
-const { mergeUsers, withSubmitRange, rollupStatus, withTrainingRollup, balanceTimeline, withFixedPic, isStemItem, activeUsers, picLabel, picOptions, cardNote, isValidDate, todayLocal, countdown, effectiveStatus, validRange, needsAttention, timelineMilestones, areaStatus, savedAt, progress, groupProgress, nextMilestone, todayMarker, draftChanges, timelineTodayIndex, compactTimelineDate } = await import('../../main/resources/static/js/pages/schedule.js');
+const { mergeUsers, withSubmitRange, rollupStatus, withTrainingRollup, balanceTimeline, withFixedPic, isStemItem, activeUsers, picLabel, picOptions, cardNote, timelineCategory, TIMELINE_CATEGORIES, TIMELINE_CATEGORY_ORDER, isValidDate, todayLocal, countdown, effectiveStatus, validRange, needsAttention, timelineMilestones, areaStatus, savedAt, progress, groupProgress, nextMilestone, todayMarker, draftChanges, timelineTodayIndex, compactTimelineDate } = await import('../../main/resources/static/js/pages/schedule.js');
 const seed = JSON.parse(await packagedRead('../../main/resources/schedule/default.json', '../resources/schedule/default.json'));
 test('format ketat dan tanggal kalender nyata', () => {
   for (const s of ['2026-12-01','2027-01-01','2024-02-29','2000-02-29','0001-01-01']) assert.equal(isValidDate(s),true,s);
@@ -286,11 +286,32 @@ test('mergeUsers: hanya user SAP, nama dari list, list dipakai bila SAP gagal', 
   assert.deepEqual(mergeUsers([], list, false).map(u => u.code), ['AP-STF1', 'CSH-STF1', 'PUR-MGR1']);
   assert.equal(sap[0].name, 'AP-STF1');
 });
-test('garis waktu: tata letak membungkus tanpa geser samping, kartu tidak dipotong, penanda hari ini di sumbu', async () => {
+test('garis waktu: satu sumbu menerus, geser di dalam wadah, warna per kategori, penanda hari ini di sumbu', async () => {
   const html = await packagedRead('../../main/resources/static/schedule.html', '../static/schedule.html');
-  assert.doesNotMatch(html, /\.timeline-track|multi-location|-webkit-line-clamp|\.timeline-today\s+span|timeline-stem/);
-  assert.match(html, /\.timeline \{[^}]*grid-template-columns:repeat\(auto-fit,minmax\(176px,1fr\)\)/);
-  assert.match(html, /\.timeline-card \{[^}]*flex:1/);
+  assert.doesNotMatch(html, /\.timeline-track|multi-location|-webkit-line-clamp|auto-fit,minmax\(176px/);
+  assert.match(html, /\.timeline::before \{[^}]*grid-row:3;[^}]*grid-column:1 \/ -1/);          // sumbu tunggal menerus
+  assert.match(html, /\.timeline-shell \{[^}]*overflow-x:auto[^}]*scroll-snap-type:x/);          // geser di dalam wadah
+  assert.match(html, /\.timeline li \{[^}]*grid-template-rows:subgrid/);                          // satu baris sumbu, kartu atas/bawah
+  assert.match(html, /\.timeline-card \{[^}]*align-self:stretch/);                                // tinggi seragam per sisi
+  for (const k of ['go', 'master', 'prod', 'toko', 'upload', 'saldo']) assert.match(html, new RegExp('\\.cat-' + k + '[ ,{]'));
   assert.doesNotMatch(source, /slice\(0,87\)/);
-  assert.match(source, /class="timeline-axis"/);
+  assert.match(source, /class="timeline-dot /);
+  assert.match(source, /class="tl-legend"/);
+});
+test('kategori titik garis waktu: Master Data, Inventory per lokasi, Upload SAP oleh STEM, Saldo, Go Live/Kick Off', () => {
+  const c = (id, multi, ids) => timelineCategory({ id, ids }, multi);
+  for (const id of ['kickoff', 'golive', 'final']) assert.equal(c(id), 'go');
+  for (const id of ['prepare', 'deadline', 'upload-master', 'verify']) assert.equal(c(id), 'master');
+  for (const id of ['ap-ar', 'fa', 'gl', 'bb-cutoff', 'bb-balance-ap', 'bb-balance-asset', 'bb-balance-ledger']) assert.equal(c(id), 'saldo');
+  assert.equal(c('training'), 'training'); assert.equal(c('training-1'), 'training');
+  // satu lokasi (CV): inventory satu warna, upload tetap Upload SAP
+  for (const id of ['opname', 'cutoff', 'inventory', 'bb-inv-cutoff', 'bb-inv-upload', 'st-opname', 'st-serah']) assert.equal(c(id, false), 'inv');
+  assert.equal(c('inventory-upload', false), 'upload'); assert.equal(c('st-upload', false), 'upload');
+  // dua lokasi (WBI): lokasi pertama Produksi/Pabrik, berikutnya Toko/Store; kartu gabungan dua lokasi = both
+  assert.equal(c('st-serah', true), 'prod'); assert.equal(c('st-serah-toko', true), 'toko');
+  assert.equal(c('bb-inv-upload', true), 'prod'); assert.equal(c('bb-inv-cutoff-toko', true), 'toko');
+  assert.equal(c('st-upload', true), 'upload'); assert.equal(c('st-upload-toko', true), 'upload');
+  assert.equal(c('st-opname', true, ['st-opname', 'st-opname-toko']), 'both');
+  assert.equal(c('tidak-dikenal'), 'go');
+  assert.deepEqual(TIMELINE_CATEGORY_ORDER.filter(k => !TIMELINE_CATEGORIES[k]), []);
 });

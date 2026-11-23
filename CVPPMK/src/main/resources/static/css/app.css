@@ -158,6 +158,11 @@
   --ui-color-115: rgba(16,24,32,.08);
 }
 
+/* Warna kategori garis waktu Schedule (ungu dan rose tambahan; lainnya memakai info/ok/warn). Semua lolos kontras 4.5:1 di latar terang dan gelap. */
+:root { --cat-upload: #6b46a8; --cat-saldo: #a2307c; --tl-edge: rgba(16, 24, 32, .28); }
+:root[data-theme="dark"] { --cat-upload: #b79cf0; --cat-saldo: #f08ac8; --tl-edge: rgba(0, 0, 0, .6); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --cat-upload: #b79cf0; --cat-saldo: #f08ac8; --tl-edge: rgba(0, 0, 0, .6); } }
+
 /* Company identity changes tokens only, never navigation or business rules. */
 :root[data-company="wbi"] {
   --accent: #0b6d88; --accent-strong: #075b73; --accent-soft: #e5f2f7;

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {scheduleTabs,progress,groupProgress,timelineMilestones,nextMilestone,countdown,cardNote,withFixedPic,areaStatus,timelineTodayIndex,inventoryLocations,combinedInventoryFlow,inventoryFlow,balanceTimeline,shortInventoryTitle,isInventoryActivity} from '../../main/resources/static/js/pages/schedule.js';
+import {scheduleTabs,progress,groupProgress,timelineMilestones,nextMilestone,countdown,cardNote,withFixedPic,areaStatus,timelineTodayIndex,timelineCategory,inventoryLocations,combinedInventoryFlow,inventoryFlow,balanceTimeline,shortInventoryTitle,isInventoryActivity} from '../../main/resources/static/js/pages/schedule.js';
 const read=name=>JSON.parse(readFileSync(new URL(`../../main/resources/schedule/${name}.json`,import.meta.url)));
 const wbi=read('default-wbi'),cv=read('default'),get=id=>wbi.items.find(i=>i.id===id);
 const stemIds=['upload-master','inventory-upload','inventory-upload-toko','ap-ar','fa','gl'];
@@ -70,4 +70,12 @@ test('only six upload milestones are STEM; combined timeline labels keep CV owne
  assert.equal(stemIds.length,6);
  for(const id of stemIds){assert.match(get(id).title,/^Upload /);assert.equal(get(id).pic,'STEM');if(cv.items.some(i=>i.id===id))assert.equal(cv.items.find(i=>i.id===id).pic,'STEM');}
  for(const it of wbi.items.filter(i=>i.section==='balance'))assert.equal(it.pic,'');
+});
+test('WBI: kategori warna garis waktu mengikuti lokasi inventory dan pemilik pekerjaan',()=>{
+ const flow=combinedInventoryFlow(wbi.items),cat=e=>timelineCategory(e,true),by=id=>flow.find(e=>e.id===id||(e.ids||[]).includes(id));
+ assert.equal(cat(by('st-opname')),'both');assert.equal(cat(by('st-cutoff')),'both');
+ assert.equal(cat(by('st-serah')),'prod');assert.equal(cat(by('st-serah-toko')),'toko');
+ assert.equal(cat(by('st-upload')),'upload');assert.equal(cat(by('st-upload-toko')),'upload');
+ const bal=balanceTimeline(wbi.items).map(cat);assert.ok(bal.includes('prod')&&bal.includes('toko')&&bal.includes('saldo'));
+ const main=timelineMilestones(wbi.items).filter(e=>!isInventoryActivity(e.id)).map(cat);assert.ok(main.includes('go')&&main.includes('master')&&main.includes('saldo'));
 });

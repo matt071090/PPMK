@@ -215,6 +215,27 @@ export function timelineTodayIndex(items, today = todayLocal()) {
   if (!todayMarker(items, today)) return null;
   return items.filter(it => it.startDate < today).length;
 }
+// Kategori titik garis waktu -> warna (token CSS .cat-<kunci>) dan legenda. Status tetap lewat ikon dan label, bukan warna kategori.
+export const TIMELINE_CATEGORIES = {
+  go: 'Kick Off / Go Live', master: 'Master Data', training: 'Training', inv: 'Inventory',
+  prod: 'Inventory Produksi/Pabrik', toko: 'Inventory Toko/Store', both: 'Inventory Produksi/Pabrik dan Toko/Store',
+  upload: 'Upload SAP oleh STEM', saldo: 'Saldo A/P, A/R, Fixed Asset, G/L'
+};
+export const TIMELINE_CATEGORY_ORDER = ['go', 'master', 'training', 'inv', 'prod', 'toko', 'upload', 'saldo'];
+// entry: {id, ids?}. multi: company punya lebih dari satu lokasi inventory (lokasi pertama = Produksi/Pabrik, berikutnya = Toko/Store).
+export function timelineCategory(entry, multi = false) {
+  const ids = entry.ids || [entry.id], id = ids[0] || '';
+  if (/^(kickoff|golive|final)$/.test(id)) return 'go';
+  if (/^training/.test(id)) return 'training';
+  if (/^(prepare|deadline|upload-master|verify)$/.test(id)) return 'master';
+  if (/^(ap-ar|fa|gl|bb-cutoff|bb-balance)/.test(id)) return 'saldo';
+  if (/^(st-upload|inventory-upload)/.test(id)) return 'upload';
+  const loc = /^(?:st-(?:opname|cutoff|serah)|bb-inv-(?:cutoff|upload)|opname|cutoff|inventory)(.*)$/.exec(id);
+  if (!loc) return 'go';
+  if (!multi) return 'inv';
+  const places = new Set(ids.map(i => ((/^(?:st-(?:opname|cutoff|serah)|bb-inv-(?:cutoff|upload)|opname|cutoff|inventory)(.*)$/.exec(i) || [])[1] || '') ? 'toko' : 'prod'));
+  return places.size > 1 ? 'both' : [...places][0];
+}
 export function compactTimelineDate(start,end=start) {
   if(!validRange(start,end)) throw new RangeError('Rentang tanggal tidak valid.');
   const months=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -319,13 +340,31 @@ function mount() {
     const targetOf = it => isInventoryActivity(it.id)?'stock':it.id==='training'?'training':['prepare','deadline','upload-master','verify'].includes(it.id)?'master':'ringkasan';
     const entryOf = it => withSubmitRange({id:it.id,title:it.title,startDate:it.startDate,endDate:it.endDate,status:it.status,note:it.notes||it.note||'',target:targetOf(it)}, all);
     // Garis waktu bersama (Ringkasan dan Stock Opname). Entri: {id,title,startDate,endDate,status,note,target,time?}. Tanggal/jam di sumbu, bukan di kartu.
-    const timelineHtml = (list, nextId, marker) => `<div class="timeline-shell"><ol class="timeline" style="--count:${list.length || 1}">${list.map((e,i)=>{
-      const status=effectiveStatus(e.status,e.endDate), short=compactTimelineDate(e.startDate,e.endDate);
-      const note=cardNote(e.note || ''), title=shortInventoryTitle(e.title,all), sub=esc(short.year)+(e.time?' · '+esc(e.time):'');
-      const todayCls=marker===i?'':marker===list.length&&i===list.length-1?' after':null;
-      const today=todayCls===null?'':`<span class="timeline-today${todayCls}" title="${esc(format(todayLocal()))}">Hari ini</span>`;
-      return `<li class="${e.id===nextId?'upcoming':''}"><span class="timeline-date" aria-hidden="true">${esc(short.label)}<small>${sub}</small></span><span class="timeline-axis" aria-hidden="true"><span class="timeline-dot ${status}">${status==='selesai'?'✓':status==='telat'?'!':''}</span>${today}</span><a class="timeline-card" href="#/${e.target}" title="${esc(e.title+' · '+format(e.startDate)+(e.endDate!==e.startDate?' s/d '+format(e.endDate):'')+(e.time?' · '+e.time:'')+(note?' · '+note:''))}"><span class="mobile-date">${esc(short.label)} <small>${sub}</small></span><b>${esc(title)}</b>${note?`<span class="timeline-note">${esc(note)}</span>`:''}<span class="timeline-foot">${badge(status)}${e.id===nextId?'<span class="next-label">Berikutnya</span>':''}</span><span class="sr-only">${dates(e)}</span></a></li>`;
-    }).join('')}</ol></div>`;
+    const timelineHtml = (list, nextId, marker) => {
+      const multi = inventoryLocations(all).length > 1, cats = list.map(e => timelineCategory(e, multi));
+      const shown = TIMELINE_CATEGORY_ORDER.filter(k => cats.includes(k) || ((k === 'prod' || k === 'toko') && cats.includes('both')));
+      const legend = shown.length > 1 ? `<ul class="tl-legend" aria-label="Kategori kegiatan">${shown.map(k => `<li><i class="sw cat-${k}" aria-hidden="true"></i>${esc(TIMELINE_CATEGORIES[k])}</li>`).join('')}</ul>` : '';
+      const items = list.map((e,i)=>{
+        const status=effectiveStatus(e.status,e.endDate), short=compactTimelineDate(e.startDate,e.endDate), cat=cats[i];
+        const note=cardNote(e.note || ''), title=shortInventoryTitle(e.title,all), sub=esc(short.year)+(e.time?' · '+esc(e.time):'');
+        const todayCls=marker===i?'':marker===list.length&&i===list.length-1?' after':null;
+        const today=todayCls===null?'':`<span class="timeline-today${todayCls}" title="${esc(format(todayLocal()))}">Hari ini</span>`;
+        return `<li class="cat-${cat} ${i%2?'below':'above'}${e.id===nextId?' upcoming':''}" style="--col:${i+1}"><span class="timeline-date" aria-hidden="true">${esc(short.label)}<small>${sub}</small></span><span class="timeline-stem" aria-hidden="true"></span><span class="timeline-dot ${status}" aria-hidden="true">${status==='selesai'?'✓':status==='telat'?'!':''}</span>${today}<a class="timeline-card" href="#/${e.target}" title="${esc(e.title+' · '+format(e.startDate)+(e.endDate!==e.startDate?' s/d '+format(e.endDate):'')+(e.time?' · '+e.time:'')+(note?' · '+note:'')+' · Kategori: '+TIMELINE_CATEGORIES[cat])}"><span class="mobile-date">${esc(short.label)} <small>${sub}</small></span><b>${esc(title)}</b>${note?`<span class="timeline-note">${esc(note)}</span>`:''}<span class="timeline-foot">${badge(status)}${e.id===nextId?'<span class="next-label">Berikutnya</span>':''}</span><span class="sr-only">${dates(e)}</span></a></li>`;
+      }).join('');
+      return `<div class="timeline-wrap"><div class="tl-bar">${legend}<span class="tl-scroll" hidden><button type="button" class="tl-nav" data-dir="-1" aria-label="Geser garis waktu ke kiri">‹</button><span>Geser untuk melihat semua titik</span><button type="button" class="tl-nav" data-dir="1" aria-label="Geser garis waktu ke kanan">›</button></span></div><div class="timeline-shell" tabindex="0" role="region" aria-label="Garis waktu, bisa digeser ke samping"><ol class="timeline" style="--count:${list.length || 1}">${items}</ol></div></div>`;
+    };
+    // Petunjuk geser (hanya bila garis waktu lebih lebar dari wadah), tombol kiri/kanan, dan posisi awal di sekitar hari ini / kegiatan berikutnya.
+    const initTimelines = () => document.querySelectorAll('.timeline-wrap').forEach(wrap => {
+      const shell=wrap.querySelector('.timeline-shell'), hint=wrap.querySelector('.tl-scroll'), [prev,next]=wrap.querySelectorAll('.tl-nav');
+      const update=()=>{ const can=shell.scrollWidth>shell.clientWidth+2; hint.hidden=!can; prev.disabled=shell.scrollLeft<=2; next.disabled=shell.scrollLeft+shell.clientWidth>=shell.scrollWidth-2; };
+      shell.addEventListener('scroll',update,{passive:true});
+      if (typeof ResizeObserver!=='undefined') new ResizeObserver(update).observe(shell);
+      const smooth=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
+      wrap.querySelectorAll('.tl-nav').forEach(btn=>btn.onclick=()=>shell.scrollBy({left:+btn.dataset.dir*shell.clientWidth*.8,behavior:smooth}));
+      const focus=shell.querySelector('.timeline-today')||shell.querySelector('.upcoming');
+      if (focus && shell.scrollWidth>shell.clientWidth) shell.scrollLeft=Math.max(0,focus.getBoundingClientRect().left-shell.getBoundingClientRect().left+shell.scrollLeft-shell.clientWidth/3);
+      update();
+    });
     const rules = doc.data.rules.filter((rule,i)=>tab==='ringkasan'||i===0&&tab==='master');
     const lockNote = editable ? '' : `<div class="callout warn lock-note"><b>Mode lihat.</b> PIC dan status bisa diubah lalu Simpan; tanggal dan catatan hanya admin. Diskusi bisa dipakai semua. ${lockConfigured ? `<form id="unlock-form" class="unlock"><label class="sr-only" for="unlock-pw">Password admin</label><input id="unlock-pw" class="control" type="password" autocomplete="current-password" placeholder="Password admin (sama dengan Setup)" maxlength="200"><button class="control secondary" type="submit">Buka kunci</button><span id="unlock-msg" role="alert"></span></form>` : ''}</div>`;
     $('#chat-head-slot').innerHTML = `<span data-chat-slot="${tab==='ringkasan'?'umum':'tab:'+tab}"></span>`;
@@ -405,7 +444,7 @@ function mount() {
       if (tab === 'training') { const steps=items.filter(it=>it.section==='training').map(entryOf); if (steps.length > 1) html += `<h2>Garis waktu</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps, null, timelineTodayIndex(steps))}`; }
       html += table(items);
     }
-    view.innerHTML = html; mountChatSlots(); applyAccess(); controls();
+    view.innerHTML = html; mountChatSlots(); applyAccess(); controls(); initTimelines();
   }
   function editorName() { try { return localStorage.getItem('editor') || ''; } catch { return ''; } }
   function applyAccess() {
