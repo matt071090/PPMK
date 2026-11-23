@@ -286,3 +286,11 @@ test('mergeUsers: hanya user SAP, nama dari list, list dipakai bila SAP gagal', 
   assert.deepEqual(mergeUsers([], list, false).map(u => u.code), ['AP-STF1', 'CSH-STF1', 'PUR-MGR1']);
   assert.equal(sap[0].name, 'AP-STF1');
 });
+test('garis waktu: tata letak membungkus tanpa geser samping, kartu tidak dipotong, penanda hari ini di sumbu', async () => {
+  const html = await packagedRead('../../main/resources/static/schedule.html', '../static/schedule.html');
+  assert.doesNotMatch(html, /\.timeline-track|multi-location|-webkit-line-clamp|\.timeline-today\s+span|timeline-stem/);
+  assert.match(html, /\.timeline \{[^}]*grid-template-columns:repeat\(auto-fit,minmax\(176px,1fr\)\)/);
+  assert.match(html, /\.timeline-card \{[^}]*flex:1/);
+  assert.doesNotMatch(source, /slice\(0,87\)/);
+  assert.match(source, /class="timeline-axis"/);
+});

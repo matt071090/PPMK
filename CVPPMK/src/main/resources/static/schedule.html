@@ -9,7 +9,7 @@
 .schedule .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:18px 0; }
 .schedule .back-btn { margin-left:auto; }
 .schedule .control { font:inherit; color:var(--text); background:var(--surface); border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; min-height:44px; max-width:100%; }
-.schedule button.control { font-weight:600; }
+.schedule button.control, .schedule a.control { font-weight:600; }
 .schedule .primary { background:var(--accent-soft); color:var(--accent-strong); border-color:var(--accent); }
 .schedule button:disabled { opacity:.55; cursor:wait; }
 .schedule .stats { display:flex; flex-wrap:wrap; gap:16px; margin:20px 0; }
@@ -294,6 +294,18 @@
 .schedule .pic-pop li[data-v]:hover, .schedule .pic-pop li.on { background:var(--accent-soft); color:var(--accent-strong); }
 .schedule .pic-pop li.hint { cursor:default; font-size:12px; color:var(--muted); white-space:normal; padding:6px 10px 8px; border-bottom:1px solid var(--border); border-radius:0; margin-bottom:4px; }
 .schedule .pic-pop li.free { color:var(--accent-strong); white-space:normal; overflow-wrap:anywhere; }
+/* Rapikan: jarak antar kotak info, tabel area di HP jadi 2 kolom, tombol header HP satu baris */
+.schedule .lock-note { margin-bottom:12px; }
+.schedule .callout.info, .schedule .rules-note { margin-top:0; margin-bottom:12px; }
+@media(max-width:600px) {
+ .schedule .saved-tools { display:contents; }
+ .schedule #revision { order:3; flex:1 0 100%; }
+ .schedule .area-table tbody tr { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; padding:6px 0; }
+ .schedule .area-table td { width:auto; min-width:0; padding:6px 12px; }
+ .schedule .area-table td:first-child, .schedule .area-table td:nth-child(4) { grid-column:1 / -1; }
+ .schedule .area-table td:first-child::before { display:none; }
+ .schedule .area-table td:first-child { font-weight:650; font-size:15px; }
+}
 </style>
 <script src="js/modnav.js" defer></script>
 <link rel="icon" href="favicon.ico" sizes="any">
