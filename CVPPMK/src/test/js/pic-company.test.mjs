@@ -1,10 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 import {usersFromSection,picLabel,picOptions,resolvePicText,loadCompanyPicUsers} from '../../main/resources/static/js/pages/schedule.js';
 const config=JSON.parse(readFileSync(new URL('../../main/resources/company/wbi.json',import.meta.url))).pic;
-const table={results:{users:{columns:['USER_CODE','U_NAME','SUPERUSER','Locked'],rows:[['WBI-ACC-STF1','Rizky','N','N'],['CEO-WBI','Andy','Y','N'],['Workflow','Workflow','Y','N'],['WBI-PARE','Gerai Pare','N','N'],['LOCKED','Terkunci','N','Y']]}}};
+const table={results:{users:{columns:['USER_CODE','U_NAME','SUPERUSER','Locked'],rows:[['WBI-ACC-STF1','Rizky','N','N'],['PUR-MGR','Fenny','Y','N'],['Workflow','Workflow','Y','N'],['WBI-PARE','Gerai Pare','N','N'],['LOCKED','Terkunci','N','Y']]}}};
 test('company-configured SAP PIC excludes locked/system/store accounts, retains eligible superusers',()=>{
- const users=usersFromSection(table,config.excludedCodes);assert.deepEqual(users.map(u=>u.code),['WBI-ACC-STF1','CEO-WBI']);
- const opts=picOptions(users,'',config.group);assert.deepEqual(opts.map(o=>o.value),['','STEM','WBI:WBI-ACC-STF1','WBI:CEO-WBI']);assert.equal(opts[2].group,'WBI');assert.equal(opts[2].label,'WBI-ACC-STF1 (Rizky)');
+ const users=usersFromSection(table,config.excludedCodes);assert.deepEqual(users.map(u=>u.code),['WBI-ACC-STF1','PUR-MGR']);
+ const opts=picOptions(users,'',config.group);assert.deepEqual(opts.map(o=>o.value),['','STEM','WBI:WBI-ACC-STF1','WBI:PUR-MGR']);assert.equal(opts[2].group,'WBI');assert.equal(opts[2].label,'WBI-ACC-STF1 (Rizky)');
 });
 test('WBI labels include code and username, free text stays valid, legacy PPMK labels stay unchanged',()=>{
  const users=usersFromSection(table,config.excludedCodes);

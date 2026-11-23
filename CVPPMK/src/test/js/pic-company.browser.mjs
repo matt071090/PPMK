@@ -14,7 +14,7 @@ try {
   await page.setViewportSize({width,height:1000});await page.waitForTimeout(400);
   const input=page.locator('[data-pic="balance-inv"]');await input.evaluate(e=>scrollTo({top:e.getBoundingClientRect().top+scrollY-260,behavior:'instant'}));await input.evaluate(e=>e.blur());await input.focus();
   await page.locator('.pic-pop [data-v="WBI:WBI-ACC-STF1"]').waitFor();
-  assert.match(await page.locator('.pic-pop').innerText(),/WBI.*WBI-ACC-STF1 \(Rizky\).*CEO-WBI \(Andy\)/s);assert.doesNotMatch(await page.locator('.pic-pop').innerText(),/Workflow|WBI-PARE|LOCKED/);
+  assert.match(await page.locator('.pic-pop').innerText(),/WBI.*WBI-ACC-STF1 \(Rizky\).*PUR-MGR \(Fenny\)/s);assert.doesNotMatch(await page.locator('.pic-pop').innerText(),/Workflow|WBI-PARE|LOCKED/);
   const filename=`dropdown-${device}.png`;await page.screenshot({path:new URL(filename,out).pathname});result.screenshots.push(filename);await input.press('Escape');
  }
  await page.locator('[data-pic="balance-inv"]').evaluate(e=>e.blur());await page.locator('[data-pic="balance-inv"]').focus();await page.locator('.pic-pop [data-v="WBI:WBI-ACC-STF1"]').click();await page.locator('#save').click();await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Jadwal tersimpan'));
@@ -26,7 +26,7 @@ try {
  await open('schedule.html#/stock');await page.locator('[data-pic="opname-toko"]').fill('Koordinator shift malam');await page.locator('[data-pic="opname-toko"]').press('Tab');await page.locator('#save').click();await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Jadwal tersimpan'));
  assert.equal((await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()))).data.items.find(i=>i.id==='opname-toko').pic,'Koordinator shift malam');await page.unroute('**/api/section/users');
  result.checks.push('Unavailable SAP directory keeps free text usable and never borrows ppmk-users.json');
- await open('schedule.html#/ringkasan',18637);await page.locator('[data-pic="kickoff"]').focus();await page.locator('.pic-pop [data-v="PPMK:CV01"]').waitFor();assert.match(await page.locator('.pic-pop').innerText(),/PPMK.*CV01 \(Tim CV\)/s);assert.doesNotMatch(await page.locator('.pic-pop').innerText(),/Rizky|CEO-WBI/);
+ await open('schedule.html#/ringkasan',18637);await page.locator('[data-pic="kickoff"]').focus();await page.locator('.pic-pop [data-v="PPMK:CV01"]').waitFor();assert.match(await page.locator('.pic-pop').innerText(),/PPMK.*CV01 \(Tim CV\)/s);assert.doesNotMatch(await page.locator('.pic-pop').innerText(),/Rizky|PUR-MGR/);
  result.checks.push('CV retains ppmk-users.json and PPMK group; no new User WBI menu/storage');assert.deepEqual(result.errors,[]);
 } finally {await writeFile(new URL('browser-evidence.json',out),JSON.stringify(result,null,2)+'\n');await browser.close();}
 console.log(JSON.stringify({checks:result.checks.length,screenshots:result.screenshots.length,errors:result.errors}));
