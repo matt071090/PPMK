@@ -76,6 +76,16 @@ public class ServiceLayerClient {
         return call("GET", path, null, true);
     }
 
+    /** GET yang hasilnya dikembalikan apa adanya (teks), untuk $metadata (XML). Hanya baca. */
+    public synchronized String getRaw(String path) throws IOException {
+        if (!configured()) throw new IllegalStateException("Service Layer belum dikonfigurasi (sap.sl.* di application.properties)");
+        if (cookies == null) login();
+        Response res = send("GET", path, null);
+        if (res.status == 401) { login(); res = send("GET", path, null); }
+        if (res.status >= 400) throw new IOException("Service Layer " + res.status + ": " + errorMessage(res.body));
+        return res.body;
+    }
+
     /** Tulis data: POST (buat baru) atau PATCH (ubah sebagian field). Hasil POST = objek yang dibuat, PATCH = objek kosong. */
     public JsonNode write(String method, String path, JsonNode body) throws IOException {
         if (!"POST".equals(method) && !"PATCH".equals(method)) throw new IllegalArgumentException("Method tulis tidak didukung: " + method);

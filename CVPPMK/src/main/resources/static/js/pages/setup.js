@@ -5,12 +5,15 @@
 // Alias kolom query = nama field Service Layer = baris ke-2 template Excel, jadi ketiganya bisa dibandingkan langsung.
 // Kolom berawalan "_" = pembanding saja (tidak dikirim), mis. _ItemGroup: nama referensi yang kodenya bisa beda antar DB;
 // kode tujuannya dicari lewat step.lookups saat upload. Langkah kind "ref" (branch, dimension) hanya sumber pencarian, tidak tampil.
-import { $, $$, esc, isEmpty, onMount, flushMounts } from "../ui.js";
+import { $, $$, esc, isEmpty, onMount, flushMounts, company, showCompanyName } from "../ui.js";
 import { xlsxBlob, download } from "../xlsx.js";
 import { readXlsx } from "../xlsx-read.js";
+import { dtwRows, dtwTemplateZip, txtContext } from "../dtw-txt.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
+import { uploadInChunks, progressUi, resultsTable } from "./upload-progress.js";
+import { hanaPage } from "./hana.js";
+import { mappingPage, uncategorized } from "./addon-mapping.js";
 
-const PROJECT = "CVPPMK";
 const store = {
   get: k => { try { return localStorage.getItem(k); } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { } }
@@ -27,7 +30,9 @@ const TIERS = {
   B: ["Tanpa Chart of Accounts", "Tidak memakai akun G/L, jadi boleh dikerjakan sebelum COA. Currency paling awal karena dipakai akun."],
   C: ["Chart of Accounts", "Fondasi semua langkah berikutnya."],
   D: ["Butuh Chart of Accounts", "Memakai akun G/L. Baris yang merujuk akun yang belum ada di COA tujuan ditandai Error."],
-  E: ["Master data utama", "Paling akhir karena merujuk hampir semua langkah di atas."]
+  E: ["Master data utama", "Paling akhir karena merujuk hampir semua langkah di atas."],
+  F: ["Addon STEM", "Parameter dan master STEM Addon. Dikerjakan setelah DBCreator STEM dijalankan di DB tujuan, dan setelah Document Numbering serta Chart of Accounts."],
+  G: ["Addon Farm Breeding", "Parameter dan master Farm Breeding Addon. Dikerjakan setelah DBCreator Farm Breeding (yang berjalan sesudah DBCreator STEM) dan setelah tahap Addon STEM."]
 };
 const label = f => f.startsWith("_") ? f.slice(1) : f;
 const tplOf = step => step.template && TEMPLATES.find(t => `T${t.no}` === step.template);
@@ -71,7 +76,7 @@ async function loadLookups(step) {
 
 // ---------- template Excel -> baris sumber ----------
 // Dropdown template: "kode - nama" (ambil kodenya) atau nama (dicari kodenya di data tujuan langkah referensi).
-const CODE_SPLIT = new Set(["accounts", "titles", "banks", "country"]);
+const CODE_SPLIT = new Set(["accounts", "titles", "banks", "country", "locations"]);
 const REF_STEPS = {
   vat_in: ["tax-groups", "Name", "Code"], vat_out: ["tax-groups", "Name", "Code"], dims: ["dimensions", "Name", "_key"],
   branches: ["branches", "Name", "_key"], pricelists: ["price-lists", "PriceListName", "_key"],
@@ -182,9 +187,16 @@ export function compare(step, data, lookups = {}) {
       errors.push(`Akun induk ${s[P.field]} tidak ada di tujuan maupun di data sumber`);
     if (accts) for (const f of step.accounts || [])
       if (touched(f) && !accts.has(norm(s[f]))) errors.push(`Akun ${s[f]} (${f}) tidak ada di COA tujuan`);
-    for (const l of step.lookups || [])
-      if (touched(l.from) && !(lookups[`${l.step}|${l.by}`] || new Map()).has(up(s[l.from])))
-        errors.push(`${label(l.from)} "${s[l.from]}" belum ada di tujuan`);
+    for (const l of step.lookups || []) {
+      if (!touched(l.from)) continue;
+      // l.sep: nilai berisi beberapa kode (mis. dokumen berisi banyak aset), semuanya harus ada di tujuan
+      const map = lookups[`${l.step}|${l.by}`] || new Map(), miss = (l.sep ? String(s[l.from]).split(l.sep) : [s[l.from]]).map(norm).filter(v => v && !map.has(up(v)));
+      if (miss.length) errors.push(`${label(l.from)} "${miss.join(", ")}" belum ada di tujuan`);
+    }
+    // baris anak (step.children): upload tidak mengubah detail yang sudah ada (PATCH koleksi UDO bisa menggandakan baris)
+    const childFrom = new Set((step.children || []).map(c => c.from));
+    if (t && childFrom.size && diffs.size && [...diffs].every(f => childFrom.has(f)))
+      errors.push("Detail beda dengan sumber; upload tidak bisa mengubah baris detail, ubah di SAP");
     const status = errors.length ? "error" : t && !diffs.size ? "same" : t ? "diff" : "new";
     rows.push({ status, src: s, tgt: t, diffs, errors });
   }
@@ -207,8 +219,41 @@ export function payload(step, r, lookups) {
   for (const l of step.lookups || []) {
     const v = norm(r.src[l.from]);
     if (!v || (r.status !== "new" && !r.diffs.has(l.from))) continue;
+    if (l.field.startsWith("_")) continue;   // lookup hanya untuk cek keberadaan di tujuan, tidak dikirim
     const k = lookups[`${l.step}|${l.by}`].get(v.toUpperCase());
     data[l.field] = numLike(String(k)) ? +k : k;
+  }
+  // baris anak UDO (step.children): hanya untuk baris baru; _Detail = nilai digabung, dipecah jadi satu baris anak per nilai
+  if (r.status === "new") for (const c of step.children || []) {
+    const v = norm(r.src[c.from]);
+    if (!v) continue;
+    // anak banyak kolom (c.fields): baris dipisah c.rowSep, kolom dipisah c.colSep, kolom kosong tidak dikirim
+    if (c.fields) data[c.collection] = v.split(c.rowSep || "¦").map(row => Object.fromEntries(row.split(c.colSep || "^")
+      .map((x, i) => [c.fields[i], x.trim()]).filter(([k, x]) => k && x !== "").map(([k, x]) => [k, (c.numeric || []).includes(k) ? +x : x]))).filter(o => Object.keys(o).length);
+    else data[c.collection] = v.split(c.sep || "|").map(x => x.trim()).filter(Boolean).map(x => ({ [c.field]: x }));
+  }
+  // anak dari kolom "_..." di baris yang sama (step.flat): satu baris anak per dokumen/aset, hanya untuk baris baru.
+  // flat: [{collection, fields: {fieldSL: "_kolomExcel"}, numeric: [fieldSL]}]; kolom kosong tidak dikirim
+  if (r.status === "new") for (const c of step.flat || []) {
+    // c.rows: properti tak terlihat di baris sumber (mis. _Lines dari TXT DTW) berisi beberapa baris anak sekaligus
+    if (c.rows && Array.isArray(r.src[c.rows])) {
+      data[c.collection] = r.src[c.rows].map(o => Object.fromEntries(Object.entries(o).filter(([, x]) => norm(x) !== "")
+        .map(([k, x]) => [k, (c.numeric || []).includes(k) ? +x : x])));
+      continue;
+    }
+    const child = {};
+    for (const [f, col] of Object.entries(c.fields)) {
+      const v = norm(r.src[col]);
+      if (v !== "") child[f] = (c.numeric || []).includes(f) ? +v : v;
+    }
+    // c.when: anak hanya dikirim kalau salah satu field ini terisi (mis. cost center opsional). c.defaults: field -> "_kolom" atau "=nilai tetap"
+    if (c.when && !c.when.some(f => child[f] !== undefined)) continue;
+    for (const [f, src] of Object.entries(c.defaults || {})) {
+      if (child[f] !== undefined) continue;
+      const v = src.startsWith("=") ? src.slice(1) : norm(r.src[src]);
+      if (v !== "") child[f] = v;
+    }
+    if (Object.keys(child).length) data[c.collection] = [child];
   }
   return r.status === "new" ? { action: "create", data } : { action: "update", key: r.tgt._key, data };
 }
@@ -247,6 +292,8 @@ function stepPage(step) {
           <li data-n="2"><span class="sx-num">2</span><span><b>Cek &amp; bandingkan</b><small>dengan data di SAP tujuan</small></span></li>
           <li data-n="3"><span class="sx-num">3</span><span><b>Upload ke SAP</b><small>baris yang dipilih</small></span></li>
         </ol>
+        <h2 class="sx-h">0. Yang sudah ada di DB tujuan</h2>
+        <div class="sx-now"><p class="sx-req">Memuat…</p></div>
         <h2 class="sx-h">1. Pilih cara isi data</h2>
         <div class="sx-ways" role="radiogroup" aria-label="Cara isi data">
           <div class="sx-way" data-way="db">
@@ -260,23 +307,60 @@ function stepPage(step) {
               : "Belum ada template Excel untuk langkah ini."}</p>
             <div class="sx-way-b" data-body="excel"></div>
           </div>
+          ${step.dtw ? `<div class="sx-way" data-way="txt">
+            <label class="sx-way-h"><input type="radio" name="way-${step.id}" value="txt"><b>Upload file TXT DTW</b></label>
+            <p class="sx-way-d">Pakai file TXT yang sama dengan yang disiapkan untuk DTW (HEADER, DEPRE, CAP_HEADER, CAP_DETAIL). Dicek dan dibandingkan dengan SAP tujuan sebelum di-upload.</p>
+            <div class="sx-way-b" data-body="txt"></div>
+          </div>` : ""}
         </div>
         <h2 class="sx-h">2. Cek &amp; bandingkan <span class="sx-cmp-label"></span></h2>
         <div class="sx-body"><p class="sx-req">Pilih cara isi data di atas.</p></div>
         <details class="grp sx-sql"><summary><span>Query &amp; mapping kolom <span class="muted">· untuk review: alias = nama field Service Layer = baris 2 template</span></span></summary>
           <pre class="sx-pre" data-sx-sql>Memuat…</pre></details>
+        ${step.flat ? `<details class="grp sx-slchk"><summary><span>Cek nama field Service Layer <span class="muted">\u00b7 membandingkan field yang dikirim upload dengan $metadata SAP</span></span></summary>
+          <div class="sx-slchk-b" style="padding:10px 14px"><button type="button" class="cbtn" data-sx-slchk>Cek sekarang</button><div data-sx-slres style="margin-top:10px"></div></div></details>` : ""}
       </div>`;
     }
   };
 }
+// Bandingkan field yang dikirim langkah ini (kolom template + step.flat) dengan $metadata Service Layer tujuan (api/sl/fields), hanya baca.
+async function slCheck(step, tpl, out, btn) {
+  const text = btn.innerHTML;
+  btn.disabled = true; btn.textContent = "Memeriksa\u2026";
+  const row = (t, msg) => `<div class="callout ${t}"><span class="ci">${t === "ok" ? "\u2713" : "!"}</span><div class="ct"><b>${t === "ok" ? "OK" : t === "warn" ? "Perlu dicek" : "Masalah"}</b>${msg}</div></div>`;
+  try {
+    const r = await getJson(`api/sl/fields?entity=${encodeURIComponent(step.entity)}`);
+    if (r.error) { out.innerHTML = `<div class="callouts">${row("danger", esc(r.error))}</div>`; return; }
+    const have = new Set((r.fields || []).map(f => f.name)), colls = r.collections || [], list = [];
+    const main = ((tpl && tpl.sheets[0].fields) || []).map(f => f.field).filter(f => !f.startsWith("_"));
+    const miss = main.filter(f => !have.has(f));
+    list.push(miss.length ? row("danger", `Field ${esc(step.entity)} yang dikirim tapi tidak ada di SAP: <code>${miss.map(esc).join(", ")}</code>`)
+      : row("ok", `${main.length} field utama ${esc(step.entity)} ada di SAP.`));
+    for (const c of step.flat || []) {
+      const real = colls.find(x => x.name === c.collection);
+      if (!real) {
+        const hint = colls.map(x => x.name);
+        list.push(row("danger", `Koleksi <code>${esc(c.collection)}</code> tidak ada di ${esc(step.entity)}. Koleksi yang ada: <span class="muted">${hint.map(esc).join(", ") || "(tidak ada)"}</span>`));
+        continue;
+      }
+      const names = new Set(real.fields.map(f => f.name)), bad = Object.keys(c.fields).filter(f => !names.has(f));
+      list.push(bad.length ? row("danger", `Koleksi <code>${esc(c.collection)}</code>: field tidak ada di SAP <code>${bad.map(esc).join(", ")}</code>. Field yang ada: <span class="muted">${[...names].map(esc).join(", ")}</span>`)
+        : row("ok", `Koleksi <code>${esc(c.collection)}</code>: ${Object.keys(c.fields).length} field ada di SAP.`));
+    }
+    out.innerHTML = `<div class="callouts">${list.join("")}</div>`;
+  } catch (e) {
+    out.innerHTML = `<div class="callouts">${row("danger", esc(e.message))}</div>`;
+  } finally { btn.disabled = false; btn.innerHTML = text; }
+}
 async function getTemplate(step, btn) {
   const text = btn.innerHTML;
   btn.disabled = true; btn.textContent = "Menyiapkan…";
-  try { downloadTemplate(tplOf(step), await loadRef(), PROJECT); }
+  try { downloadTemplate(tplOf(step), await loadRef(), company.name); }
   catch (e) { alert(`Gagal membuat template: ${e.message}`); }
   finally { btn.disabled = false; btn.innerHTML = text; }
 }
 
+const txtState = new Map();     // step id -> { file, rows, sheet, notes } file TXT DTW terakhir
 const excelState = new Map();   // step id -> { file, rows, sheet } file Excel terakhir, tetap ada saat pindah cara
 const stage = (box, n, done) => $$(".sx-steps li", box).forEach(li => {
   const i = +li.dataset.n;
@@ -284,14 +368,42 @@ const stage = (box, n, done) => $$(".sx-steps li", box).forEach(li => {
   $(".sx-num", li).textContent = li.className === "done" ? "✓" : i;
 });
 
+// Isi DB tujuan saat ini: query langkah yang sama, hanya SELECT. Ditampilkan sebelum membandingkan dengan sumber,
+// supaya terlihat apa yang sudah ada di tujuan (mis. tabel addon sudah terisi dari DB lama atau masih kosong).
+async function showNow(step, el) {
+  if (!el) return;
+  el.innerHTML = `<p class="sx-req">Memuat…</p>`;
+  try {
+    const t = (await getJson(dataUrl(step.id, ""))).target || {};
+    if (t.error) {
+      el.innerHTML = `<div class="error">Tidak bisa membaca DB tujuan: ${esc(t.error)}<br>Kalau tabelnya belum ada, jalankan DBCreator addon di DB tujuan dulu.</div>`;
+      return;
+    }
+    const cols = (t.columns || []).filter(c => !c.startsWith("_")), idx = cols.map(c => t.columns.indexOf(c)), rows = t.rows || [], SHOW = 15;
+    if (!rows.length) {
+      el.innerHTML = `<p class="sx-req"><b>0</b> baris. Tabel ada tapi masih kosong, jadi semua data dari sumber akan berstatus baru.</p>`;
+      return;
+    }
+    el.innerHTML = `<p class="sx-req"><b>${rows.length}</b> baris sudah ada di DB tujuan${rows.length > SHOW ? `, menampilkan ${SHOW} pertama` : ""}. Nanti dibandingkan dengan sumber di langkah 2.</p>
+      <div class="table-wrap"><table class="data"><thead><tr>${cols.map(c => `<th>${esc(label(c))}</th>`).join("")}</tr></thead>
+      <tbody>${rows.slice(0, SHOW).map(r => `<tr>${idx.map(i => `<td>${esc(norm(r[i]))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="error">Gagal memuat: ${esc(e.message)}</div>`;
+  }
+}
+
 async function mountStep(step, box) {
   if (!box) return;
+  showNow(step, $(".sx-now", box));
+  const chk = $("[data-sx-slchk]", box);
+  if (chk) chk.onclick = () => slCheck(step, tplOf(step), $("[data-sx-slres]", box), chk);
   const sql = $(".sx-sql", box);
   sql.ontoggle = () => { if (sql.open && $("[data-sx-sql]", box).textContent === "Memuat…")
     fetch(`api/setup/${step.id}/sql`).then(r => r.text()).then(t => $("[data-sx-sql]", box).textContent = t); };
   const tpl = tplOf(step);
   let way = store.get(`setup-way:${step.id}`) || "db";
   if (way === "excel" && !tpl) way = "db";
+  if (way === "txt" && !step.dtw) way = "db";
   $$(".sx-way", box).forEach(c => {
     const on = c.dataset.way === way;
     c.classList.toggle("on", on);
@@ -306,6 +418,8 @@ async function mountStep(step, box) {
   const reload = () => { tgtCache.clear(); mountStep(step, box); };
 
   if (way === "db") {
+    // sumber yang diingat browser tapi sudah tidak diizinkan / tidak ada lagi (mis. setup.source-dbs berubah): dibuang, bukan error
+    if (currentSrc() && ![...list.same, ...list.others].some(x => x.id === currentSrc())) store.set("setup-src", "");
     const src = currentSrc(), dbBody = $('[data-body="db"]', box);
     dbBody.innerHTML = `<div class="sx-row">${sourceSelect(src, list)}<button type="button" class="cbtn" data-sx-reload>↻ Baca ulang</button></div>
       <small class="muted" data-sx-info></small>`;
@@ -333,26 +447,47 @@ async function mountStep(step, box) {
     return;
   }
 
-  // cara Excel
-  const xlBody = $('[data-body="excel"]', box), st = excelState.get(step.id);
-  xlBody.innerHTML = `<div class="sx-row"><button type="button" class="cbtn" data-sx-tpl>⤓ Download template ${esc(step.template)}</button>
-      <label class="cbtn primary sx-file">Pilih file .xlsx…<input type="file" accept=".xlsx" hidden></label></div>
-    ${st ? `<div class="sx-filechip"><b>${esc(st.file)}</b><span class="muted">· sheet ${esc(st.sheet)} · ${st.rows.length} baris terbaca</span></div>` : ""}`;
-  $("[data-sx-tpl]", xlBody).onclick = e => getTemplate(step, e.currentTarget);
+  // cara file: template Excel atau TXT DTW (bentuk baris hasilnya sama, jalur cek dan upload sama)
+  const isTxt = way === "txt", xlBody = $(`[data-body="${way}"]`, box), st = (isTxt ? txtState : excelState).get(step.id);
+  xlBody.innerHTML = `<div class="sx-row">${isTxt ? `<button type="button" class="cbtn" data-sx-txttpl>⤓ Download template TXT DTW</button><small class="muted">Pilih semua file DTW sekaligus (HEADER, DEPRE, ...), format tab-delimited .txt.</small>`
+      : `<button type="button" class="cbtn" data-sx-tpl>\u2913 Download template ${esc(step.template)}</button>`}
+      <label class="cbtn primary sx-file">${isTxt ? "Pilih file .txt\u2026" : "Pilih file .xlsx\u2026"}<input type="file" accept="${isTxt ? ".txt,.tsv,.csv" : ".xlsx"}"${isTxt ? " multiple" : ""} hidden></label></div>
+    ${st ? `<div class="sx-filechip"><b>${esc(st.file)}</b><span class="muted">\u00b7 ${esc(st.sheet)} \u00b7 ${st.rows.length} baris terbaca</span></div>` : ""}
+    ${st && st.notes ? `<small class="muted">${st.notes.map(esc).join("<br>")}</small>` : ""}`;
+  if (!isTxt) $("[data-sx-tpl]", xlBody).onclick = e => getTemplate(step, e.currentTarget);
+  else $("[data-sx-txttpl]", xlBody).onclick = async e => {
+    const b = e.currentTarget, text = b.innerHTML;
+    b.disabled = true; b.textContent = "Menyiapkan\u2026";
+    // kode contoh + REFERENSI.txt diambil dari DB tujuan; kalau gagal, template tetap dibuat dengan kode kosong
+    let ctx = null;
+    try { ctx = txtContext((await getJson("api/section/fixed-asset")).results); } catch (err) { ctx = null; }
+    try { const z = dtwTemplateZip(step.id, step.title, company.name, ctx); download(z.blob, z.filename); }
+    finally { b.disabled = false; b.innerHTML = text; }
+  };
   $("input[type=file]", xlBody).onchange = async e => {
-    const f = e.target.files[0];
-    if (!f) return;
+    const files = [...e.target.files];
+    if (!files.length) return;
     body.innerHTML = `<div class="skeleton"><div></div><div></div><div></div></div>`;
     try {
-      const { sheet, rows } = await excelRows(step, tpl, await readXlsx(f));
-      excelState.set(step.id, { file: f.name, sheet, rows });
+      if (isTxt) {
+        const r = await dtwRows(step.id, files);
+        txtState.set(step.id, { file: files.map(f => f.name).join(", "), sheet: "TXT DTW", rows: r.rows, notes: r.notes });
+      } else {
+        const { sheet, rows } = await excelRows(step, tpl, await readXlsx(files[0]));
+        excelState.set(step.id, { file: files[0].name, sheet, rows });
+      }
       mountStep(step, box);
     } catch (err) { body.innerHTML = `<div class="error">${esc(err.message)}</div>`; }
   };
-  $("[data-sx-s1]", box).textContent = st ? `File ${st.file}` : "database lain atau Excel";
-  if (!st) { stage(box, 1, false); cmpLabel.textContent = ""; body.innerHTML = `<p class="sx-req">Download template, isi datanya mulai baris 3, lalu pilih filenya di atas.</p>`; return; }
+  $("[data-sx-s1]", box).textContent = st ? `File ${st.file}` : "database lain, Excel, atau TXT DTW";
+  if (!st) {
+    stage(box, 1, false); cmpLabel.textContent = "";
+    body.innerHTML = isTxt ? `<p class="sx-req">Pilih file TXT DTW di atas (semua file sekaligus).</p>`
+      : `<p class="sx-req">Download template, isi datanya mulai baris 3, lalu pilih filenya di atas.</p>`;
+    return;
+  }
   stage(box, 2, false);
-  cmpLabel.textContent = `· file Excel → ${list.target}`;
+  cmpLabel.textContent = `\u00b7 ${isTxt ? "file TXT DTW" : "file Excel"} \u2192 ${list.target}`;
   body.innerHTML = `<div class="skeleton"><div></div><div></div><div></div></div>`;
   let data, lookups;
   try { [data, lookups] = await Promise.all([getJson(dataUrl(step.id, "")), loadLookups(step)]); }
@@ -437,13 +572,13 @@ function drawStep(step, body, cmp, opt) {
     const list = picked();
     const head = [...(hasSrc ? ["Status"] : []), ...fields, ...(hasSrc ? ["Catatan"] : [])];
     const out = list.map(r => [...(hasSrc ? [STATUS[r.status][0]] : []), ...fields.map(f => norm((r.src || r.tgt)[f])), ...(hasSrc ? [r.errors.join("; ")] : [])]);
-    download(xlsxBlob([{ name: step.title.slice(0, 31), rows: [head, ...out] }]), `Setup ${step.order} ${step.title} - hasil cek - ${PROJECT}.xlsx`);
+    download(xlsxBlob([{ name: step.title.slice(0, 31), rows: [head, ...out] }]), `Setup ${step.order} ${step.title} - hasil cek - ${company.name}.xlsx`);
   };
   const toTpl = $("[data-sx-totpl]", body);
   if (toTpl) toTpl.onclick = () => {
     const list = picked().filter(r => r.src).map(r => r.src);
     if (!list.length) return alert("Belum ada baris sumber yang dipilih.");
-    download(xlsxBlob([templateSheet(step, opt.tpl, list)]), `${PROJECT} - ${opt.tpl.no} - ${opt.tpl.title} (dari database).xlsx`);
+    download(xlsxBlob([templateSheet(step, opt.tpl, list)]), `${company.name} - ${opt.tpl.no} - ${opt.tpl.title} (dari database).xlsx`);
   };
 
   const btn = $("[data-sx-upload]", body);
@@ -455,22 +590,27 @@ function drawStep(step, body, cmp, opt) {
       + `• ${nNew} baris baru akan dibuat\n• ${nDiff} baris akan diperbarui\n\nLanjutkan?`)) return;
     btn.disabled = true; btn.textContent = "Mengirim…";
     const res = $(".sx-result", body);
+    const prog = progressUi(step.title, list.length);
     try {
-      const out = await getJson(`api/setup/${step.id}/upload`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows: list.map(r => payload(step, r, opt.lookups)) }) });
-      const results = out.results, ok = results.filter(x => x.ok).length;
+      const url = `api/setup/${step.id}/upload`;
+      const { results, aborted } = await uploadInChunks(list.map(r => payload(step, r, opt.lookups)),
+        part => getJson(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: part }) }),
+        { onProgress: prog.update, shouldStop: prog.isStopped });
+      prog.close();
+      const ok = results.filter(x => x.ok).length, unsent = list.length - results.length;
       if (opt.box) stage(opt.box, 3, ok > 0);
       tgtCache.delete(step.id);
+      showNow(step, document.querySelector(`#sx-${step.id} .sx-now`));   // isi tujuan setelah upload
       res.innerHTML = `<h3>Hasil upload</h3>
-        <p class="sx-req"><b>${ok}</b> berhasil, <b>${results.length - ok}</b> gagal. Baca ulang untuk membandingkan lagi dengan data terbaru.</p>
-        <div class="table-wrap"><table class="data"><thead><tr><th>Hasil</th><th>Aksi</th>${step.match.map(f => `<th>${esc(label(f))}</th>`).join("")}<th>Pesan dari SAP</th></tr></thead>
-        <tbody>${results.map((x, i) => `<tr><td><span class="badge ${x.ok ? "yes" : "danger"}">${x.ok ? "Berhasil" : "Gagal"}</span></td>
-          <td>${list[i].status === "new" ? "Dibuat" : "Diperbarui"}</td>${step.match.map(f => `<td>${esc(norm(list[i].src[f]))}</td>`).join("")}
-          <td class="sx-note">${x.ok ? "OK" : esc(x.message || "")}</td></tr>`).join("")}</tbody></table></div>`;
+        <p class="sx-req"><b>${ok}</b> berhasil, <b>${results.length - ok}</b> gagal${unsent ? `, <b>${unsent}</b> belum dikirim (${aborted ? "pengiriman terhenti: " + esc(aborted) : "dihentikan"})` : ""}. Baca ulang untuk membandingkan lagi dengan data terbaru.</p>
+        <div class="sx-res-tbl"></div>`;
+      resultsTable($(".sx-res-tbl", res), results.map((x, i) => ({ ok: !!x.ok, action: list[i].status === "new" ? "Dibuat" : "Diperbarui",
+        cells: step.match.map(f => norm(list[i].src[f])), message: x.message })), step.match.map(label));
       res.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) {
       res.innerHTML = `<div class="error">Upload gagal: ${esc(e.message)}</div>`;
     } finally {
+      prog.close();
       btn.disabled = false; btn.textContent = "Upload ke SAP…";
     }
   };
@@ -484,6 +624,7 @@ function overviewPage(steps) {
     lead: "Semua setup & master data, diurutkan menurut ketergantungan datanya: langkah yang tidak memakai akun G/L ada di atas Chart of Accounts.",
     render() {
       onMount(() => mountOverview(steps, $("#sx-overview")));
+      onMount(() => wireOverviewSearch($("#sx-overview")));
       const tiers = Object.keys(TIERS).filter(t => steps.some(s => s.tier === t));
       return `<div class="sx" id="sx-overview">
         <div class="sx-ways sx-ways-info">
@@ -492,11 +633,12 @@ function overviewPage(steps) {
         </div>
         <p class="sx-req">Dua cara ini dipilih di halaman tiap langkah. Apa pun caranya, data selalu dicek dulu terhadap SAP tujuan sebelum di-upload lewat Service Layer.
           Kolom <b>Di tujuan</b> = jumlah data yang sudah ada sekarang.</p>
+        <div class="toolbar"><input type="search" id="sx-q" placeholder="Cari langkah: nama, tabel, tahap, atau butuh apa…" aria-label="Cari langkah setup"><span class="count" id="sx-qc"></span></div>
         ${tiers.map(t => `<h2 id="tahap-${t.toLowerCase()}"><span class="no">${t}</span>${esc(TIERS[t][0])}</h2>
           <p class="sec-lead">${esc(TIERS[t][1])}</p>
           <div class="table-wrap"><table class="data sx-overview"><thead><tr><th class="num">Urut</th><th>Langkah</th><th>Jenis</th><th>Butuh</th>
             <th>Cara isi</th><th class="num">Di tujuan</th></tr></thead>
-          <tbody>${steps.filter(s => s.tier === t).map(s => `<tr data-step="${s.id}">
+          <tbody>${steps.filter(s => s.tier === t).map(s => `<tr data-step="${s.id}" data-tier="${esc(t + " " + TIERS[t][0])}">
             <td class="num">${s.order}</td>
             <td><a href="#/${s.id}"><b>${esc(s.title)}</b></a><div class="muted">${esc(s.ref || "")}</div></td>
             <td><span class="badge ${s.kind === "data" ? "info" : ""}">${s.kind === "data" ? "Data" : "Setting"}</span></td>
@@ -504,6 +646,57 @@ function overviewPage(steps) {
             <td>${esc(ways(s))}${s.kind === "data" && !canUpload(s) ? ` <span class="badge" title="Bandingkan & export saja">upload menyusul</span>` : ""}</td>
             <td class="num" data-c="tgt">${s.kind === "data" ? "…" : "–"}</td>
           </tr>`).join("")}</tbody></table></div>`).join("")}</div>`;
+    }
+  };
+}
+// Cocokkan teks dengan kueri: semua kata (dipisah spasi) harus ada, tanpa peduli huruf besar/kecil.
+export function matchQuery(text, query) {
+  const words = String(query || "").toLowerCase().split(/\s+/).filter(Boolean), t = String(text || "").toLowerCase();
+  return words.every(w => t.includes(w));
+}
+// Kotak cari di halaman Urutan Setup: menyembunyikan baris yang tidak cocok dan tahap yang barisnya habis; Esc mengosongkan.
+function wireOverviewSearch(box) {
+  if (!box) return;
+  const q = $("#sx-q", box), cnt = $("#sx-qc", box), rows = $$("tbody tr[data-step]", box);
+  const text = new Map(rows.map(tr => [tr, `${tr.textContent} ${tr.dataset.step} ${tr.dataset.tier || ""}`]));
+  const draw = () => {
+    let shown = 0;
+    rows.forEach(tr => { const ok = matchQuery(text.get(tr), q.value); tr.hidden = !ok; if (ok) shown++; });
+    $$("table.sx-overview", box).forEach(tb => {
+      const any = $$("tbody tr[data-step]", tb).some(tr => !tr.hidden), wrap = tb.closest(".table-wrap");
+      [wrap, wrap && wrap.previousElementSibling, wrap && wrap.previousElementSibling && wrap.previousElementSibling.previousElementSibling]
+        .forEach(el => { if (el) el.hidden = !any; });
+    });
+    cnt.textContent = q.value.trim() ? (shown ? `${shown} dari ${rows.length} langkah` : "Tidak ada langkah yang cocok") : `${rows.length} langkah`;
+  };
+  q.oninput = draw;
+  q.onkeydown = e => { if (e.key === "Escape" && q.value) { q.value = ""; draw(); } };
+  draw();
+}
+// Pencarian di sidebar: menyembunyikan langkah yang tidak cocok (dan tahap yang habis), membuka semua tahap selama mencari.
+// Enter membuka langkah pertama yang cocok, Esc mengosongkan.
+function wireNavSearch(nav) {
+  const q = $("#nav-q", nav);
+  if (!q) return;
+  const groups = $$(".nav-group:not(.flat)", nav);
+  const draw = () => {
+    const on = q.value.trim() !== "";
+    nav.classList.toggle("searching", on);
+    groups.forEach(g => {
+      const items = $$("li", g), head = $("button", g) ? $("button", g).textContent : "";
+      items.forEach(li => {
+        const link = $("a", li), id = link && link.dataset ? link.dataset.id : "";   // kode langkah ikut dicari (mis. uom, stem-params)
+        li.hidden = on && !matchQuery(`${li.textContent} ${id} ${head}`, q.value);
+      });
+      g.hidden = on && !items.some(li => !li.hidden);
+    });
+  };
+  q.oninput = draw;
+  q.onkeydown = e => {
+    if (e.key === "Escape" && q.value) { q.value = ""; draw(); }
+    else if (e.key === "Enter") {
+      const first = $$("li", nav).find(li => !li.hidden && !li.closest("[hidden]"));
+      if (first) { const a = $("a", first); if (a) location.hash = a.getAttribute("href"); }
     }
   };
 }
@@ -521,9 +714,35 @@ async function mountOverview(steps, box) {
   await Promise.all([work(), work(), work(), work()]);
 }
 
+// ---------- kunci Setup (war): password dicek di server, sesi browser ini terbuka sampai kembali ke Dokumentasi ----------
+function lockScreen(art, configured) {
+  $("#nav").innerHTML = "";
+  art.innerHTML = `<h1>Setup &amp; Cut Off</h1>
+    <p class="lead">Menu ini bisa menulis data ke SAP lewat Service Layer, jadi dikunci dengan password Setup.</p>
+    ${configured ? `<form class="lock-form" id="lock-form" novalidate>
+        <label class="fld"><span>Password Setup</span><input type="password" id="lock-pw" autocomplete="current-password" aria-describedby="lock-msg"></label>
+        <p class="fld-msg" id="lock-msg">Password diatur di application.properties server (docs.setup.password).</p>
+        <button class="btn primary" type="submit">Buka Setup</button></form>`
+      : `<div class="error">Password Setup belum diatur di server. Isi docs.setup.password di application.properties, lalu restart aplikasi.</div>`}`;
+  const f = $("#lock-form", art);
+  if (!f) return;
+  const input = $("#lock-pw", f), msg = $("#lock-msg", f);
+  input.focus();
+  f.onsubmit = async e => {
+    e.preventDefault();
+    const fail = t => { input.classList.add("err"); msg.className = "fld-msg err"; msg.textContent = t; input.select(); };
+    if (!input.value) return fail("Password wajib diisi.");
+    try {
+      await getJson("api/setup-access/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: input.value }) });
+      location.reload();
+    } catch (err) { fail(err.message); }
+  };
+}
+
 // ---------- aplikasi setup.html: sidebar per tahap + routing #/ (ringkasan) dan #/<langkah> ----------
 export async function startSetupApp() {
   const art = $("#article"), nav = $("#nav");
+  showCompanyName();
   $("#theme-btn").onclick = () => {
     const el = document.documentElement, dark = el.dataset.theme ? el.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     el.dataset.theme = dark ? "light" : "dark"; store.set("theme", el.dataset.theme);
@@ -531,32 +750,40 @@ export async function startSetupApp() {
   $("#menu-btn").onclick = () => document.body.classList.toggle("nav-open");
   let steps;
   try {
-    const mode = await getJson("api/review/mode");
-    if (!mode.editable) {
-      art.innerHTML = `<h1>Setup &amp; Cut Off</h1><div class="error">Halaman ini hanya tersedia di mode dev / edit, karena bisa menulis data ke SAP.</div>`;
-      return;
-    }
+    // mode debug: langsung terbuka; war: wajib password Setup (docs.setup.password), tertutup lagi saat kembali ke Dokumentasi
+    const access = await getJson("api/setup-access");
+    if (!access.dev) $(".back-btn").onclick = e => {
+      e.preventDefault();
+      fetch("api/setup-access/logout", { method: "POST" }).finally(() => { location.href = "index.html"; });
+    };
+    if (!access.unlocked) return lockScreen(art, access.configured);
     steps = (await getJson("api/setup/steps")).filter(s => s.kind !== "ref");   // langkah referensi tidak ditampilkan
   } catch (e) {
     art.innerHTML = `<h1>Setup &amp; Cut Off</h1><div class="error">Gagal memuat langkah setup: ${esc(e.message)}</div>`;
     return;
   }
   steps.forEach((s, i) => s.order = i + 1);   // nomor urut = urutan di steps.json
-  const pages = { "": { title: "Urutan Setup", def: overviewPage(steps) } };
+  const pages = { "": { title: "Urutan Setup", def: overviewPage(steps) }, "addon-mapping": { title: "Mapping Add-on", def: mappingPage() } };
   steps.forEach(s => pages[s.id] = { title: s.title, no: String(s.order), chapter: `${s.tier} · ${TIERS[s.tier][0]}`, def: stepPage(s) });
+  pages.hana = { title: "Backup & Restore HANA", chapter: "Utilitas", def: hanaPage() };   // tak ada di sidebar: menu ada di Tools (hana.html); rute ini hanya untuk buka kunci password Setup (hana.js)
   const tiers = Object.keys(TIERS).filter(t => steps.some(s => s.tier === t));
   nav.innerHTML = `<div class="nav-group flat"><a href="#/" data-id="" class="chapter-link"><span class="gno">⌂</span><span>Urutan Setup</span></a></div>`
+    + `<div class="nav-group flat"><a href="#/addon-mapping" data-id="addon-mapping" class="chapter-link"><span class="gno">#</span><span>Mapping Add-on</span><span class="badge warn" id="am-badge" hidden></span></a></div>`
+    + `<div class="nav-search"><input type="search" id="nav-q" placeholder="Cari langkah…" aria-label="Cari langkah di sidebar" autocomplete="off"></div>`
     + tiers.map(t => `<div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">${t}</span>${esc(TIERS[t][0])}</button>
       <ul>${steps.filter(s => s.tier === t).map(s => `<li><a href="#/${s.id}" data-id="${s.id}"${s.kind === "setting" ? ` class="todo"` : ""}>
         <span class="no">${s.order}</span><span>${esc(s.title)}</span></a></li>`).join("")}</ul></div>`).join("");
   $$(".nav-group > button", nav).forEach(b => b.onclick = () => {
     const g = b.parentElement; g.classList.toggle("collapsed"); b.setAttribute("aria-expanded", !g.classList.contains("collapsed"));
   });
+  wireNavSearch(nav);
+  // badge: objek add-on yang tampil di dokumentasi tapi belum dikategorikan
+  getJson("api/addon/objects").then(d => { const n = uncategorized(d), b = $("#am-badge"); if (n) { b.textContent = `${n} baru`; b.hidden = false; } }).catch(() => { });
   const route = () => {
     const id = (location.hash.match(/^#\/([a-z0-9-]*)/) || [])[1] || "", page = pages[id] || pages[""];
     document.body.classList.remove("nav-open");
     $$("#nav a[data-id]").forEach(a => a.classList.toggle("active", a.dataset.id === (pages[id] ? id : "")));
-    document.title = `${page.no ? page.no + " " : ""}${page.title} · Setup CVPPMK`;
+    document.title = `${page.no ? page.no + " " : ""}${page.title} · Setup & Cut Off`;
     art.innerHTML = `<nav class="crumbs" aria-label="Breadcrumb"><span>Setup &amp; Cut Off</span>${page.chapter ? `<span>${esc(page.chapter)}</span>` : ""}</nav>
       <h1>${page.no ? `<span class="no">${esc(page.no)}</span>` : ""}${esc(page.title)}</h1>
       <p class="lead">${page.def.lead}</p>

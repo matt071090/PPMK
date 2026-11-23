@@ -81,7 +81,14 @@ public class SectionController {
         return out;
     }
 
-    private Map<String, Object> run(String key, String sql) {
+    /** GET /api/section/company-name: nama company (OADM.CompnyName) untuk header halaman. */
+    @GetMapping("/company-name")
+    public Map<String, Object> companyName() {
+        return Collections.singletonMap("name", jdbc.queryForObject("SELECT \"CompnyName\" FROM OADM", String.class));
+    }
+
+    // dipakai juga oleh AddonController (isi tabel add-on generik)
+    Map<String, Object> run(String key, String sql) {
         long start = System.currentTimeMillis();
         try {
             Map<String, Object> out = jdbc.query(sql, rs -> {

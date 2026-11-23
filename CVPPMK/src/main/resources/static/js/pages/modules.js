@@ -1,7 +1,95 @@
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
 import { mainTable, tableName, tableModule } from "../sap-tables.js";
-import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, kv, settings, table, tabs, searchable, tags, udfCols, expandList, exportButton, autoCols, VALUATION, GL_METHOD } from "../ui.js";
+import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, callouts, kv, settings, table, tabs, searchable, tags, udfCols, expandList, exportButton, exportSheets, sqlSheets, autoCols, VALUATION, GL_METHOD } from "../ui.js";
+import { SP_PAGE } from "./sp-validation.js";
+import { addonState } from "./addon.js";
+
+// ---------- kesiapan upload aset: data pendukung yang harus ada + hasil query SELECT-nya; keputusan tetap di manusia ----------
+// Semua data dari query sql/fixed-asset/*.sql (SELECT saja). Query yang gagal ditampilkan sebagai Masalah per item, bukan menggagalkan halaman.
+function assetReadiness(d) {
+  const R = k => rowsOf(d[k]), items = [];
+  const add = (st, title, result, why, tbl, q) => items.push({ st, title, result, why, tbl, q });
+  const guard = (k, title, q, why, fn) => {
+    if (d[k] && d[k].error) add("danger", title, "query gagal", why, `<div class="error">${esc(d[k].error)}</div>`, q);
+    else if (!d[k]) add("danger", title, "query tidak ada hasilnya", why, "", q);
+    else fn(R(k));
+  };
+  guard("classes", "Asset Class", "01_classes.sql", "Setiap aset butuh asset class dengan depreciation area Main Area dan account determination. Kode class dipakai kolom Asset Class di file aset.", rows => {
+    // sama dengan cek di atas halaman: account determination harus ada dan akun G/L utamanya terisi (tipe tanpa penyusutan hanya butuh akun saldo)
+    const dtn = Object.fromEntries(R("determination").map(x => [x.Code, x])), noDprT = new Set(R("dep_types").filter(t => t.DprMeth === "NO").map(t => t.Code));
+    const main = rows.filter(r => r.DprAreaID === "Main Area").map(r => {
+      const x = dtn[r.AcctDtn], req = noDprT.has(r.DprTypID) ? FA_REQUIRED.slice(0, 1) : FA_REQUIRED;
+      const miss = !r.AcctDtn ? ["belum ada account determination"] : !x ? ["account determination tidak ada"] : req.filter(([k]) => isEmpty(x[k])).map(([, l]) => l);
+      return { ...r, Kurang: miss.join(", ") };
+    });
+    const good = main.filter(r => !r.Kurang), bad = main.filter(r => r.Kurang);
+    add(!good.length ? "danger" : bad.length ? "warn" : "ok", "Asset Class", `${good.length} class lengkap${bad.length ? `, ${bad.length} belum lengkap akun G/L (tidak masalah kalau tidak dipakai aset)` : ""}`,
+      "Setiap aset butuh asset class dengan Main Area dan account determination yang akun G/L-nya lengkap. Kode class dipakai kolom Asset Class di file aset; class yang belum lengkap jangan dipakai.",
+      table([{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" }, { key: "AcctDtn", label: "Account Determination" }, { key: "DprTypID", label: "Tipe" }, { key: "UseLife", label: "Umur default (bulan)", num: 1 },
+        { key: "Kurang", label: "Akun belum lengkap", fmt: v => v ? esc(v) : `<span class="badge yes">Lengkap</span>` }], main, { flag: r => !!r.Kurang }), "01_classes.sql");
+  });
+  guard("dep_types", "Depreciation Type", "02_dep_types.sql", "Nama tipe penyusutan di file harus sama persis dengan di SAP (mis. Straight Line, bukan straight-line).", rows => {
+    const sl = rows.filter(t => /straight/i.test(t.Code));
+    add(sl.length ? "ok" : "warn", "Depreciation Type", sl.length ? `${sl.map(t => t.Code).join(", ")} tersedia` : "tidak ada tipe Straight Line", "Nama tipe penyusutan di file harus sama persis dengan di SAP (mis. Straight Line, bukan straight-line).",
+      table([{ key: "Code", label: "Kode" }, { key: "Descr", label: "Deskripsi" }], rows), "02_dep_types.sql");
+  });
+  guard("item_groups", "Item Group aset", "07_item_groups.sql", "Aset memakai item group khusus aset. Pakai kode dari tabel ini, jangan kode dari template perusahaan lain.", rows => {
+    const hit = rows.filter(g => /fixed|asset|aset/i.test(g.ItmsGrpNam));
+    add(hit.length ? "ok" : "warn", "Item Group aset", hit.length ? hit.map(g => `${g.ItmsGrpCod} ${g.ItmsGrpNam}`).join(", ") : "tidak ada grup bernama aset", "Aset memakai item group khusus aset. Pakai kode dari tabel ini, jangan kode dari template perusahaan lain.",
+      table([{ key: "ItmsGrpCod", label: "Kode" }, { key: "ItmsGrpNam", label: "Nama" }], rows, { flag: g => hit.includes(g) }), "07_item_groups.sql");
+  });
+  guard("locations", "Location", "06_locations.sql", "Setiap lokasi di file aset harus sudah ada di sini (dipakai sebagai kode angka). Lokasi yang belum ada dibuat dulu di SAP.", rows =>
+    add("info", "Location", `${rows.length} lokasi`, "Setiap lokasi di file aset harus sudah ada di sini (dipakai sebagai kode angka). Lokasi yang belum ada dibuat dulu di SAP.",
+      table([{ key: "Code", label: "Kode" }, { key: "Location", label: "Nama" }], rows), "06_locations.sql"));
+  guard("periods", "Posting Period", "08_periods.sql", "Tanggal posting Capitalization harus jatuh di periode yang terbuka. Tanggal asli lama butuh tahun fiskal lama; tanggal cutoff butuh periode cutoff terbuka.", rows => {
+    const by = new Map();
+    rows.forEach(r => { const o = by.get(r.Category) || { Category: r.Category, Mulai: r.F_RefDate, Selesai: r.T_RefDate, Bulan: 0, Terbuka: 0, Tertutup: 0, Tutup: [] };
+      o.Bulan++; o.Selesai = r.T_RefDate; if (r.PeriodStat === "N") o.Terbuka++; else { o.Tertutup++; o.Tutup.push(r.Code); } by.set(r.Category, o); });
+    const list = [...by.values()], closed = list.reduce((a, o) => a + o.Tertutup, 0), open = list.reduce((a, o) => a + o.Terbuka, 0);
+    const first = list.length ? list[0].Category : "-";
+    add(closed ? "warn" : "ok", "Posting Period", `tahun fiskal mulai ${first}; ${open} periode terbuka, ${closed} tidak terbuka`, "Tanggal posting Capitalization harus jatuh di periode yang terbuka. Tanggal asli lama butuh tahun fiskal lama; tanggal cutoff butuh periode cutoff terbuka.",
+      table([{ key: "Category", label: "Tahun" }, { key: "Mulai", label: "Mulai" }, { key: "Selesai", label: "Selesai" }, { key: "Terbuka", label: "Periode terbuka", num: 1 }, { key: "Tertutup", label: "Periode tidak terbuka", num: 1 },
+        { key: "Tutup", label: "Yang tidak terbuka", fmt: v => esc((v || []).join(", ")) }], list.filter(o => +o.Category <= 2027)), "08_periods.sql");
+    d._periodSummary = list;
+  });
+  guard("series", "Numbering Series Capitalization", "09_series.sql", "Dokumen Capitalization memakai series per tahun. Isi kolom Series dengan kode series tahun dokumennya.", rows =>
+    add(rows.length ? "ok" : "danger", "Numbering Series Capitalization", rows.length ? `${rows.length} series (${rows.slice(0, 4).map(r => r.SeriesName).join(", ")}${rows.length > 4 ? " ..." : ""})` : "belum ada series",
+      "Dokumen Capitalization memakai series per tahun. Isi kolom Series dengan kode series tahun dokumennya.",
+      table([{ key: "Series", label: "Kode series" }, { key: "SeriesName", label: "Nama" }, { key: "InitialNum", label: "Nomor awal" }, { key: "NextNumber", label: "Nomor berikut" }, { key: "Locked", label: "Dikunci", fmt: badgeYN }], rows), "09_series.sql"));
+  guard("sp_notif", "SP yang memblok Capitalization", "10_sp_notif.sql", "SP Notif sebagian perusahaan menolak Capitalization di bawah nilai tertentu (mis. Rp 5.000.000). Kalau ada prosedur di sini, buka isinya dan cek aturan untuk objek 1470000049 sebelum upload.", rows =>
+    add(rows.length ? "warn" : "ok", "SP yang memblok Capitalization", rows.length ? `${rows.map(r => r.PROCEDURE_NAME).join(", ")} menyebut Capitalization` : "tidak ada prosedur yang menyebut Capitalization",
+      "SP Notif sebagian perusahaan menolak Capitalization di bawah nilai tertentu (mis. Rp 5.000.000). Kalau ada prosedur di sini, buka isinya dan cek aturan untuk objek 1470000049 sebelum upload.",
+      rows.length ? table([{ key: "PROCEDURE_NAME", label: "Prosedur" }], rows) : "", "10_sp_notif.sql"));
+  guard("dimensions", "Cost Center (Distribution Rule)", "11_dimensions.sql", "Opsional: cost center bisa diisi di baris Capitalization (OcrCode 1-5). Kode di file harus ada di sini dan dimension-nya cocok.", rows =>
+    add("info", "Cost Center (Distribution Rule)", `${rows.length} distribution rule di ${new Set(rows.map(r => r.DimCode)).size} dimension`, "Opsional: cost center bisa diisi di baris Capitalization (OcrCode 1-5). Kode di file harus ada di sini dan dimension-nya cocok.",
+      table([{ key: "DimCode", label: "Dimension" }, { key: "OcrCode", label: "Kode" }, { key: "OcrName", label: "Nama" }, { key: "Active", label: "Aktif", fmt: badgeYN }], rows), "11_dimensions.sql"));
+  guard("projects", "Project", "12_projects.sql", "Opsional: project di baris Capitalization. Kalau file aset tidak berisi project, abaikan.", rows =>
+    add("info", "Project", `${rows.length} project`, "Opsional: project di baris Capitalization. Kalau file aset tidak berisi project, abaikan.",
+      table([{ key: "PrjCode", label: "Kode" }, { key: "PrjName", label: "Nama" }, { key: "Locked", label: "Dikunci", fmt: badgeYN }], rows), "12_projects.sql"));
+  guard("capitalization", "Aset dan dokumen yang sudah ada", "13_capitalization.sql", "Mencegah kode aset bentrok dan dokumen ganda. Kalau sudah ada isinya, cek dulu apa yang sudah masuk.", rows => {
+    const c = rows[0] || {}, assets = new Set(R("assets").map(a => a.ItemCode)).size, docs = +c.Dokumen || 0;
+    add(assets || docs ? "warn" : "ok", "Aset dan dokumen yang sudah ada", assets || docs ? `${assets} aset, ${docs} dokumen Capitalization` : "belum ada aset dan dokumen: mulai dari nol",
+      "Mencegah kode aset bentrok dan dokumen ganda. Kalau sudah ada isinya, cek dulu apa yang sudah masuk.",
+      `<p>${assets} aset di master data, ${docs} dokumen Capitalization${docs ? ` (${esc(c.Awal)} s.d. ${esc(c.Akhir)})` : ""}.</p>`, "13_capitalization.sql");
+  });
+  const L = { ok: ["yes", "Siap"], warn: ["warn", "Perlu dicek"], danger: ["danger", "Masalah"], info: ["info", "Info"] };
+  const n = s => items.filter(i => i.st === s).length;
+  const decide = [];
+  const per = d._periodSummary || [];
+  if (per.length) {
+    const first = +per[0].Category, closed = per.filter(o => o.Tertutup);
+    if (first > 2022) decide.push(["warn", `Tahun fiskal terlama di SAP adalah ${first}. Opsi A (kapitalisasi di tanggal perolehan asli) butuh tahun fiskal dan periode sebelum itu dibuat dan dibuka dulu.`]);
+    if (closed.length) decide.push(["warn", `Periode yang tidak terbuka: ${closed.map(o => o.Tutup.join(", ")).join("; ")}. Pilih: buka sementara, atau posting di periode yang terbuka dengan Asset Value Date sesuai cutoff (opsi B).`]);
+  }
+  decide.push(["info", "Keputusan manusia: opsi A atau B, tanggal cutoff, kolom akumulasi penyusutan yang dipakai, lokasi atau cost center yang belum ada, dan apakah cost center ikut diupload. Lihat panduan di docs/08_DB_Config/DTW/Asset."]);
+  const body = `<p class="sec-lead">Data pendukung yang harus ada sebelum aset di-upload, dibaca langsung dari DB tujuan (SELECT saja). Buka tiap baris untuk melihat tabelnya; muat ulang halaman setelah ada yang diperbaiki di SAP.</p>`
+    + callouts([["ok", `${n("ok")} siap`], ...(n("warn") ? [["warn", `${n("warn")} perlu dicek`]] : []), ...(n("danger") ? [["danger", `${n("danger")} bermasalah`]] : [])])
+    + items.map(i => `<details class="grp"><summary><span><b>${esc(i.title)}</b> <span class="muted">${esc(i.result)}</span></span><span class="badge ${L[i.st][0]}">${L[i.st][1]}</span></summary>
+        <p class="sec-lead">${esc(i.why)}</p>${i.tbl}<p class="muted">Query: <code>sql/fixed-asset/${esc(i.q)}</code></p></details>`).join("")
+    + callouts(decide);
+  return section("readiness", "Kesiapan upload aset", body, { no: "2.13.0" });
+}
 
 const one = r => rowsOf(r)[0] || {};
 const num = v => isEmpty(v) ? val(v) : esc((+v).toLocaleString("id-ID"));
@@ -277,6 +365,15 @@ function itemDetail(r, udf) {
   return head + tabs("item-detail", list);
 }
 
+// kolom "Menu 7 Addon" di Daftar UDO: status dari mapping (addonState); tombol hanya di mode dev karena mapping ikut dibundel ke war
+function udoMenu(r) {
+  const o = (addonState.objects || []).find(x => x.code === r.Code);
+  if (!o) return `<span class="muted">–</span>`;
+  if (r.TYPE !== "3") return o.shown ? `<span class="badge yes">Otomatis</span>` : `<span class="badge">Disembunyikan</span>`;
+  const btn = (act, lbl) => addonState.editable ? ` <button type="button" class="cbtn" data-act="${act}" data-code="${esc(o.code)}">${lbl}</button>` : "";
+  return o.shown ? `<span class="badge yes">Menu</span>${btn("udo-unmenu", "Batalkan")}` : (btn("udo-menu", "Jadikan menu").trim() || `<span class="muted">Tidak</span>`);
+}
+
 export const PAGES = {
   // ================= 2. Keuangan =================
   "coa": {
@@ -365,7 +462,7 @@ export const PAGES = {
   "fixed-asset": {
     lead: "Kelas aset tetap dan master data aset. Akun G/L aset tetap (account determination) ada di <a href=\"#/gl-determination\">G/L Account Determination</a>, tab Fixed Assets.",
     menu: "Administration › Setup › Fixed Assets › Asset Classes",
-    tables: ["OACS", "ACS1", "ODTP", "OADT"],
+    tables: ["OACS", "ACS1", "ODTP", "OADT", "OITM", "ITM7", "OFPR", "OLCT", "OITB", "NNM1", "OOCR", "OPRJ", "OACQ"],
     checks(d) {
       const classes = rowsOf(d.classes), dtn = Object.fromEntries(rowsOf(d.determination).map(x => [x.Code, x])), out = [];
       // depreciation type tanpa penyusutan (mis. Tanah) tidak butuh akun penyusutan
@@ -381,12 +478,19 @@ export const PAGES = {
             out.push(["warn", `Asset class ${name}, ${a.DprAreaID}: account determination ${a.AcctDtn} belum lengkap akun G/L-nya (${missing.join(", ")}).`]);
         });
       });
+      // master aset: kelas harus ada, parameter penyusutan harus ada (tanpa itu aset tidak bisa disusutkan)
+      const known = new Set(classes.map(c => c.Code)), assets = rowsOf(d.assets);
+      const noClass = [...new Set(assets.filter(a => a.AssetClass && !known.has(a.AssetClass)).map(a => a.AssetClass))];
+      if (noClass.length) out.push(["danger", `Aset memakai asset class yang tidak ada: ${noClass.join(", ")}.`]);
+      const hasDepr = new Set(assets.filter(a => !isEmpty(a.DprArea)).map(a => a.ItemCode));
+      const lack = [...new Set(assets.filter(a => !hasDepr.has(a.ItemCode)).map(a => a.ItemCode))];
+      if (lack.length) out.push(["warn", `${lack.length} aset belum punya parameter penyusutan (depreciation area, mulai, umur): ${lack.slice(0, 5).join(", ")}${lack.length > 5 ? " ..." : ""}.`]);
       return out;
     },
     render(d) {
       const types = Object.fromEntries(rowsOf(d.dep_types).map(t => [t.Code, t]));
       const deprType = v => { const t = types[v]; return t ? `${esc(v)}<span class="raw">${esc(DPR_METH[t.DprMeth] || t.DprMeth)}</span>` : val(v); };
-      return section("classes", "Asset Class", table([{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
+      return assetReadiness(d) + section("classes", "Asset Class", table([{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
           { key: "BPLName", label: "Branch" },
           { key: "AssetType", label: "Asset Type", fmt: codedCell(ASSET_TYPE) }, { key: "DprAreaID", label: "Depreciation Area" },
           { key: "AcctDtn", label: "Account Determination", fmt: v => isEmpty(v) ? val(v) : `<a href="#/gl-determination">${esc(v)}</a>` },
@@ -394,8 +498,12 @@ export const PAGES = {
           { key: "UseLife", label: "Masa manfaat (bulan)", num: 1 }, { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.classes)], rowsOf(d.classes)),
           { no: "2.13.1", lead: "Satu kelas bisa punya beberapa depreciation area (mis. komersial dan fiskal). Setiap kelas terikat ke satu branch: prefix T- = CV-TRADING, K- = CV-KOMERSIAL. "
             + "Kolom Depreciation Type ikut menampilkan metode penyusutannya." })
-        + section("assets", "Fixed Asset Master Data", `<div class="placeholder"><p style="margin:0;font-weight:600;color:var(--text)">Belum dikerjakan</p>
-            <p style="margin:4px 0 0">Daftar master aset tetap (item tipe Fixed Asset) per asset class akan ditampilkan di sini.</p></div>`, { no: "2.13.2" });
+        + section("assets", "Fixed Asset Master Data", table([{ key: "ItemCode", label: "Kode Aset" }, { key: "ItemName", label: "Nama" },
+          { key: "AssetClass", label: "Asset Class" }, { key: "ItmsGrpNam", label: "Item Group" }, { key: "DprArea", label: "Depreciation Area" },
+          { key: "DprStart", label: "Mulai penyusutan" }, { key: "UsefulLife", label: "Masa manfaat (bulan)", num: 1 },
+          { key: "DprType", label: "Depreciation Type", fmt: deprType }], rowsOf(d.assets)),
+          { no: "2.13.2", lead: "Item tipe Fixed Asset beserta parameter penyusutannya (satu baris per depreciation area). Nilai perolehan masuk lewat dokumen Asset Capitalization. "
+            + "Upload aset: Setup tahap E, langkah Fixed Asset Master Data (template T25) lalu Asset Capitalization (T26)." });
     }
   },
 
@@ -511,23 +619,25 @@ export const PAGES = {
       const byCode = rows => rows.reduce((m, r) => (m.get(r.CardCode) || m.set(r.CardCode, []).get(r.CardCode)).push(r) && m, new Map());
       const ctx = { contacts: byCode(rowsOf(d.contacts)), addresses: byCode(rowsOf(d.addresses)), udf: d.bp?.udf || [],
         branches: [...new Set(bp.flatMap(b => String(b.Branches || "").split("|")).filter(Boolean))] };
-      // Excel tetap satu sheet per tipe: semua BP + group-nya
-      const xCols = [{ key: "CardCode", label: "Kode" }, { key: "CardName", label: "Nama" }, { key: "Type", label: "Tipe" }, { key: "GroupName", label: "Group" },
-        { key: "Currency", label: "Mata uang", fmt: v => v === "##" ? "Semua" : val(v) }, { key: "LicTradNum", label: "NPWP" },
-        { key: "frozenFor", label: "Inactive", fmt: badgeYN }, { key: "Branches", label: "Branch", fmt: v => tags(v) }, ...udfCols(d.bp)];
       const tab = (t, name) => {
         const list = bp.filter(b => (b.CardType === "L" ? "C" : b.CardType) === t); // lead memakai customer group
-        return exportButton(xCols, list, name) + bpView(t, name, list, groups, ctx);
+        return bpView(t, name, list, groups, ctx);
       };
+      // Excel BP Master Data: satu file, satu sheet per query xl_* (sql/business-partners/1x_xl_*.sql), mengikuti tab layar BP Master Data
+      const xlsx = exportSheets(sqlSheets(d, { xl_general: "General", xl_contacts: "Contact Persons", xl_addresses: "Addresses",
+        xl_payment_terms: "Payment Terms", xl_bank_accounts: "Bank Accounts", xl_payment_run: "Payment Run",
+        xl_accounting_general: "Accounting - General", xl_accounting_tax: "Accounting - Tax", xl_wtax_codes: "WTax Codes",
+        xl_branch_assignment: "Branch Assignment" }), "BP Master Data");
       // Shipping Type hanya dipakai di BP (tab General), jadi ditampilkan di halaman ini
       const ships = rowsOf(d.shipping).map(x => ({ ...x, Used: bp.filter(b => b.ShipType === x.TrnspName).length }));
       const shipping = section("shipping", "Shipping Type", table([{ key: "TrnspCode", label: "Kode", num: 1 }, { key: "TrnspName", label: "Shipping Type" },
           { key: "WebSite", label: "Website" }, { key: "Active", label: "Aktif", fmt: badgeYN },
-          { key: "Used", label: "Dipakai BP", num: 1, fmt: v => v ? num(v) : `<span class="muted">0</span>` }, ...udfCols(d.shipping)], ships),
+          { key: "Used", label: "Dipakai BP", num: 1, fmt: v => v ? num(v) : `<span class="muted">0</span>` }, ...udfCols(d.shipping)], ships, { noExport: true }),
         { lead: "Administration › Setup › General › Shipping Types. Cara pengiriman default BP (tab General), ikut terbawa ke dokumen." });
-      return shipping + section("list", "Business Partner", tabs("bp", Object.entries(BP_TYPE).map(([t, name]) => [name, tab(t, name)])),
+      return shipping + section("list", "Business Partner", xlsx + tabs("bp", Object.entries(BP_TYPE).map(([t, name]) => [name, tab(t, name)])),
         { lead: "Pilih group di chip atas untuk menyaring, lalu klik BP di daftar kiri untuk melihat detailnya seperti layar BP Master Data. "
-          + "Arahkan kursor ke chip group untuk melihat price list default-nya." });
+          + "Arahkan kursor ke chip group untuk melihat price list default-nya. Tombol Excel mengunduh BP Master Data per tab layar SAP: "
+          + "General, Contact Persons, Addresses, Payment Terms, Bank Accounts, Payment Run, Accounting - General, Accounting - Tax, WTax Codes, Branch Assignment." });
     }
   },
 
@@ -590,22 +700,8 @@ export const PAGES = {
         { key: "Category", label: "Jenis", fmt: codedCell(LAYOUT_CAT) }, { key: "Author", label: "Pembuat" }], rowsOf(d.custom)))
   },
 
-  "sp-validation": {
-    lead: "Stored procedure SAP yang dijalankan setiap kali dokumen disimpan. Dipakai untuk validasi bisnis (mis. qty GRPO melebihi toleransi PO).",
-    menu: "Database HANA › Procedures",
-    tables: ["SYS.PROCEDURES"],
-    checks(d) {
-      const tn = rowsOf(d.procs).find(p => p.Name === "SBO_SP_TRANSACTIONNOTIFICATION");
-      if (!tn) return [["warn", "SBO_SP_TransactionNotification tidak ditemukan."]];
-      return +tn.Len < 1500 ? [["warn", "SBO_SP_TransactionNotification masih template bawaan SAP, belum ada validasi. Di blueprint referensi ada validasi PO/GRPO/cost center di sini."]] : [];
-    },
-    render(d) {
-      const procs = rowsOf(d.procs);
-      return procs.map(p => section(p.Name.toLowerCase(), p.Name, `<p class="sec-lead">${num(p.Len)} karakter.</p>
-        <details class="grp"><summary><span>Lihat isi procedure</span></summary>
-        <pre class="proc-src" style="margin:0;padding:14px;overflow:auto;max-height:420px;font-size:12.5px;border-top:1px solid var(--border)">${esc(p.Definition)}</pre></details>`)).join("");
-    }
-  },
+  // 4.4 daftar SP + breakdown SBO_SP per object: lihat sp-validation.js
+  "sp-validation": SP_PAGE,
 
   // ================= 5. Add-on & Kustomisasi STEM =================
   "udo": {
@@ -618,7 +714,9 @@ export const PAGES = {
         + section("list", "Daftar UDO", searchable("udo-t", [{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
           { key: "TYPE", label: "Tipe", fmt: codedCell(UDO_TYPE) }, { key: "TableName", label: "Tabel header", fmt: v => `<code>@${esc(v)}</code>` },
           { key: "ChildTables", label: "Tabel baris", fmt: v => isEmpty(v) ? "" : v.split(", ").map(t => `<code>@${esc(t)}</code>`).join(" ") },
-          { key: "MngSeries", label: "Series", fmt: badgeYN }, { key: "CanCancel", label: "Cancel", fmt: badgeYN }, { key: "CanLog", label: "Log", fmt: badgeYN }], u));
+          { key: "MngSeries", label: "Series", fmt: badgeYN }, { key: "CanCancel", label: "Cancel", fmt: badgeYN }, { key: "CanLog", label: "Log", fmt: badgeYN },
+          { key: "_menu", label: "Menu 7 Addon", fmt: (_, r) => udoMenu(r) }], u),
+          { lead: "UDO Master Data otomatis jadi menu di bab 7 Addon. UDO Document bisa dijadikan menu kalau isinya lebih cocok dicek sebagai master data (mode dev); sub kategorinya diatur di Setup › Mapping Add-on." });
     }
   },
 

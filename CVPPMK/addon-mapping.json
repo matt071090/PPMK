@@ -1,0 +1,108 @@
+{
+  "categories" : [ "Farm Breeding", "STEM Addon" ],
+  "objects" : {
+    "STEM_ACCGIGRMAP" : {
+      "cat" : "STEM Addon"
+    },
+    "STEM_APPROVAL" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_BOMCOS" : {
+      "cat" : "STEM Addon",
+      "master" : true
+    },
+    "STEM_BOMMAP" : {
+      "cat" : "STEM Addon",
+      "master" : true
+    },
+    "STEM_BONUSTYPE" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_DRAFT_MODAL" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_EXPMAP" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_MASTERAUDIT" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_MASTERSURVEY" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_MODULEIFLOCS" : {
+      "cat" : "STEM Addon"
+    },
+    "STEM_MSTATAUDIT" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_MSTD" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_MSTDANALYSIS" : {
+      "cat" : "Farm Breeding",
+      "master" : true
+    },
+    "STEM_MTMPLSURVEY" : {
+      "cat" : "Farm Breeding",
+      "master" : true
+    },
+    "STEM_QSTD" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_REJECT" : {
+      "cat" : "STEM Addon"
+    },
+    "STEM_REPORTWEB" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_SERIESJE" : {
+      "cat" : "STEM Addon"
+    },
+    "STEM_SERIESMAP" : {
+      "cat" : "STEM Addon"
+    },
+    "STEM_SERIESRWK" : {
+      "cat" : "STEM Addon"
+    },
+    "STEM_SPECCRITERIA" : {
+      "cat" : "STEM Addon"
+    },
+    "STEM_STATSMAP" : {
+      "cat" : "Farm Breeding"
+    },
+    "STEM_STDSPEC" : {
+      "cat" : "STEM Addon"
+    },
+    "STEM_TYPEOFSTAT" : {
+      "cat" : "Farm Breeding"
+    },
+    "ST_MACHINE" : {
+      "cat" : "Farm Breeding"
+    },
+    "ST_PARAM" : {
+      "cat" : "STEM Addon"
+    },
+    "ST_PARAMREPORT" : {
+      "cat" : "Farm Breeding"
+    },
+    "ST_RTYPE" : {
+      "cat" : "STEM Addon"
+    },
+    "ST_SHIFT" : {
+      "cat" : "STEM Addon"
+    },
+    "ST_STATGRP" : {
+      "cat" : "Farm Breeding"
+    },
+    "ST_UDWC" : {
+      "cat" : "STEM Addon"
+    },
+    "ST_WCGROUP" : {
+      "cat" : "STEM Addon"
+    },
+    "ST_WCWHS_MAP" : {
+      "cat" : "STEM Addon"
+    }
+  }
+}

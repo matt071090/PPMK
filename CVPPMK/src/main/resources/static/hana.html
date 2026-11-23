@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tools · CVPPMK</title>
+<link rel="stylesheet" href="css/app.css">
+<style>.hn .chips[role=tablist] { display: none; }</style>
+<script>try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch { }</script>
+</head>
+<body class="setup-app">
+<!-- Halaman Tools (ikut dibundel ke war, tidak bergantung setup.html): navigasi Backup | Restore | Riwayat HANA.
+     Bukan bagian menu Setup; setup.html#/hana hanya dipakai untuk membuka kunci password Setup. -->
+<header class="top">
+  <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-label="Buka menu">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="logo">PP</span>
+    <span><small>Tools</small><span>CV. Putra Prima Mandiri Kediri</span></span></a>
+  <a class="edit-btn back-btn" href="index.html" title="Kembali ke dokumentasi Project Check List">
+    <svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><path d="M11.5 5L6.5 10l5 5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Dokumentasi</span>
+  </a>
+  <button class="icon-btn" id="theme-btn" type="button" aria-label="Ganti tema terang/gelap">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
+  </button>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" aria-label="Menu Tools">
+    <nav id="nav">
+      <div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">⛁</span>Database HANA</button>
+        <ul>
+          <li><a href="#/backup" data-id="backup"><span class="no">1</span><span>Backup</span></a></li>
+          <li><a href="#/restore" data-id="restore"><span class="no">2</span><span>Restore</span></a></li>
+          <li><a href="#/pindah" data-id="pindah"><span class="no">3</span><span>Pindahkan file</span></a></li>
+          <li><a href="#/riwayat" data-id="riwayat"><span class="no">4</span><span>Riwayat</span></a></li>
+        </ul></div>
+      <div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">▤</span>Crystal Report</button>
+        <ul>
+          <li><a href="rpt.html"><span class="no">1</span><span>RPT Editor</span></a></li>
+        </ul></div>
+      <div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">✓</span>Audit SAP</button>
+        <ul>
+          <li><a href="countdoc.html"><span class="no">1</span><span>Count Document</span></a></li>
+        </ul></div>
+    </nav>
+  </aside>
+  <main class="content"><article class="article" id="article"></article></main>
+</div>
+
+<script type="module">
+import { hanaPage } from "./js/pages/hana.js";
+const $ = s => document.querySelector(s);
+$("#theme-btn").onclick = () => {
+  const el = document.documentElement, dark = el.dataset.theme ? el.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  el.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", el.dataset.theme); } catch { }
+};
+$("#menu-btn").onclick = () => document.body.classList.toggle("nav-open");
+$("#nav .nav-group > button").onclick = e => { const g = e.currentTarget.parentElement; g.classList.toggle("collapsed"); e.currentTarget.setAttribute("aria-expanded", !g.classList.contains("collapsed")); };
+
+const TITLES = { backup: "Backup database", restore: "Restore database", pindah: "Pindahkan file backup", riwayat: "Riwayat backup & restore" };
+const cur = () => (location.hash.match(/^#\/?(backup|restore|pindah|riwayat)/) || [])[1] || "backup";
+const mark = () => {
+  const t = cur();
+  document.querySelectorAll("#nav a[data-id]").forEach(a => a.classList.toggle("active", a.dataset.id === t));
+  document.title = `${TITLES[t]} · Tools CVPPMK`;
+  const h = $("#pg-title"); if (h) h.textContent = TITLES[t];
+  document.body.classList.remove("nav-open");
+};
+const page = hanaPage({ hashTabs: true }), art = $("#article");
+art.innerHTML = `<nav class="crumbs" aria-label="Breadcrumb"><span>Tools</span><span>Database HANA</span></nav>
+  <h1 id="pg-title"></h1><p class="lead">${page.lead}</p>${page.render()}`;
+mark();
+window.addEventListener("hashchange", mark);
+page.mount(art);
+</script>
+</body>
+</html>

@@ -52,12 +52,12 @@ public class SetupController {
     private final ServiceLayerClient sl;
     private final Environment env;
     private final ObjectMapper json;
-    private final boolean editable;
+    private final SetupAccessController access;
     private final String dsUrl, dsUser, dsPass, schemaFilter;
     private final List<String> sourceDbs, otherSources;
 
     public SetupController(JdbcTemplate jdbc, ServiceLayerClient sl, Environment env, ObjectMapper json,
-                           @Value("${docs.edit.enabled:true}") boolean editable,
+                           SetupAccessController access,
                            @Value("${spring.datasource.url}") String dsUrl,
                            @Value("${spring.datasource.username}") String dsUser,
                            @Value("${spring.datasource.password}") String dsPass,
@@ -70,7 +70,7 @@ public class SetupController {
         this.sl = sl;
         this.env = env;
         this.json = json;
-        this.editable = editable;
+        this.access = access;
         this.dsUrl = dsUrl;
         this.dsUser = dsUser;
         this.dsPass = dsPass;
@@ -85,11 +85,17 @@ public class SetupController {
         return out;
     }
 
-    // War di Tomcat = web dokumentasi saja: semua endpoint setup (termasuk baca DB sumber) ditutup, bukan cuma upload.
-    // @ModelAttribute dijalankan sebelum setiap handler di controller ini.
+    // Semua endpoint setup (termasuk baca DB sumber) hanya untuk sesi yang Setup-nya terbuka: mode debug, atau war
+    // setelah password docs.setup.password benar (SetupAccessController). @ModelAttribute jalan sebelum setiap handler di sini.
     @ModelAttribute
-    public void requireEditMode() {
-        if (!editable) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Setup hanya tersedia di mode dev / edit");
+    public void requireSetupAccess(javax.servlet.http.HttpServletRequest req) {
+        access.require(req);
+    }
+
+    // pesan error dikirim ke browser sebagai {message} (default Spring Boot menyembunyikan pesan error)
+    @ExceptionHandler(ResponseStatusException.class)
+    public org.springframework.http.ResponseEntity<Map<String, String>> error(ResponseStatusException e) {
+        return org.springframework.http.ResponseEntity.status(e.getStatus()).body(Collections.singletonMap("message", e.getReason()));
     }
 
     // ---------- langkah ----------
@@ -265,7 +271,6 @@ public class SetupController {
      */
     @PostMapping("/{id:[a-z0-9-]+}/upload")
     public Map<String, Object> upload(@PathVariable String id, @RequestBody JsonNode body) throws IOException {
-        if (!editable) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Upload hanya tersedia di mode dev / edit");
         JsonNode step = step(id);
         requireData(step);
         String entity = step.path("entity").asText();
