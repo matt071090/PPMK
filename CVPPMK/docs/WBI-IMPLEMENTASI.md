@@ -13,6 +13,7 @@ Count Document dari branch fitur juga dibawa; sumber lokal D:/STEM/GitHub/PPMK/C
 - Branch: required dan lookup warehouse/asset class tetap, numbering tanpa branch tetap opsional, serta raw U_BRANCH Shift tetap mengikuti perilaku lama. Nol hanya boleh merujuk branch yang memang ada, bukan penanda semua branch. Tes memeriksa create/update, kosong/0/valid/tak dikenal.
 - Server mengulang required dan validasi ID branch berdasarkan OBPL tujuan. ST_SHIFT memeriksa keberadaan U_BRANCH secara terpisah di koneksi sumber dan tujuan; jika absen, query menggunakan alias NULL. Farm Breeding Tier G memeriksa tabel tujuan dan menampilkan “tidak tersedia di company ini”, serta menolak upload langsung jika tabel belum terpasang.
 - Data sumber ber-branch menuju non-branch harus dikosongkan eksplisit; tidak ada pelepasan branch diam-diam. Ini mengikuti spek user dan berbeda dari usulan QA-04 dalam laporan survei. Nilai 0 tetap ditolak pada non-branch, berbeda dari pembacaan longgar QA-02. Duplikat kode/nama series tetap ditandai Error.
+- Arahan lanjutan Fakhri: WBI memakai addon Retail, sehingga profil WBI menonaktifkan **seluruh Tier G Farm Breeding** dengan pesan jelas, termasuk langkah yang tabelnya kebetulan sama dengan Retail. Tidak menambah langkah Retail sampai katalog disetujui. Pemeriksaan tabel otomatis tetap berlaku untuk instalasi lain yang mengaktifkan Farm Breeding.
 
 ## Konfigurasi, chat, favicon
 

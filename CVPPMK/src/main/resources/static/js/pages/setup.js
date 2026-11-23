@@ -288,6 +288,7 @@ function stepHead(step) {
     </div>`;
 }
 function stepPage(step) {
+  if (step.unavailable) return { lead: 'Modul ini tidak digunakan di company tujuan.', render: () => `<p class="sx-note-box">${esc(step.note)}</p>` };
   if (step.kind === "setting") return {
     lead: "Langkah setting: dicek dan diatur manual di SAP B1, tidak di-upload dari sini.",
     doc: step.doc,

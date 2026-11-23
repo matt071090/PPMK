@@ -102,7 +102,12 @@ public class SetupController {
     @GetMapping("/steps")
     public JsonNode steps() throws IOException {
         try (InputStream in = new ClassPathResource("setup/steps.json").getInputStream()) {
-            return json.readTree(in);
+            JsonNode steps = json.readTree(in);
+            if (!env.getProperty("setup.farm-breeding.enabled", Boolean.class, true))
+                for (JsonNode step : steps) if ("G".equals(step.path("tier").asText()))
+                    ((ObjectNode)step).put("upload", false).put("unavailable", true)
+                        .put("note", "Tidak tersedia di company ini: modul Farm Breeding dinonaktifkan. Setup addon Retail memakai katalog terpisah setelah disetujui.");
+            return steps;
         }
     }
 
@@ -239,6 +244,12 @@ public class SetupController {
     public Map<String, Object> data(@PathVariable String id, @RequestParam(required = false) String src) throws IOException {
         JsonNode step = step(id);
         requireData(step);
+        if (step.path("unavailable").asBoolean()) {
+            Map<String, Object> unavailable = new LinkedHashMap<>();
+            unavailable.put("unavailable", true); unavailable.put("message", step.path("note").asText());
+            unavailable.put("columns", Collections.emptyList()); unavailable.put("rows", Collections.emptyList());
+            return Collections.singletonMap("target", unavailable);
+        }
         String sql = stepSql(id);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("generatedAt", LocalDateTime.now().withNano(0).toString());
@@ -375,7 +386,7 @@ public class SetupController {
         requireData(step);
         String entity = step.path("entity").asText();
         if (!step.path("upload").asBoolean(true) || entity.isEmpty())
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Langkah '" + id + "' belum bisa di-upload (bandingkan & export saja)");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, step.path("unavailable").asBoolean() ? step.path("note").asText() : "Langkah '" + id + "' belum bisa di-upload (bandingkan & export saja)");
         boolean keyString = step.path("keyString").asBoolean(false);
         // langkah lewat aksi service (mis. SeriesService_AddSeries) dan bukan entity: body dibungkus, key ikut di dalam body
         JsonNode svc = step.path("action");

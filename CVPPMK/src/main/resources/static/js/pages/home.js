@@ -154,7 +154,7 @@ async function loadHealth(fresh) {
 }
 
 async function loadCompany() {
-  if (company.code) { $('#company-name').textContent = company.name; document.title = `Home · ${company.name}`; return; }
+  if (company.code) { $('#company-name').textContent = company.name; $('#home-company-logo').textContent = company.code.toUpperCase(); document.title = `Home · ${company.name}`; return; }
   try {
     const d = await getJson('api/section/company-details', 30000), r = d.results && d.results.company;
     const i = r && r.columns ? r.columns.indexOf('CompnyName') : -1;
