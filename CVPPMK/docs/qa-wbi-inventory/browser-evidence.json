@@ -1,8 +1,8 @@
 {
   "scenarios": 1,
   "checks": [
-    "40 activities, 6 area rows, 12 milestones and Kick Off +8 days; separate 19:00 and 22:00 inventory rows",
-    "Two location timelines retain full seed labels in headings/rules and short card labels; no 390px page overflow; STEM PIC locked",
+    "40 activities, 6 area rows, 14 timeline cards and Kick Off +8 days; separate 19:00 and 22:00 inventory rows",
+    "One combined timeline merges count/cutoff and preserves distinct handover/upload times; no 390px page overflow; STEM PIC locked",
     "Non-admin STEM PIC tampering returns 403; free opname PIC saves without overwriting STEM or other PIC",
     "ASSUMPTION: unlocked admin editor can override STEM PIC and save it",
     "Home totals 40; CV retains 37 activities, 5 area rows and its single original inventory flow"
@@ -11,7 +11,9 @@
     "inventory-desktop.png",
     "pic-table-desktop.png",
     "inventory-mobile.png",
-    "pic-table-mobile.png"
+    "pic-table-mobile.png",
+    "main-timeline-desktop.png",
+    "main-timeline-mobile.png"
   ],
   "errors": []
 }

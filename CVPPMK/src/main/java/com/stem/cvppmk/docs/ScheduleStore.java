@@ -113,7 +113,7 @@ public class ScheduleStore {
                 for (String key : Arrays.asList("handoverTime", "uploadTime")) {
                     text(item, key, 11);
                     String time = item.path(key).asText();
-                    require(time.isEmpty() || time.matches("(?:[01][0-9]|2[0-3]):[0-5][0-9](?:-(?:[01][0-9]|2[0-3]):[0-5][0-9])?"), "Jam harus HH:mm atau HH:mm-HH:mm.");
+                    require(time.isEmpty() || "24:00".equals(time) || time.matches("(?:[01][0-9]|2[0-3]):[0-5][0-9](?:-(?:[01][0-9]|2[0-3]):[0-5][0-9])?"), "Jam harus HH:mm atau HH:mm-HH:mm.");
                     require(time.length() != 11 || time.substring(0,5).compareTo(time.substring(6)) <= 0, "Urutan jam tidak valid.");
                 }
             } else {

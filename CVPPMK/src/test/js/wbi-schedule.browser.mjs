@@ -13,15 +13,15 @@ const page=await context.newPage();page.on('pageerror',e=>evidence.errors.push(e
 const open=async(path,port=18635)=>{await page.goto(`http://127.0.0.1:${port}/${path}`);await page.waitForFunction(()=>document.querySelector('#view .activity-table')||document.querySelector('#home .m-sched .big'));};
 try {
  await open('schedule.html#/ringkasan');assert.match(await page.locator('.progress-line').innerText(),/0 dari 40 kegiatan selesai/);assert.match(await page.locator('.next').innerText(),/Kick Off.*8 hari/);
- assert.equal(await page.locator('.area-table tbody tr').count(),6);assert.equal(await page.locator('#view .timeline-card').count(),12);
+ assert.equal(await page.locator('.area-table tbody tr').count(),6);assert.equal(await page.locator('#view .timeline-card').count(),14);
  const area=page.locator('.area-table tbody tr');
  assert.match(await area.filter({hasText:'Inventory Produksi / Pabrik / Central Kitchen'}).innerText(),/19:00.*19:00-20:00/s);
- assert.match(await area.filter({hasText:'Inventory Toko / Store'}).innerText(),/22:00.*ASUMSI:.*setelah 22:00/s);
+ assert.match(await area.filter({hasText:'Inventory Toko / Store'}).innerText(),/22:00.*24:00/s);
  const nav=await page.locator('#nav [data-tab]').evaluateAll(as=>as.filter(a=>!a.closest('li').hidden).map(a=>a.dataset.tab));assert.deepEqual(nav,['ringkasan','master','stock','balance']);
- evidence.checks.push('40 activities, 6 area rows, 12 milestones and Kick Off +8 days; separate 19:00 and 22:00 inventory rows');
- await open('schedule.html#/stock');assert.equal(await page.locator('#inventory-flows .timeline-shell').count(),2);assert.equal(await page.locator('#inventory-flows .timeline-card').count(),8);
- assert.match(await page.locator('#inventory-flows h3').first().innerText(),/^Produksi \/ Pabrik \/ Central Kitchen$/);assert.equal(await page.locator('#inventory-flows h3').nth(1).innerText(),'Toko / Store');
- const tokoUpload=page.locator('.timeline-card').filter({has:page.locator('b',{hasText:/Upload SAP Toko\/Store/})});assert.match(await tokoUpload.innerText(),/ASUMSI:.*setelah 22:00/s);assert.doesNotMatch(await tokoUpload.innerText(),/22:00-\d/);
+ evidence.checks.push('40 activities, 6 area rows, 14 timeline cards and Kick Off +8 days; separate 19:00 and 22:00 inventory rows');
+ await open('schedule.html#/stock');assert.equal(await page.locator('#inventory-flows .timeline-shell').count(),1);assert.equal(await page.locator('#inventory-flows .timeline-card').count(),6);
+ assert.match(await page.locator('#inventory-flows .timeline-card').first().innerText(),/Produksi\/Pabrik · Toko\/Store/);
+ const tokoUpload=page.locator('.timeline-card').filter({has:page.locator('b',{hasText:/Upload SAP Toko\/Store/})});assert.match(await tokoUpload.getAttribute("title"),/24:00/s);assert.doesNotMatch(await tokoUpload.innerText(),/22:00-\d/);
  assert.match(await page.locator('.rules').innerText(),/Produksi \/ Pabrik \/ Central Kitchen:.*19:00-20:00.*Toko \/ Store:.*22:00/s);
  assert.equal(await page.locator('[data-pic="inventory"]').count(),0);assert.equal(await page.locator('[data-pic="inventory-toko"]').count(),0);assert.equal(await page.locator('[data-pic="inventory-upload-toko"]').count(),0);
  assert.equal(await page.locator('[data-pic="opname-toko"]').count(),1);assert.match(await page.locator('.activity-table').innerText(),/STEM.*terkunci/s);
@@ -34,7 +34,9 @@ try {
   await page.evaluate(()=>document.querySelectorAll('body>header,.chat-fab').forEach(e=>e.style.visibility=''));
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  }
- evidence.checks.push('Two location timelines retain full seed labels in headings/rules and short card labels; no 390px page overflow; STEM PIC locked');
+ for(const [device,width]of [['desktop',1440],['mobile',390]]){await page.setViewportSize({width,height:1000});await open('schedule.html#/ringkasan');await page.locator('#view .timeline-shell').screenshot({path:new URL(`main-timeline-${device}.png`,out).pathname});evidence.screenshots.push(`main-timeline-${device}.png`);}
+ await open('schedule.html#/stock');
+ evidence.checks.push('One combined timeline merges count/cutoff and preserves distinct handover/upload times; no 390px page overflow; STEM PIC locked');
  const saved=await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()));assert.equal(saved.data.items.filter(i=>i.pic==='STEM').length,8);
  const denied=await page.evaluate(async doc=>{doc.data.items.find(i=>i.id==='inventory-upload-toko').pic='Tidak boleh';return(await fetch('api/schedule',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({rev:doc.rev,data:doc.data})})).status;},saved);assert.equal(denied,403);
  const freePic=`Tim Toko ${saved.rev+1}`;await page.locator('[data-pic="opname-toko"]').fill(freePic);await page.locator('[data-pic="opname-toko"]').press('Tab');await page.locator('#save').click();await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Jadwal tersimpan'));

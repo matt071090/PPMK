@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {scheduleTabs,progress,groupProgress,timelineMilestones,nextMilestone,countdown,cardNote,withFixedPic,areaStatus,timelinePosition,inventoryLocations,inventoryFlow,balanceTimeline,shortInventoryTitle,isInventoryActivity} from '../../main/resources/static/js/pages/schedule.js';
+import {scheduleTabs,progress,groupProgress,timelineMilestones,nextMilestone,countdown,cardNote,withFixedPic,areaStatus,timelinePosition,inventoryLocations,combinedInventoryFlow,inventoryFlow,balanceTimeline,shortInventoryTitle,isInventoryActivity} from '../../main/resources/static/js/pages/schedule.js';
 const read=name=>JSON.parse(readFileSync(new URL(`../../main/resources/schedule/${name}.json`,import.meta.url)));
 const wbi=read('default-wbi'),cv=read('default'),get=id=>wbi.items.find(i=>i.id===id);
 const stemIds=['upload-master','inventory','inventory-upload','inventory-toko','inventory-upload-toko','ap-ar','fa','gl'];
@@ -11,11 +11,11 @@ test('WBI has 40 activities, 18 milestones, 16 master and 6 balance; no Training
  assert.equal(new Set(wbi.items.map(i=>i.id)).size,40);
  assert.equal(get('master-E0').title,'Add-On Master Data (STEM, Retail, iReapBiz)');
 });
-test('Pabrik times retained; Toko deadline 22:00 and unknown upload finish are explicit assumptions',()=>{
+test('Pabrik times retained; Toko deadline 22:00 and upload starts at 24:00 without changing the date',()=>{
  assert.equal(get('balance-inv').handoverTime,'19:00');assert.equal(get('balance-inv').uploadTime,'19:00-20:00');
- assert.equal(get('balance-inv-toko').handoverTime,'22:00');assert.equal(get('balance-inv-toko').uploadTime,'');
+ assert.equal(get('balance-inv-toko').handoverTime,'22:00');assert.equal(get('balance-inv-toko').uploadTime,'24:00');
  assert.match(get('inventory-toko').note,/31 Desember 2026 pukul 22:00/);
- assert.match(get('inventory-upload-toko').note,/^ASUMSI:.*setelah 22:00/);
+ assert.match(get('inventory-upload-toko').note,/pukul 24:00.*pukul 22:00/);
  for(const id of ['opname','cutoff','inventory','inventory-upload']){
   assert.equal(get(id).startDate,get(id+'-toko').startDate);assert.equal(get(id).endDate,get(id+'-toko').endDate);
   assert.match(get(id).title,/Produksi \/ Pabrik \/ Central Kitchen/);assert.match(get(id+'-toko').title,/Toko \/ Store/);
@@ -35,12 +35,13 @@ test('WBI 4 tabs and CV 5 tabs; progress/areas/master groups and Kick Off remain
  assert.equal(timelineMilestones(wbi.items).length,12);assert.equal(timelineMilestones(cv.items).length,11);
  assert.ok(Number.isFinite(timelinePosition(timelineMilestones(wbi.items),'2026-12-30')));
 });
-test('location labels originate in seed, inventory flows each have four stages and assumptions survive card shortening',()=>{
+test('location labels originate in seed; one combined flow preserves all distinct times',()=>{
  const locations=inventoryLocations(wbi.items);assert.equal(locations.length,2);
  assert.equal(locations[0].label,'Produksi / Pabrik / Central Kitchen');assert.equal(locations[0].shortLabel,'Produksi/Pabrik');assert.equal(locations[1].shortLabel,'Toko/Store');
  for(const l of locations)assert.equal(inventoryFlow(l).length,4);
- assert.equal(inventoryFlow(locations[0])[2].time,'19:00');assert.equal(inventoryFlow(locations[1])[2].time,'22:00');assert.equal(inventoryFlow(locations[1])[3].time,'');
- assert.match(cardNote(inventoryFlow(locations[1])[3].note),/^ASUMSI:.*setelah 22:00/);
+ assert.equal(inventoryFlow(locations[0])[2].time,'19:00');assert.equal(inventoryFlow(locations[1])[2].time,'22:00');assert.equal(inventoryFlow(locations[1])[3].time,'24:00');
+ assert.deepEqual(combinedInventoryFlow(wbi.items).map(e=>e.time||''),['','','19:00','19:00-20:00','22:00','24:00']);
+ assert.equal(combinedInventoryFlow(wbi.items).length,6);assert.match(combinedInventoryFlow(wbi.items)[0].title,/Produksi\/Pabrik · Toko\/Store/);
  assert.equal(shortInventoryTitle(get('opname').title,wbi.items),'Stock Opname Produksi/Pabrik');
  assert.equal(balanceTimeline(wbi.items).length,8);assert.equal(balanceTimeline(cv.items).length,6);
  for(const id of ['opname-toko','cutoff-toko','inventory-toko','inventory-upload-toko'])assert.equal(isInventoryActivity(id),true);
@@ -49,4 +50,10 @@ test('shared fixed-PIC projection locks only seed-marked STEM activities and pre
  const ids=wbi.items.filter(i=>i.pic==='STEM').map(i=>i.id);assert.deepEqual(ids.sort(),[...stemIds].sort());
  const projected=withFixedPic(wbi.items,true,ids,true);assert.equal(projected.filter(i=>i.picFixed).length,8);assert.equal(projected.find(i=>i.id==='opname').picFixed,undefined);
  const override=withFixedPic([{id:'inventory-upload-toko',pic:'STEM pengganti'}],true,ids,true)[0];assert.equal(override.pic,'STEM pengganti');assert.equal(override.picFixed,true);
+});
+
+test('WBI seed and shared schedule UI contain client-facing language only; midnight retains Dec 31',()=>{
+ assert.doesNotMatch(JSON.stringify(wbi),/asumsi|Fakhri|koordinator|TODO|FIXME|worker/i);
+ assert.doesNotMatch(readFileSync(new URL('../../main/resources/static/js/pages/schedule.js',import.meta.url),'utf8'),/asumsi|Fakhri|koordinator|TODO|FIXME|worker/i);
+ assert.equal(get('inventory-upload-toko').startDate,'2026-12-31');assert.equal(countdown(get('inventory-upload-toko').endDate,'2026-12-31'),0);
 });

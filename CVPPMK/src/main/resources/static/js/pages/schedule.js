@@ -44,7 +44,7 @@ const NOTE_TIME = /\b\d{1,2}[:.]\d{2}\b/;
 const NOTE_YEAR = /\b20\d{2}\b/;
 export function cardNote(note) {
   return String(note || '').split(/(?<=[.;])\s+/).map(s => s.trim())
-    .filter(s => s && (/^ASUMSI:/i.test(s) || !(NOTE_DAY.test(s) || NOTE_DATE.test(s) || NOTE_TIME.test(s) || NOTE_YEAR.test(s))))
+    .filter(s => s && !(NOTE_DAY.test(s) || NOTE_DATE.test(s) || NOTE_TIME.test(s) || NOTE_YEAR.test(s)))
     .map(s => s.replace(/;$/, '.').replace(/^./, c => c.toUpperCase())).join(' ');
 }
 // Pekerjaan konsultan STEM: PIC otomatis "STEM" dan tidak bisa diubah (ubah daftar ini bila pembagian kerja berubah).
@@ -168,6 +168,19 @@ export function inventoryFlow(loc) {
     {id:'st-serah'+loc.suffix,title:'Serah ke STEM'+label,startDate:b.handoverDate,endDate:b.handoverDate,status:loc.handover.status,note:loc.label ? loc.handover.note : '',time:b.handoverTime,target},
     {id:'st-upload'+loc.suffix,title:'Upload SAP'+label,startDate:b.uploadDate,endDate:b.uploadDate,status:(loc.upload||b).status,note:!b.uploadTime ? b.note : 'Dicek tim perusahaan.',time:b.uploadTime,target}
   ];
+}
+// Merge matching physical-count/cutoff cards only; distinct handover/upload times keep their own cards.
+export function combinedInventoryFlow(items) {
+  const locations=inventoryLocations(items), out=[];
+  for (const loc of locations) for (const [stage,e] of inventoryFlow(loc).entries()) {
+    const previous=stage<2 && out.find(x=>x.stage===stage && x.startDate===e.startDate && x.endDate===e.endDate && x.time===e.time);
+    if(previous) {
+      previous.title=(stage===0?'Hitung fisik':'Cut off inventory')+' '+locations.filter(l=>previous.ids.includes('st-'+(stage===0?'opname':'cutoff')+l.suffix)||l===loc).map(l=>l.shortLabel).join(' · ');
+      previous.ids.push(e.id); previous.status=rollupStatus([previous.status,e.status]);
+      previous.note=stage===0?'Hitung fisik oleh tim perusahaan, tanpa penerimaan/pengiriman.':'';
+    } else out.push({...e,stage,ids:[e.id]});
+  }
+  return out.sort((a,b)=>a.startDate.localeCompare(b.startDate)||(a.time||'').localeCompare(b.time||'')||a.stage-b.stage);
 }
 export function balanceTimeline(items) {
   const get = id => items.find(it => it.id === id);
@@ -313,7 +326,7 @@ function mount() {
     // Garis waktu bersama (Ringkasan dan Stock Opname). Entri: {id,title,startDate,endDate,status,note,target,time?}. Tanggal/jam di sumbu, bukan di kartu.
     const timelineHtml = (list, nextId, marker) => `<div class="timeline-shell"><ol class="timeline${list.length<=6?' wide':''}" style="--count:${list.length || 1}">${list.map((e,i)=>{
       const status=effectiveStatus(e.status,e.endDate), short=compactTimelineDate(e.startDate,e.endDate);
-      const note=cardNote(e.note || ''), summary=note.length>90 && !/^ASUMSI:/i.test(note) ? note.slice(0,87)+'…' : note, title=shortInventoryTitle(e.title,all), sub=esc(short.year)+(e.time?' · '+esc(e.time):'');
+      const note=cardNote(e.note || ''), summary=note.length>90 ? note.slice(0,87)+'…' : note, title=shortInventoryTitle(e.title,all), sub=esc(short.year)+(e.time?' · '+esc(e.time):'');
       return `<li class="${i%2?'below':'above'} ${e.id===nextId?'upcoming':''}" style="--slot:${i+1};--tone:var(--tl-${i%5})"><span class="timeline-dot ${status}" aria-hidden="true">${status==='selesai'?'✓':status==='telat'?'!':''}</span><span class="timeline-stem" aria-hidden="true"></span><span class="timeline-date" aria-hidden="true">${esc(short.label)}<small>${sub}</small></span><a class="timeline-card" href="#/${e.target}" title="${esc(e.title+' · '+format(e.startDate)+(e.endDate!==e.startDate?' s/d '+format(e.endDate):'')+(e.time?' · '+e.time:'')+(note?' · '+note:''))}"><span class="mobile-date">${esc(short.label)} <small>${sub}</small></span><b>${esc(title)}</b>${summary?`<span class="timeline-note">${esc(summary)}</span>`:''}${badge(status)}${e.id===nextId?'<span class="next-label">Berikutnya</span>':''}<span class="sr-only">${dates(e)}</span></a></li>`;
     }).join('')}</ol>${marker!==null&&marker!==undefined?`<span class="timeline-today" style="--position:${marker/100}" title="${esc(format(todayLocal()))}"><span>Hari ini</span></span>`:''}</div>`;
     const rules = doc.data.rules.filter((rule,i)=>tab==='ringkasan'||i===0&&tab==='master');
@@ -333,7 +346,9 @@ function mount() {
       if(next && !timeline.some(it=>it.id===next.id)) timeline.push(next);
       timeline.sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.id.localeCompare(b.id));
       const locations=inventoryLocations(all);
-      const entries=timeline.map(entryOf).map(e=>{
+      const entries=locations.length>1 ? [
+        ...timeline.filter(it=>!isInventoryActivity(it.id)).map(entryOf), ...combinedInventoryFlow(all)
+      ].sort((a,b)=>a.startDate.localeCompare(b.startDate)||(a.time||'').localeCompare(b.time||'')) : timeline.map(entryOf).map(e=>{
         const loc=locations.find(l=>l.handover?.id===e.id);
         if(!loc?.upload) return e;
         return {...e,title:'Serah & upload '+(loc.label||'inventory'),status:rollupStatus([e.status,loc.upload.status]),time:loc.balance.uploadTime||loc.balance.handoverTime,note:loc.balance.uploadTime?e.note:loc.balance.note};
@@ -352,7 +367,7 @@ function mount() {
       for (const ids of [...inventoryLocations(all).map(l=>[l.balance.id]),['balance-ap','balance-ar'],['balance-asset'],['balance-ledger']]) {
         const group = ids.map(get).filter(Boolean); if(!group.length) continue;
         // Jika A/P dan A/R diedit berbeda, tampilkan kedua jadwal dengan label.
-        const values = (key,time) => group.map(it=>`${group.length>1?esc(it.title)+': ':''}${esc(format(it[key]))} ${time?esc(it[time] || (time==='uploadTime' && /^ASUMSI:/i.test(it.note) ? it.note : '')):''}`).join('<br>');
+        const values = (key,time) => group.map(it=>`${group.length>1?esc(it.title)+': ':''}${esc(format(it[key]))} ${time?esc(it[time] || ''):''}`).join('<br>');
         html += row(group.length>1?'A/P dan A/R':group[0].title,values('cutoffDate'),values('handoverDate','handoverTime'),values('uploadDate','uploadTime'),group);
       }
       html += '</tbody></table></div><p>Status area menggabungkan checklist terkait; milestone dan checklist tetap disimpan terpisah.</p>';
@@ -361,9 +376,8 @@ function mount() {
     if (tab === 'stock') {
       const locations=inventoryLocations(all);
       html += '<div id="inventory-flows"><h2>Alur inventory</h2>';
-      for (const loc of locations) {
-        const steps=inventoryFlow(loc);
-        html += `${loc.label?`<h3>${esc(loc.label)}</h3>`:''}<p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps,null,timelinePosition(steps))}`;
+      for (const steps of locations.length>1 ? [combinedInventoryFlow(all)] : locations.map(inventoryFlow)) {
+        html += `<p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps,null,timelinePosition(steps))}`;
       }
       const locationRules=doc.data.rules.filter(rule=>locations.some(loc=>loc.label && rule.startsWith(loc.label+':')));
       html += `<section class="rules"><h2>Aturan</h2><ul>${locationRules.length?locationRules.map(rule=>`<li>${esc(rule)}</li>`).join(''):'<li>Tanpa penerimaan/pengiriman selama opname.</li><li>Transaksi 31 Des diakui Januari 2027.</li><li>Pergerakan setelah cut off dikoordinasikan dengan STEM.</li>'}</ul></section></div>`;
@@ -380,7 +394,7 @@ function mount() {
       return `<div class="table-wrap"><table class="settings activity-table"><thead><tr><th>Kegiatan</th><th>Jadwal</th><th>PIC</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${rows.map(it=>{
         const status=effectiveStatus(it.status,it.endDate);
         const note=it.section==='master' && /^Batas akhir data dari user:/.test(it.note) ? '' : it.note;
-        const date=it.section==='balance' ? `Cut off ${esc(format(it.cutoffDate))} · Serah ${esc(format(it.handoverDate))} ${esc(it.handoverTime)} · Upload ${esc(format(it.uploadDate))} ${esc(it.uploadTime || (/^ASUMSI:/i.test(it.note) ? it.note : ''))}` : dates(it);
+        const date=it.section==='balance' ? `Cut off ${esc(format(it.cutoffDate))} · Serah ${esc(format(it.handoverDate))} ${esc(it.handoverTime)} · Upload ${esc(format(it.uploadDate))} ${esc(it.uploadTime || '')}` : dates(it);
         return `<tr><td class="item-title"><b>${esc(it.title)}</b>${note?`<details class="item-note" ${tab==='training'?'open':''}><summary>Catatan${tab==='training'?' materi & peserta':''}</summary>${esc(note)}</details>`:''}</td><td class="item-date">${date}</td><td class="item-pic">${it.picFixed ? `<span class="pic-fixed" title="PIC kegiatan STEM terkunci; perubahan melalui editor admin">${esc(picShown(it.pic))}${company.code ? ' 🔒<small>terkunci</small>' : '<small>otomatis</small>'}</span>` : picSelectHtml(it.pic, `data-pic="${esc(it.id)}" aria-label="PIC ${esc(it.title)}"`)}</td><td class="item-status">${statusCell(it,status)}</td><td class="item-action"><button class="control secondary" data-edit="${esc(it.id)}" aria-label="Ubah ${esc(it.title)}">Ubah</button><span data-chat-slot="item:${esc(it.id)}"></span></td></tr>`;
       }).join('')}</tbody></table></div>`;
     }
@@ -438,7 +452,7 @@ function mount() {
       if(form.querySelector('[name=pic]')?.type!=='hidden')patch.pic=form.querySelector('[name=pic]').dataset.selectedPic ?? resolvePicText(patch.pic,picUsers);
       if(it.section==='balance') {patch.startDate=patch.cutoffDate;patch.endDate=patch.uploadDate;}
       if(!validRange(patch.startDate,patch.endDate) || (it.section==='balance' && (!validRange(patch.cutoffDate,patch.handoverDate)||!validRange(patch.handoverDate,patch.uploadDate)))) { $('#edit-error').textContent='Tanggal tidak valid atau urutannya terbalik.'; return; }
-      for(const key of ['handoverTime','uploadTime']) if (key in patch && patch[key] && (!/^(?:[01]\d|2[0-3]):[0-5]\d(?:-(?:[01]\d|2[0-3]):[0-5]\d)?$/.test(patch[key]) || (patch[key].length===11 && patch[key].slice(0,5)>patch[key].slice(6)))) { $('#edit-error').textContent='Jam tidak valid. Gunakan HH:mm atau HH:mm-HH:mm berurutan.'; return; }
+      for(const key of ['handoverTime','uploadTime']) if (key in patch && patch[key] && patch[key]!=='24:00' && (!/^(?:[01]\d|2[0-3]):[0-5]\d(?:-(?:[01]\d|2[0-3]):[0-5]\d)?$/.test(patch[key]) || (patch[key].length===11 && patch[key].slice(0,5)>patch[key].slice(6)))) { $('#edit-error').textContent='Jam tidak valid. Gunakan HH:mm atau HH:mm-HH:mm berurutan.'; return; }
       Object.assign(it,patch); editorId=null; dirty=draftChanges(baseline,doc.data.items).length>0; render(); message('Perubahan ada di draf. Tekan Simpan perubahan.');
     };
     form.querySelector('input').focus(); form.scrollIntoView({block:'nearest'});

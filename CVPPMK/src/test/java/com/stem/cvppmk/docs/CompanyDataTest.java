@@ -82,10 +82,10 @@ class CompanyDataTest {
         assertEquals("19:00",items.get("balance-inv").path("handoverTime").asText());
         assertEquals("19:00-20:00",items.get("balance-inv").path("uploadTime").asText());
         assertEquals("22:00",items.get("balance-inv-toko").path("handoverTime").asText());
-        assertEquals("",items.get("balance-inv-toko").path("uploadTime").asText());
+        assertEquals("24:00",items.get("balance-inv-toko").path("uploadTime").asText());
         assertTrue(items.get("inventory-toko").path("note").asText().contains("31 Desember 2026 pukul 22:00"));
-        assertTrue(items.get("inventory-upload-toko").path("note").asText().startsWith("ASUMSI:"));
-        assertTrue(items.get("inventory-upload-toko").path("note").asText().contains("setelah 22:00"));
+        assertFalse(store.get().data.toString().matches("(?is).*(asumsi|Fakhri|koordinator|TODO|FIXME|worker).*"));
+        assertTrue(items.get("inventory-upload-toko").path("note").asText().contains("pukul 24:00"));
         for(String id:Arrays.asList("opname","cutoff","inventory","inventory-upload")) {
             assertEquals(items.get(id).path("startDate"),items.get(id+"-toko").path("startDate"));
             assertEquals(items.get(id).path("endDate"),items.get(id+"-toko").path("endDate"));

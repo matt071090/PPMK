@@ -6,7 +6,7 @@
   "rules": [
     "Setelah 21 Desember, master data baru/perubahan diinput sendiri oleh user. Tidak ada upload susulan STEM.",
     "Produksi / Pabrik / Central Kitchen: Stock Opname 29-31 Desember, cut off inventory 31 Desember; serah ke STEM 19:00 dan upload SAP 19:00-20:00. Tanpa penerimaan/pengiriman selama opname.",
-    "Toko / Store: Stock Opname 29-31 Desember, cut off inventory 31 Desember. Batas akhir serah ke STEM 31 Desember 2026 pukul 22:00. ASUMSI: upload SAP setelah serah ke STEM (setelah 22:00), tanpa jam selesai yang ditetapkan.",
+    "Toko / Store: Stock Opname 29-31 Desember, cut off inventory 31 Desember. Batas akhir serah ke STEM 31 Desember 2026 pukul 22:00. Upload SAP 31 Desember 2026 pukul 24:00, tanpa jam selesai.",
     "Go Live tetap 1 Januari 2027. A/P, A/R, Fixed Asset, dan G/L diupload setelah Go Live (7 s/d 14 Jan). Transaksi 31 Des diakui Januari 2027; pergerakan setelah cut off dikoordinasikan dengan STEM."
   ],
   "items": [
@@ -128,7 +128,7 @@
       "endDate": "2026-12-31",
       "status": "belum",
       "pic": "",
-      "note": "Toko / Store. Cut off inventory 31 Desember 2026; tidak menetapkan jam cut off baru.",
+      "note": "Toko / Store. Cut off inventory 31 Desember 2026.",
       "cutover": false
     },
     {
@@ -150,7 +150,7 @@
       "endDate": "2026-12-31",
       "status": "belum",
       "pic": "STEM",
-      "note": "ASUMSI: Toko / Store, upload setelah serah ke STEM (setelah 22:00). Jam selesai belum ditentukan Fakhri; admin dapat mengedit jadwal.",
+      "note": "Upload SAP Toko / Store: 31 Desember 2026 pukul 24:00, setelah serah ke STEM (batas akhir pukul 22:00).",
       "cutover": true
     },
     {
@@ -407,12 +407,12 @@
       "endDate": "2026-12-31",
       "status": "belum",
       "pic": "",
-      "note": "ASUMSI: Toko / Store, upload setelah serah ke STEM (setelah 22:00). Jam selesai belum ditentukan Fakhri; admin dapat mengedit jadwal.",
+      "note": "Upload SAP Toko / Store: 31 Desember 2026 pukul 24:00, setelah serah ke STEM (batas akhir pukul 22:00).",
       "cutoffDate": "2026-12-31",
       "handoverDate": "2026-12-31",
       "uploadDate": "2026-12-31",
       "handoverTime": "22:00",
-      "uploadTime": ""
+      "uploadTime": "24:00"
     },
     {
       "id": "balance-ap",
