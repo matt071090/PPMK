@@ -34,7 +34,7 @@ try {
   await page.evaluate(()=>document.querySelectorAll('body>header,.chat-fab').forEach(e=>e.style.visibility=''));
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  }
- for(const [device,width]of [['desktop',1440],['mobile',390]]){await page.setViewportSize({width,height:1000});await open('schedule.html#/ringkasan');await page.locator('#view .timeline-shell').screenshot({path:new URL(`main-timeline-${device}.png`,out).pathname});evidence.screenshots.push(`main-timeline-${device}.png`);}
+ for(const [device,width]of [['desktop',1440],['mobile',390]]){await page.setViewportSize({width,height:1000});await open('schedule.html#/ringkasan');assert.ok(await page.locator('#view .timeline-card').evaluateAll(els=>{const boxes=els.map(e=>e.getBoundingClientRect());return boxes.every((a,i)=>boxes.every((b,j)=>i===j||a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top));}),'timeline cards must not overlap');await page.locator('#view .timeline-shell').screenshot({path:new URL(`main-timeline-${device}.png`,out).pathname});evidence.screenshots.push(`main-timeline-${device}.png`);if(width===1440){await page.locator('#view .timeline-shell').evaluate(e=>e.scrollLeft=e.scrollWidth);await page.locator('#view .timeline-shell').screenshot({path:new URL('main-timeline-end-desktop.png',out).pathname});evidence.screenshots.push('main-timeline-end-desktop.png');}}
  await open('schedule.html#/stock');
  evidence.checks.push('One combined timeline merges count/cutoff and preserves distinct handover/upload times; no 390px page overflow; STEM PIC locked');
  const saved=await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()));assert.equal(saved.data.items.filter(i=>i.pic==='STEM').length,8);
