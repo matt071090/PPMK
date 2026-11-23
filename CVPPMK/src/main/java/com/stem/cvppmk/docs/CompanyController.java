@@ -15,9 +15,10 @@ public class CompanyController {
         this.files = files; this.name = name;
     }
     @GetMapping
-    public Map<String, String> metadata() {
-        Map<String, String> out = new LinkedHashMap<>();
+    public Map<String, Object> metadata() {
+        Map<String, Object> out = new LinkedHashMap<>();
         out.put("code", files.company()); out.put("name", name);
+        new CompanyProfile(files).metadata(out);
         return out;
     }
 }

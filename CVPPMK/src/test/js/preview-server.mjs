@@ -8,7 +8,8 @@ const resources=path.resolve(fileURLToPath(new URL('../../main/resources/',impor
 const mode=process.env.PREVIEW_COMPANY || 'wbi';
 const dev=process.env.PREVIEW_DEV==='1', unlocked=dev || process.env.PREVIEW_ADMIN==='1';
 const branchEnabled=process.env.PREVIEW_BRANCH_MODE===undefined ? mode!=='wbi' : ({Y:true,N:false}[process.env.PREVIEW_BRANCH_MODE] ?? null);
-const company=mode==='wbi'?{code:'wbi',name:'PT Warung Begok Indonesia'}:{code:'',name:'CV. Putra Prima Mandiri Kediri'};
+const profile=mode==='wbi'?JSON.parse(await readFile(path.join(resources,'company/wbi.json'),'utf8')):{};
+const company=mode==='wbi'?{code:'wbi',name:'PT Warung Begok Indonesia',picGroup:profile.pic.group,picSource:profile.pic.source,picExcludedCodes:profile.pic.excludedCodes}:{code:'',name:'CV. Putra Prima Mandiri Kediri',picGroup:'PPMK',picSource:'file',picUsersFile:'ppmk-users.json'};
 const seed=JSON.parse(await readFile(path.join(resources,'schedule',mode==='wbi'?'default-wbi.json':'default.json'),'utf8'));
 const baseSteps=JSON.parse(await readFile(path.join(resources,'setup/steps.json'),'utf8'));
 const retailSteps=JSON.parse(await readFile(path.join(resources,'setup/retail-steps.json'),'utf8'));
@@ -27,7 +28,7 @@ const sections={
   udf:()=>({fields:table(['TableID','Field','Descr','TypeID','SizeID','Dflt','NotNull'],Array.from({length:80},(_,i)=>['OITM',`U_Operasi${i+1}`,`Pengaturan operasi ${i+1}`,'A',30,'','N'])),addon_udf:table(['TableID','AliasID'],[['OWHS','STEM_Type']])}),
   'saved-queries':()=>({categories:table(['CatName','QueryCount','IsSystem'],[['Produksi',65,'N'],['Belum digunakan',0,'N'],['SAP_DASHBOARD_STOCK',5,'Y']]),queries:table(['CatName','QName','Len','Created','LastRun','IsSystem'],Array.from({length:66},(_,i)=>['Produksi',`Laporan produksi ${i+1}`,i===65?0:120,'2026-11-01','2026-11-20','N']))}),
   warehouses:()=>({warehouses:table(['WhsCode','WhsName','BPLName','Inactive','BinActivat','BalInvntAc'],[['UTAMA','Gudang utama',mode==='wbi'?null:'CV-KOMERSIAL','N','N','110100']])}),
-  users:()=>({users:table(['USER_CODE','U_NAME','SUPERUSER','Locked','Branches'],[['FIN01','Tim Keuangan','N','N',mode==='wbi'?null:'CV-KOMERSIAL']])}),
+  users:()=>({users:table(['USER_CODE','U_NAME','SUPERUSER','Locked','Branches'],mode==='wbi'?[['WBI-ACC-STF1','Rizky','N','N',null],['CEO-WBI','Andy','Y','N',null],['Workflow','Workflow','Y','N',null],['WBI-PARE','Gerai Pare','N','N',null],['LOCKED','Terkunci','N','Y',null]]:[['FIN01','Tim Keuangan','N','N','CV-KOMERSIAL']])}),
   'business-partners':()=>({bp:table(['CardCode','CardName','CardType','GroupCode','frozenFor','Branches'],[['C001','Pelanggan Retail','C',100,'N',null]]),groups:table(['GroupCode','GroupName','GroupType'],[[100,'Pelanggan Retail','C']])}),
   'sp-validation':()=>({addon_procs:table(['Name'],[['SBO_SP_TransactionNotification'],['SBO_SP_PostTransactionNotice']]),addon_funcs:table(['Name'],[['GetItemResourceCost']])})
 };

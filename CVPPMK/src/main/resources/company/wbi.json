@@ -1,0 +1,7 @@
+{
+  "pic": {
+    "source": "sap",
+    "group": "WBI",
+    "excludedCodes": ["Workflow", "AlertSvc", "B1i", "STEM01", "STEM02", "STEM03", "Support", "EDsUser", "INTERFACE", "manager", "BMW-PAM", "BMW-PG", "WBI-PARE", "WBI-GRH"]
+  }
+}

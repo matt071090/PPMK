@@ -1,5 +1,5 @@
 // Metadata for display and exported filenames. Kept independent of DOM and page helpers.
-export const company = { name: 'No company', code: '' };
+export const company = { name: 'No company', code: '', picGroup:'PPMK', picSource:'file', picUsersFile:'ppmk-users.json', picExcludedCodes:[] };
 let pending;
 export function loadCompany() {
   return pending || (pending = fetch('api/company', { cache: 'no-store' }).then(async r => {
@@ -7,6 +7,10 @@ export function loadCompany() {
     const d = await r.json();
     if (d.code && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(d.code)) throw new Error('Kode company tidak valid.');
     company.code = d.code || '';
+    company.picGroup = d.picGroup || (company.code ? company.code.toUpperCase() : 'PPMK');
+    company.picSource = d.picSource || (company.code ? 'none' : 'file');
+    company.picUsersFile = d.picUsersFile || (!company.code ? 'ppmk-users.json' : '');
+    company.picExcludedCodes = Array.isArray(d.picExcludedCodes) ? d.picExcludedCodes : [];
     if (typeof document !== 'undefined') document.documentElement.dataset.company = company.code;
     if (d.name) company.name = d.name;
     return company;

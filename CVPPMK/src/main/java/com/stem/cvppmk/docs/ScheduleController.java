@@ -19,9 +19,15 @@ public class ScheduleController {
     private final ScheduleChatController chat;
     private final DataFiles files;
     private volatile Map<String, String> userNames;
+    private final CompanyProfile profile;
+    private final SectionController section;
     private final ObjectMapper mapper = new ObjectMapper().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
             .enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
-    public ScheduleController(ScheduleStore store, SetupAccessController access, ScheduleChatController chat, DataFiles files) { this.store = store; this.access = access; this.chat = chat; this.files = files; }
+    public ScheduleController(ScheduleStore store, SetupAccessController access, ScheduleChatController chat, DataFiles files) { this(store,access,chat,files,null); }
+    @org.springframework.beans.factory.annotation.Autowired
+    public ScheduleController(ScheduleStore store, SetupAccessController access, ScheduleChatController chat, DataFiles files, SectionController section) {
+        this.store=store;this.access=access;this.chat=chat;this.files=files;this.section=section;this.profile=new CompanyProfile(files);
+    }
     /** Admin = Setup terbuka (otomatis di mode dev; di war setelah password Setup). Non-admin boleh mengubah PIC dan status; tanggal/catatan tetap admin. */
     @GetMapping("/access")
     public ResponseEntity<Map<String, Object>> access(HttpServletRequest request) throws IOException {
@@ -119,20 +125,31 @@ public class ScheduleController {
         }
     }
 
-    /** "STEM" | "PPMK · AP-STF1 (Fatma)" memakai static/data/ppmk-users.json; nilai lain apa adanya. */
-    private String picLabel(String v) {
-        if (!v.startsWith("PPMK:")) return v;
-        String code = v.substring(5), name = names().get(code);
-        return "PPMK · " + code + (name != null && !name.isEmpty() && !name.equals(code) ? " (" + name + ")" : "");
+    /** Resolve only this company's configured directory; legacy PPMK values remain valid. */
+    private String picLabel(String value) {
+        String prefix=profile.group+":";
+        if(!value.startsWith(prefix))return value.startsWith("PPMK:")?"PPMK · "+value.substring(5):value;
+        String code=value.substring(prefix.length()),name=names().get(code);
+        return profile.group+" · "+code+(name!=null&&!name.isEmpty()&&!name.equals(code)?" ("+name+")":"");
     }
-
-    private Map<String, String> names() {
-        Map<String, String> n = userNames;
-        if (n != null) return n;
-        n = new LinkedHashMap<>();
-        try (java.io.InputStream in = getClass().getResourceAsStream("/static/data/ppmk-users.json")) {
-            if (in != null) for (JsonNode u : mapper.readTree(in).path("users")) n.put(u.path("code").asText(), u.path("name").asText(""));
-        } catch (IOException e) { /* tanpa nama: cukup username */ }
-        return userNames = n;
+    private Map<String,String> names() {
+        if("file".equals(profile.source) && userNames!=null)return userNames;
+        Map<String,String> out=new LinkedHashMap<>();
+        try {
+            if("file".equals(profile.source))try(java.io.InputStream in=getClass().getResourceAsStream("/static/data/"+profile.usersFile)) {
+                if(in!=null)for(JsonNode u:mapper.readTree(in).path("users"))out.put(u.path("code").asText(),u.path("name").asText(""));
+            }
+            else if("sap".equals(profile.source) && section!=null) {
+                Map<?,?> table=(Map<?,?>)((Map<?,?>)section.section("users",null).get("results")).get("users");
+                java.util.List<?> cols=(java.util.List<?>)table.get("columns"),rows=(java.util.List<?>)table.get("rows");
+                int ci=cols.indexOf("USER_CODE"),ni=cols.indexOf("U_NAME"),li=cols.indexOf("Locked");
+                if(ci>=0&&ni>=0&&li>=0)for(Object value:rows) {
+                    java.util.List<?> row=(java.util.List<?>)value;String code=String.valueOf(row.get(ci));
+                    if("N".equals(row.get(li))&&!profile.excludedUsers().contains(code.toUpperCase(java.util.Locale.ROOT)))out.put(code,row.get(ni)==null?code:String.valueOf(row.get(ni)));
+                }
+            }
+        } catch(Exception e) { /* Directory unavailable: keep literal code/free text, never borrow another company. */ }
+        if("file".equals(profile.source))userNames=out;
+        return out;
     }
 }

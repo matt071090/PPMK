@@ -84,18 +84,34 @@ export function mergeUsers(sapUsers = [], listUsers = [], sapLoaded = true) {
 }
 /** "ACC-STF1 (Dewi)": username SAP selalu tampil, nama ditambahkan bila berbeda dari username. */
 export const userLabel = u => u.name && u.name !== u.code ? `${u.code} (${u.name})` : u.code;
-export function picLabel(value, users = []) {
-  const v = String(value || '').trim();
-  if (!v) return '';
-  if (v.startsWith('PPMK:')) { const code = v.slice(5), u = users.find(x => x.code === code); return 'PPMK · ' + userLabel(u || { code, name: code }); }
-  return v;
+export function picLabel(value, users = [], group = company.picGroup) {
+  const v=String(value||'').trim();if(!v)return '';
+  if(v.startsWith(group+':')) { const code=v.slice(group.length+1),u=users.find(x=>x.code===code);return group+' · '+userLabel(u||{code,name:code}); }
+  return v.startsWith('PPMK:')?'PPMK · '+v.slice(5):v;
 }
-export function picOptions(users = [], current = '') {
+export function picOptions(users = [], current = '', group = company.picGroup) {
   const opts = [{ value: '', label: '+ PIC', group: '' }, { value: 'STEM', label: 'STEM', group: '' }]
-    .concat(users.map(u => ({ value: 'PPMK:' + u.code, label: userLabel(u), group: 'PPMK' })));   // sudah di bawah grup "PPMK", jadi tanpa awalan supaya muat di kolom
+    .concat(users.map(u => ({ value: u.code ? group+':' + u.code : u.name, label: userLabel(u), group })));   // sudah di bawah grup "PPMK", jadi tanpa awalan supaya muat di kolom
   const cur = String(current || '').trim();
   if (cur && !opts.some(o => o.value === cur)) opts.push({ value: cur, label: picLabel(cur, users), group: '' });
   return opts;
+}
+export function usersFromSection(data, excludedCodes=[]) {
+  const table=data?.results?.users;if(!table?.columns||table.error)return [];
+  const ci=table.columns.indexOf('USER_CODE'),ni=table.columns.indexOf('U_NAME'),li=table.columns.indexOf('Locked');
+  if(ci<0||ni<0||li<0)return [];
+  const excluded=new Set(excludedCodes.map(c=>c.toUpperCase()));
+  return table.rows.filter(r=>r[ci] && r[li]==='N'&&!excluded.has(String(r[ci]).toUpperCase())).map(r=>({code:String(r[ci]),name:String(r[ni]||r[ci])}));
+}
+export async function loadCompanyPicUsers(fetchImpl = fetch) {
+  try {
+    if(company.picSource==='sap') {const r=await fetchImpl('api/section/users',{cache:'no-store'});return r.ok?usersFromSection(await r.json(),company.picExcludedCodes):[];}
+    if(company.picSource==='file'&&company.picUsersFile) {const r=await fetchImpl('data/'+company.picUsersFile,{cache:'no-store'}),list=r.ok?await r.json():null;return mergeUsers([],list?.users,false);}
+  } catch { /* Unknown/unavailable directory keeps free text available. */ }
+  return [];
+}
+export function resolvePicText(text,users=[],group=company.picGroup) {
+  const hit=users.find(u=>userLabel(u)===text||u.code===text);return hit?group+':'+hit.code:text;
 }
 export function savedAt(value) {
   const date = new Date(value);
@@ -211,7 +227,7 @@ if (typeof document !== 'undefined' && document.getElementById('draft-bar')) loa
 function mount() {
   const $ = s => document.querySelector(s), view = $('#view'), notice = $('#notice');
   if (company.code) {
-    $('#pic-suggestions-help').innerHTML = 'Klik kolom <b>PIC</b> pada baris kegiatan. Pilih STEM dari saran atau ketik nama PIC sendiri.';
+    $('#pic-suggestions-help').innerHTML = 'Klik kolom <b>PIC</b> pada baris kegiatan. Pilih STEM atau user dari saran, atau ketik nama PIC sendiri. Cek dan konfirmasi daftar pada <a href="index.html#/users">User (1.5)</a>.';
     $('#cv-pic-help').hidden = true; $('#fixed-pic-help').hidden = true;
   }
   let names = scheduleTabs([]);
@@ -219,39 +235,34 @@ function mount() {
   let chat = null, reviewPages = null, RV = null, editable = false, lockConfigured = true;
   let picUsers = [];
   async function loadPicUsers() {
-    if (company.code) { picUsers = []; return; }
-    // PIC PPMK hanya dari list user CV PPMK (data/ppmk-users.json, dari Excel tim), bukan dari user SAP
-    const list = await fetch('data/ppmk-users.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
-    picUsers = mergeUsers([], list && list.users, false);
-    if (doc && !editorId) render();
+    picUsers = await loadCompanyPicUsers();
+    if(doc&&!editorId)render();
   }
-  // PIC teks bebas; saran (daftar .pic-pop di bawah) dari STEM + list user PPMK, tidak wajib dipilih.
-  // Nilai lama berformat "PPMK:KODE" ditampilkan sebagai label yang mudah dibaca.
-  const picShown = v => v && String(v).startsWith('PPMK:') ? picLabel(v, picUsers).replace(/^PPMK · /, '') : (v || '');
+  const picShown = v => v && (String(v).startsWith(company.picGroup+':')||String(v).startsWith('PPMK:')) ? picLabel(v,picUsers).replace(new RegExp('^'+company.picGroup+' · '),'') : (v||'');
   const picSelectHtml = (value, attrs, cls) =>
     `<input class="control pic-input ${cls || ''}" type="text" maxlength="200" placeholder="Pilih atau ketik PIC" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" value="${esc(picShown(value))}" ${attrs}>`;
   // daftar saran PIC buatan sendiri (datalist bawaan browser tidak bisa diatur tampilannya)
   const picPop = document.createElement('ul'); picPop.className = 'pic-pop'; picPop.setAttribute('role', 'listbox'); picPop.hidden = true; document.body.appendChild(picPop);
   let picFor = null, picIdx = -1;
-  const picChoices = () => ['STEM', ...picUsers.map(u => userLabel(u))];
+  const picChoices = () => picOptions(picUsers);
   function picPlace() { if (!picFor) return; const r = picFor.getBoundingClientRect(); picPop.style.left = `${r.left + scrollX}px`; picPop.style.top = `${r.bottom + scrollY + 4}px`; picPop.style.width = `${Math.max(r.width, 220)}px`; }
   function picFilter() {
     if (!picFor) return;
-    const raw = picFor.value.trim(), q = raw.toLowerCase(), list = picChoices().filter(c => !q || c.toLowerCase().includes(q));
-    const exact = list.some(c => c.toLowerCase() === q);
+    const raw = picFor.value.trim(), q = raw.toLowerCase(), list = picChoices().filter(c => !q || c.label.toLowerCase().includes(q));
+    const exact = list.some(c => c.label.toLowerCase() === q);
     picIdx = -1;
     picPop.innerHTML = `<li class="hint" aria-hidden="true">Pilih dari daftar, atau ketik nama lain lalu Enter.</li>`
-      + list.map(c => `<li role="option" data-v="${esc(c)}">${esc(c)}</li>`).join('')
+      + list.map((c,i) => `${c.group && (!i||list[i-1].group!==c.group)?`<li class="hint" role="presentation">${esc(c.group)}</li>`:''}<li role="option" data-v="${esc(c.value)}">${esc(c.label)}</li>`).join('')
       // teks bebas: di bawah cocokan (panah langsung ke nama yang cocok); bila tidak ada yang cocok, jadi satu-satunya pilihan
       + (raw && !exact ? `<li role="option" class="free" data-v="${esc(raw)}">Pakai <b>&ldquo;${esc(raw)}&rdquo;</b> (ketik sendiri)</li>` : '');
     picPlace(); picPop.hidden = false; picFor.setAttribute('aria-expanded', 'true');
   }
   function picClose() { picPop.hidden = true; if (picFor) picFor.setAttribute('aria-expanded', 'false'); picFor = null; picIdx = -1; }
-  function picPick(v) { const inp = picFor; picClose(); if (!inp) return; inp.value = v; inp.dispatchEvent(new Event('change', { bubbles: true })); }
+  function picPick(v) { const inp = picFor; picClose(); if (!inp) return; inp.value = picShown(v); inp.dataset.selectedPic=v; inp.dispatchEvent(new Event('change', { bubbles: true })); }
   function picMove(d) { const items = [...picPop.querySelectorAll('li[data-v]')]; if (!items.length) return; picIdx = (picIdx + d + items.length) % items.length; items.forEach((li, i) => li.classList.toggle('on', i === picIdx)); items[picIdx].scrollIntoView({ block: 'nearest' }); }
   picPop.addEventListener('mousedown', e => { e.preventDefault(); const li = e.target.closest('li[data-v]'); if (li) picPick(li.dataset.v); });
   document.addEventListener('focusin', e => { if (e.target.classList && e.target.classList.contains('pic-input')) { picFor = e.target; picFilter(); } });
-  document.addEventListener('input', e => { if (e.target === picFor) picFilter(); });
+  document.addEventListener('input', e => { if (e.target === picFor) { delete e.target.dataset.selectedPic; picFilter(); } });
   document.addEventListener('keydown', e => {
     if (!picFor || e.target !== picFor) return;
     if (e.key === 'ArrowDown') { e.preventDefault(); if (picPop.hidden) picFilter(); picMove(1); }
@@ -424,6 +435,7 @@ function mount() {
     $('#cancel-edit').onclick = () => { editorId=null; render(); };
     const form = $('#editor-slot form'); form.onsubmit = e => {
       e.preventDefault(); const patch = Object.fromEntries(new FormData(form));
+      if(form.querySelector('[name=pic]')?.type!=='hidden')patch.pic=form.querySelector('[name=pic]').dataset.selectedPic ?? resolvePicText(patch.pic,picUsers);
       if(it.section==='balance') {patch.startDate=patch.cutoffDate;patch.endDate=patch.uploadDate;}
       if(!validRange(patch.startDate,patch.endDate) || (it.section==='balance' && (!validRange(patch.cutoffDate,patch.handoverDate)||!validRange(patch.handoverDate,patch.uploadDate)))) { $('#edit-error').textContent='Tanggal tidak valid atau urutannya terbalik.'; return; }
       for(const key of ['handoverTime','uploadTime']) if (key in patch && patch[key] && (!/^(?:[01]\d|2[0-3]):[0-5]\d(?:-(?:[01]\d|2[0-3]):[0-5]\d)?$/.test(patch[key]) || (patch[key].length===11 && patch[key].slice(0,5)>patch[key].slice(6)))) { $('#edit-error').textContent='Jam tidak valid. Gunakan HH:mm atau HH:mm-HH:mm berurutan.'; return; }
@@ -437,7 +449,7 @@ function mount() {
     if(editorId && !confirm('Buang isian formulir yang belum diterapkan?')) { e.target.value=doc.data.items.find(row=>row.id===id)[e.target.dataset.status?'status':'pic']; return; }
     editorId=null;
     const it=doc.data.items.find(row=>row.id===id);
-    it[e.target.dataset.status?'status':'pic']=e.target.dataset.status?e.target.value:e.target.value.trim().slice(0,200);
+    it[e.target.dataset.status?'status':'pic']=e.target.dataset.status?e.target.value:(e.target.dataset.selectedPic ?? resolvePicText(e.target.value.trim(),picUsers)).slice(0,200);
     dirty=draftChanges(baseline,doc.data.items).length>0;
     const expanded=[...view.querySelectorAll('.stage[open]')].map(el=>el.dataset.group);
     render(); view.querySelectorAll('.stage').forEach(el=>el.open=expanded.includes(el.dataset.group)||el.querySelector('.telat')!==null);

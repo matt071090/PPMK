@@ -1,0 +1,52 @@
+{
+  "checks": [
+    "SAP directory filter/group/code+username correct; picked WBI token survives Save and resolves in area summary; STEM remains locked",
+    "Unavailable SAP directory keeps free text usable and never borrows ppmk-users.json",
+    "CV retains ppmk-users.json and PPMK group; no new User WBI menu/storage"
+  ],
+  "screenshots": [
+    "dropdown-desktop.png",
+    "dropdown-mobile.png"
+  ],
+  "errors": [],
+  "requests": [
+    "http://127.0.0.1:18635/schedule.html",
+    "http://127.0.0.1:18635/css/app.css",
+    "http://127.0.0.1:18635/js/modnav.js",
+    "http://127.0.0.1:18635/js/pages/schedule.js",
+    "http://127.0.0.1:18635/api/setup-access",
+    "http://127.0.0.1:18635/js/company.js",
+    "http://127.0.0.1:18635/api/company",
+    "http://127.0.0.1:18635/js/pages/schedule-chat.js",
+    "http://127.0.0.1:18635/js/pages/schedule-review.js",
+    "http://127.0.0.1:18635/api/schedule/access",
+    "http://127.0.0.1:18635/api/section/users",
+    "http://127.0.0.1:18635/img/favicon-32.png",
+    "http://127.0.0.1:18635/api/setup-access",
+    "http://127.0.0.1:18635/api/schedule/chat/summary",
+    "http://127.0.0.1:18635/api/review",
+    "http://127.0.0.1:18635/api/schedule",
+    "http://127.0.0.1:18635/api/schedule",
+    "http://127.0.0.1:18635/api/schedule",
+    "http://127.0.0.1:18635/img/favicon-32.png",
+    "http://127.0.0.1:18635/img/favicon-32.png",
+    "http://127.0.0.1:18635/api/schedule",
+    "http://127.0.0.1:18635/api/schedule",
+    "http://127.0.0.1:18637/schedule.html",
+    "http://127.0.0.1:18637/css/app.css",
+    "http://127.0.0.1:18637/js/modnav.js",
+    "http://127.0.0.1:18637/js/pages/schedule.js",
+    "http://127.0.0.1:18637/api/setup-access",
+    "http://127.0.0.1:18637/js/company.js",
+    "http://127.0.0.1:18637/api/company",
+    "http://127.0.0.1:18637/js/pages/schedule-chat.js",
+    "http://127.0.0.1:18637/js/pages/schedule-review.js",
+    "http://127.0.0.1:18637/api/schedule/access",
+    "http://127.0.0.1:18637/data/ppmk-users.json",
+    "http://127.0.0.1:18637/img/favicon-32.png",
+    "http://127.0.0.1:18637/api/setup-access",
+    "http://127.0.0.1:18637/api/schedule/chat/summary",
+    "http://127.0.0.1:18637/api/review",
+    "http://127.0.0.1:18637/api/schedule"
+  ]
+}
