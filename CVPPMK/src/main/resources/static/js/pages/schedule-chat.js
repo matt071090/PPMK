@@ -28,8 +28,8 @@ export function chatTime(iso) {
 }
 
 const CSS = `
-.chat-fab{position:fixed;right:16px;bottom:16px;z-index:60;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--shadow-lg)}
-.chat-fab .dot{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--danger);color:var(--on-danger);font-size:12px;line-height:20px;text-align:center}
+.chat-fab{position:fixed;right:16px;bottom:16px;z-index:60;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-weight:600;box-shadow:var(--shadow-lg)}
+.chat-fab .dot{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--danger);color:#fff;font-size:12px;line-height:20px;text-align:center}
 .chat-panel{position:fixed;z-index:70;right:16px;bottom:16px;width:min(380px,calc(100vw - 32px));height:min(560px,calc(100vh - 32px));display:none;flex-direction:column;background:var(--surface);color:var(--text);border:1px solid var(--border-strong);border-radius:12px;box-shadow:var(--shadow-lg);overflow:hidden}
 .chat-panel.open{display:flex}
 .chat-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface-2)}
@@ -49,7 +49,7 @@ const CSS = `
 .chat-form textarea{min-height:56px;resize:vertical}
 .chat-row{display:flex;gap:8px;align-items:center}
 .chat-row .hint{flex:1;font-size:12px;color:var(--muted)}
-.chat-send{min-height:40px;padding:0 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);font-weight:600}
+.chat-send{min-height:40px;padding:0 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-weight:600}
 .chat-send:disabled{opacity:.5}
 .chat-err{color:var(--danger);font-size:12px;min-height:16px}
 .chat-badge{display:inline-flex;align-items:center;gap:4px;min-height:32px;min-width:40px;justify-content:center;padding:0 8px;border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--text-2);font-size:13px}
