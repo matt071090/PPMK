@@ -21,13 +21,15 @@ Pada branch WBI, build tanpa `-Pwbi` juga tetap menghasilkan `cvppmk.war` dengan
 
 ## Konfigurasi WBI di lingkungan proses Tomcat
 
-Host `192.168.20.135`, DB `WBI_TEST`, dan user SL `manager` sudah dikonfirmasi koordinator. SL `https://192.168.20.135:50000/b1s/v1` terbukti merespons Login dan GET metadata. Port HANA dan user JDBC belum dikonfirmasi; keduanya wajib diisi, tidak ditebak.
+Endpoint HANA `192.168.20.135:30015`, schema `WBI_TEST`, dan SL `https://192.168.20.135:50000/b1s/v1`/company `WBI_TEST` sudah dikonfirmasi Fakhri. Host/port non-rahasia menjadi default profil dan dapat dioverride lewat lingkungan. User JDBC harus akun baca saja yang disediakan Fakhri, bukan DBADMIN. Semua kredensial wajib dari lingkungan, termasuk user SL. Worker hanya memverifikasi SL Login/GET; worker tidak pernah membuka JDBC.
 
 | Variabel | Isi oleh Fakhri |
 |---|---|
-| `WBI_HANA_PORT` | Port JDBC HANA yang benar |
+| `WBI_HANA_HOST` | Opsional: override host HANA default `192.168.20.135` |
+| `WBI_HANA_PORT` | Opsional: override port HANA default `30015` |
 | `WBI_HANA_USER` | User JDBC baca; berbeda dari user SAP |
 | `WBI_HANA_PASSWORD` | Rahasia JDBC, melalui lingkungan proses |
+| `WBI_SL_USER` | User SAP untuk SL; Fakhri menetapkan `manager` |
 | `WBI_SL_PASSWORD` | Rahasia user SAP, melalui lingkungan proses |
 | `WBI_SETUP_PASSWORD` | Rahasia untuk membuka menu Setup |
 | `WBI_DATA_DIR` | Opsional: direktori induk data; default `${catalina.base}/data` |
@@ -50,3 +52,11 @@ npm run preview
 Pada JDK 25, Mockito/Byte Buddy bawaan Boot 2.7 membutuhkan `mvn '-Dnet.bytebuddy.experimental=true' test` (flag juga berlaku saat package). Target bytecode produksi tetap Java 8. Tes lama yang memakai jsdom memerlukan `JSDOM_PATH` bila lokasinya berbeda dari lingkungan pengembangan lama; tes aturan Setup dan company menggunakan Node bawaan.
 
 Fixture preview hanya melayani file lokal dan API palsu di 127.0.0.1, tanpa proxy SAP/JDBC. Akses SAP nyata dan pengujian posting bukan bagian tes ini.
+
+## Sumber dan tujuan QA
+
+Keputusan Fakhri terbaru: **sumber = tujuan = WBI_TEST**. `setup.source-dbs=WBI_TEST` dan `setup.source.allow-target=true` menampilkan company tujuan sebagai sumber yang sah. Penjaga kesamaan DB baca dengan CompanyDB SL tetap berlaku. Datasource Hikari WBI memakai `read-only=true`; jalur baca Setup menegaskan `Connection.setReadOnly(true)`, koneksi sumber terpisah juga read-only, dan seluruh query katalog Retail hanya SELECT. SQL/JDBC tidak dipakai untuk menulis master; penulisan aplikasi hanya lewat SL setelah kunci Setup dibuka. Fakhri/koordinator yang menjalankan aplikasi dan QA nyata.
+
+Tier G pada WBI diganti Retail (11 langkah dalam 8 kelompok); default CV tetap Farm Breeding. Tabel Retail harus ada dan berisi data. Karena sumber sama dengan tujuan, hasil normal adalah Sama, tanpa baris yang perlu di-upload. Tidak dibuat uploader saldo awal baru: saldo inventory/AP/AR/GL diisi user sendiri. Transaksi/log/buffer tidak dimigrasi.
+
+`WBI_KARTON` di `192.168.40.181:30015` hanya calon sumber nanti, **tidak dikonfigurasi aktif dan tidak dihubungi worker**. Mengaktifkannya perlu keputusan sumber baru, akun baca saja terpisah, dan verifikasi ulang mapping/dependensi.

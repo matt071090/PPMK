@@ -1,0 +1,24 @@
+{
+  "verifiedAt": "2026-11-23",
+  "company": "WBI_TEST",
+  "endpoint": "https://192.168.20.135:50000/b1s/v1",
+  "loginHTTP": 200,
+  "metadataHTTP": 200,
+  "BusinessPlacesCount": 0,
+  "shiftHasU_BRANCH": false,
+  "shiftEvidence": "Earlier successful GET ST_SHIFT and metadata both omit U_BRANCH; final repeated ST_SHIFT GET timed out, while metadata and the other GETs succeeded.",
+  "branchFlagOwnVerification": null,
+  "branchFlagLimitation": "GET CompanyService_GetAdminInfo returns 400; metadata requires POST, not allowed except Login. Gemini survey separately reports EnableBranches=tNO.",
+  "Warehouses": {
+    "HTTP": 200,
+    "sampledRows": 1,
+    "branchField": "BusinessPlaceID",
+    "sampleBranchIsNull": true
+  },
+  "AssetClasses": {
+    "HTTP": 200,
+    "sampledRows": 1,
+    "branchField": "BPLID",
+    "sampleBranchIsNull": true
+  }
+}

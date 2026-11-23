@@ -152,11 +152,8 @@ class SetupControllerTest {
     @Test void retailProfileDisablesAllFarmStepsEvenIfSharedTablesExist() throws Exception {
         SetupController retail = new SetupController(jdbc, sl, new MockEnvironment().withProperty("setup.farm-breeding.enabled","false"),json,
             new SetupAccessController(true,""),"unused","unused","unused","","","");
-        for(JsonNode s:retail.steps()) if("G".equals(s.path("tier").asText())) {
-            assertTrue(s.path("unavailable").asBoolean()); assertFalse(s.path("upload").asBoolean());
-        }
-        Map<?,?> target=(Map<?,?>)retail.data("breeding-params",null).get("target");
-        assertEquals(true,target.get("unavailable"));
+        for(JsonNode s:retail.steps()) assertNotEquals("G",s.path("tier").asText());
+        assertThrows(ResponseStatusException.class,()->retail.data("breeding-params",null));
         assertThrows(ResponseStatusException.class,()->retail.upload("breeding-params",request(json.createObjectNode(),false)));
         verifyNoInteractions(jdbc); verify(sl,never()).write(anyString(),anyString(),any());
     }

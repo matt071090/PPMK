@@ -1,0 +1,1 @@
+SELECT "Code" AS "_key", "Code", "Name", "U_ParamType", "U_OpCode", "U_OpName", "U_InCode", "U_InName", "U_MinValue", "U_MaxValue", "U_Rafaksi", "U_QualValue", "U_IsActive" FROM "@ST_PARAMQC" ORDER BY "Code"

@@ -1,0 +1,56 @@
+{
+  "verifiedAt": "2026-11-23",
+  "branch": "wbi/main",
+  "javaTests": [
+    {
+      "name": "com.stem.cvppmk.docs.CompanyDataTest",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.stem.cvppmk.docs.SetupControllerTest",
+      "tests": "64",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.stem.cvppmk.docs.SetupRetailTest",
+      "tests": "31",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "javascriptTests": {
+    "passed": 129,
+    "failed": 0,
+    "skipped": 0
+  },
+  "commands": [
+    "mvn '-Dnet.bytebuddy.experimental=true' clean package",
+    "mvn '-Dnet.bytebuddy.experimental=true' clean package -Pwbi",
+    "npm test"
+  ],
+  "runtime": "JDK 25, production bytecode Java 8; Node 24",
+  "SAPMasterDocumentWrites": 0,
+  "workerJDBCConnections": 0,
+  "artifacts": [
+    {
+      "file": "CVPPMK/target/cvppmk.war",
+      "size": 21562473,
+      "sha256": "1a9dd5fa657f52e4968062fa5b50ea49b8481f82ee4df668f026f9c6002f3ac1",
+      "activeProfile": "default",
+      "classMajor": 52
+    },
+    {
+      "file": "CVPPMK/target/wbi.war",
+      "size": 21562472,
+      "sha256": "3a805497b314776f9c766ff7824a0ad9340e718c54096238409dc247c4a285c9",
+      "activeProfile": "wbi",
+      "classMajor": 52
+    }
+  ]
+}

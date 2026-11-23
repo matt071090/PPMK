@@ -1,0 +1,449 @@
+{
+  "verifiedAt": "2026-11-23",
+  "company": "WBI_TEST",
+  "method": "GET $metadata, UserTablesMD, UserObjectsMD and entity counts; POST Login only",
+  "entities": {
+    "ST_PLCATEGORY": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_Level",
+          "Type": "Edm.Int32"
+        },
+        {
+          "Name": "U_ConfigName",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_CategoryCode",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_CategoryName",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_Active",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 19,
+      "table": "ST_PLCATEGORY",
+      "tableType": "bott_MasterData",
+      "udo": {
+        "Code": "ST_PLCATEGORY",
+        "TableName": "ST_PLCATEGORY",
+        "ObjectType": "boud_MasterData",
+        "UserObjectMD_ChildTables": []
+      }
+    },
+    "ST_PLCONFIG": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_Level",
+          "Type": "Edm.Int32"
+        },
+        {
+          "Name": "U_ConfigName",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_Active",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 5,
+      "table": "ST_PLCONFIG",
+      "tableType": "bott_MasterData",
+      "udo": {
+        "Code": "ST_PLCONFIG",
+        "TableName": "ST_PLCONFIG",
+        "ObjectType": "boud_MasterData",
+        "UserObjectMD_ChildTables": []
+      }
+    },
+    "ST_UDROUTE": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_IsActive",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "ST_UDRTDCollection",
+          "Type": "Collection(SAPB1.ST_UDRTD)"
+        }
+      ],
+      "childFields": [
+        {
+          "Name": "U_WCCode",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_WCDesc",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_Seq",
+          "Type": "Edm.Int32"
+        }
+      ],
+      "rowCount": 24,
+      "table": "ST_UDRTH",
+      "tableType": "bott_MasterData",
+      "udo": {
+        "Code": "ST_UDROUTE",
+        "TableName": "ST_UDRTH",
+        "ObjectType": "boud_MasterData",
+        "UserObjectMD_ChildTables": [
+          {
+            "SonNumber": 1,
+            "TableName": "ST_UDRTD",
+            "LogTableName": "AST_UDRTD",
+            "Code": "ST_UDROUTE",
+            "ObjectName": "ST_UDRTD"
+          }
+        ]
+      }
+    },
+    "ST_PARAMQC": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_ParamType",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_OpCode",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_OpName",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_InCode",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_InName",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_MinValue",
+          "Type": "Edm.Double"
+        },
+        {
+          "Name": "U_MaxValue",
+          "Type": "Edm.Double"
+        },
+        {
+          "Name": "U_Rafaksi",
+          "Type": "Edm.Double"
+        },
+        {
+          "Name": "U_QualValue",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_IsActive",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 52,
+      "table": "ST_PARAMQC",
+      "tableType": "bott_MasterData",
+      "udo": {
+        "Code": "ST_PARAMQC",
+        "TableName": "ST_PARAMQC",
+        "ObjectType": "boud_MasterData",
+        "UserObjectMD_ChildTables": []
+      }
+    },
+    "ST_OPERQC": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_IsActive",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 2,
+      "table": "ST_OPERQC",
+      "tableType": "bott_MasterData",
+      "udo": {
+        "Code": "ST_OPERQC",
+        "TableName": "ST_OPERQC",
+        "ObjectType": "boud_MasterData",
+        "UserObjectMD_ChildTables": []
+      }
+    },
+    "ST_INSTYPE": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_IsActive",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 3,
+      "table": "ST_INSTYPE",
+      "tableType": "bott_MasterData",
+      "udo": {
+        "Code": "ST_INSTYPE",
+        "TableName": "ST_INSTYPE",
+        "ObjectType": "boud_MasterData",
+        "UserObjectMD_ChildTables": []
+      }
+    },
+    "U_ST_INSTYPEMAP": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_InsTypeCode",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_WarehouseCode",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_BatchStatus",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 2,
+      "table": "ST_INSTYPEMAP",
+      "tableType": "bott_NoObject"
+    },
+    "STEM_PETTYCASHCAT": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_GLAccount",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_IsMobile",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_Desc",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 26,
+      "table": "STEM_PETTYCASHCAT",
+      "tableType": "bott_MasterData",
+      "udo": {
+        "Code": "STEM_PETTYCASHCAT",
+        "TableName": "STEM_PETTYCASHCAT",
+        "ObjectType": "boud_MasterData",
+        "UserObjectMD_ChildTables": []
+      }
+    },
+    "U_STEM_RULETRANSFER": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.Int32"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_ST_CK_User",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_ST_CK_WhsFrom",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_ST_CK_WhsTo",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_ST_ItemGroup",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_ST_SubGroup3",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 6,
+      "table": "STEM_RULETRANSFER",
+      "tableType": "bott_NoObjectAutoIncrement"
+    },
+    "STEM_ORPURPOSE": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_IsActive",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_TransferType",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 4,
+      "table": "STEM_ORPURPOSE",
+      "tableType": "bott_MasterData",
+      "udo": {
+        "Code": "STEM_ORPURPOSE",
+        "TableName": "STEM_ORPURPOSE",
+        "ObjectType": "boud_MasterData",
+        "UserObjectMD_ChildTables": []
+      }
+    },
+    "STEM_REASON": {
+      "keys": [
+        "Code"
+      ],
+      "fields": [
+        {
+          "Name": "Code",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "Name",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_IsActive",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        },
+        {
+          "Name": "U_TransferType",
+          "Nullable": "false",
+          "Type": "Edm.String"
+        }
+      ],
+      "rowCount": 3,
+      "table": "STEM_REASON",
+      "tableType": "bott_MasterData",
+      "udo": {
+        "Code": "STEM_REASON",
+        "TableName": "STEM_REASON",
+        "ObjectType": "boud_MasterData",
+        "UserObjectMD_ChildTables": []
+      }
+    }
+  }
+}

@@ -102,12 +102,15 @@ public class SetupController {
     @GetMapping("/steps")
     public JsonNode steps() throws IOException {
         try (InputStream in = new ClassPathResource("setup/steps.json").getInputStream()) {
-            JsonNode steps = json.readTree(in);
-            if (!env.getProperty("setup.farm-breeding.enabled", Boolean.class, true))
-                for (JsonNode step : steps) if ("G".equals(step.path("tier").asText()))
-                    ((ObjectNode)step).put("upload", false).put("unavailable", true)
-                        .put("note", "Tidak tersedia di company ini: modul Farm Breeding dinonaktifkan. Setup addon Retail memakai katalog terpisah setelah disetujui.");
-            return steps;
+            com.fasterxml.jackson.databind.node.ArrayNode out = json.createArrayNode();
+            boolean farm = env.getProperty("setup.farm-breeding.enabled", Boolean.class, true);
+            for (JsonNode step : json.readTree(in))
+                if (farm || !"G".equals(step.path("tier").asText())) out.add(step);
+            if (env.getProperty("setup.retail.enabled", Boolean.class, false))
+                try (InputStream retail = new ClassPathResource("setup/retail-steps.json").getInputStream()) {
+                    for (JsonNode step : json.readTree(retail)) out.add(step);
+                }
+            return out;
         }
     }
 
@@ -164,18 +167,23 @@ public class SetupController {
     /**
      * Company SAP B1 di server yang sama yang boleh jadi sumber: yang dideklarasikan di setup.source-dbs (urutan dipertahankan),
      * atau kalau kosong, yang cocok dengan setup.same-server.schema-filter. Hanya schema yang benar-benar company DB (punya OADM),
-     * dan DB tujuan sendiri tidak pernah ikut.
+     * DB tujuan ikut hanya jika setup.source.allow-target diaktifkan eksplisit (QA sumber = tujuan).
      */
     private List<String> sameServerSchemas(String target) {
         List<String> companies = jdbc.queryForList("SELECT SCHEMA_NAME FROM SYS.TABLES WHERE TABLE_NAME = 'OADM' ORDER BY SCHEMA_NAME", String.class);
         List<String> out = new ArrayList<>();
         if (!sourceDbs.isEmpty()) {
-            for (String s : sourceDbs) if (!s.equals(target) && companies.contains(s)) out.add(s);
+            for (String s : sourceDbs) if ((!s.equals(target) || allowTargetSource()) && companies.contains(s)) out.add(s);
             return out;
         }
         Pattern filter = Pattern.compile(schemaFilter.isEmpty() ? Pattern.quote(target) + ".*" : schemaFilter);
         for (String s : companies) if (!s.equals(target) && filter.matcher(s).matches()) out.add(s);
+        if (allowTargetSource() && companies.contains(target)) out.add(0, target);
         return out;
+    }
+
+    private boolean allowTargetSource() {
+        return env.getProperty("setup.source.allow-target", Boolean.class, false);
     }
 
     /** DB yang dideklarasikan tapi tidak ditemukan sebagai company DB di server ini (salah ketik / belum ada). */
@@ -257,11 +265,15 @@ public class SetupController {
         out.put("target", target);
         if (Boolean.TRUE.equals(target.get("unavailable"))) return out;
         if (src != null && !src.isEmpty()) {
-            try (Connection con = openSource(src)) {
-                out.put("source", run(con, compatibleSql(con, id, sql)));
-            } catch (SQLException e) {
-                log.warn("[setup:{}] sumber {} gagal: {}", id, src, e.getMessage());
-                out.put("source", Collections.singletonMap("error", e.getMessage()));
+            if (allowTargetSource() && src.equals("same:" + targetSchema())) out.put("source", target);
+            else {
+                if (step.path("retail").asBoolean()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Retail saat ini hanya memakai sumber = tujuan WBI_TEST.");
+                try (Connection con = openSource(src)) {
+                    out.put("source", runStep(con, step, compatibleSql(con, id, sql)));
+                } catch (SQLException e) {
+                    log.warn("[setup:{}] sumber {} gagal: {}", id, src, e.getMessage());
+                    out.put("source", Collections.singletonMap("error", e.getMessage()));
+                }
             }
         }
         // akun posting di tujuan, untuk cek referensi akun sebelum upload
@@ -270,21 +282,41 @@ public class SetupController {
         return out;
     }
 
-    private Map<String, Object> runTarget(String id, String sql, boolean optionalAddon) {
+    private Map<String, Object> runTarget(String id, String sql, boolean optionalAddon) throws IOException {
+        final JsonNode definition = step(id);
+        final String requiredTables = "st-udroute".equals(id) ? sql + "\n" + stepSql("st-udroute-detail") : sql;
         try {
             return jdbc.execute((ConnectionCallback<Map<String, Object>>) con -> {
-                if (optionalAddon && !addonTablesExist(con, sql)) {
+                // A shared source/target QA datasource is still strictly read-only on JDBC.
+                if (allowTargetSource()) con.setReadOnly(true);
+                if (optionalAddon && !addonTablesExist(con, requiredTables)) {
                     Map<String, Object> result = new LinkedHashMap<>();
                     result.put("unavailable", true);
-                    result.put("message", "Tidak tersedia di company ini: tabel Farm Breeding belum terpasang.");
+                    result.put("message", "Tidak tersedia di company ini: tabel addon belum terpasang.");
                     result.put("columns", Collections.emptyList()); result.put("rows", Collections.emptyList());
                     return result;
                 }
-                return run(con, compatibleSql(con, id, sql));
+                Map<String,Object> result = runStep(con, definition, compatibleSql(con, id, sql));
+                if (definition.path("retail").asBoolean() && ((List<?>)result.get("rows")).isEmpty()) {
+                    result.put("unavailable", true);
+                    result.put("message", "Tidak tersedia: tabel Retail sumber WBI_TEST belum berisi data.");
+                }
+                return result;
             });
         } catch (DataAccessException e) {
             return Collections.singletonMap("error", e.getMostSpecificCause().getMessage());
         }
+    }
+
+    private Map<String,Object> runStep(Connection con, JsonNode step, String sql) throws SQLException {
+        Map<String,Object> result = run(con, sql);
+        if ("st-udroute".equals(step.path("id").asText())) {
+            try {
+                Map<String,Object> details = run(con, stepSql("st-udroute-detail"));
+                SetupRetailPolicy.attachDetails(result, details, step.path("children").get(0), json);
+            } catch (IOException e) { throw new SQLException("Query detail Route tidak dapat dibaca", e); }
+        }
+        return result;
     }
 
     static boolean addonTablesExist(Connection con, String sql) throws SQLException {
@@ -333,6 +365,10 @@ public class SetupController {
                     throw new IllegalArgumentException("Branch wajib diisi");
             }
             validateBranchFields(data, "st-shift".equals(step.path("id").asText()));
+        }
+        if (step.path("retail").asBoolean()) {
+            SetupRetailPolicy.validate(step, data, create);
+            SetupRetailPolicy.validateKey(step, row);
         }
         return data;
     }
@@ -391,9 +427,16 @@ public class SetupController {
         // langkah lewat aksi service (mis. SeriesService_AddSeries) dan bukan entity: body dibungkus, key ikut di dalam body
         JsonNode svc = step.path("action");
         if ("G".equals(step.path("tier").asText())) {
-            String query = stepSql(id);
+            String query = stepSql(id) + ("st-udroute".equals(id) ? "\n" + stepSql("st-udroute-detail") : "");
             Boolean installed = jdbc.execute((ConnectionCallback<Boolean>) con -> addonTablesExist(con, query));
-            if (!Boolean.TRUE.equals(installed)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Tidak tersedia di company ini: tabel Farm Breeding belum terpasang.");
+            if (!Boolean.TRUE.equals(installed)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Tidak tersedia di company ini: tabel addon belum terpasang.");
+            if (step.path("retail").asBoolean()) {
+                if (!allowTargetSource() || !body.path("source").asText().equals("same:" + targetSchema()))
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Retail saat ini hanya memakai sumber = tujuan. Pilih database sumber WBI_TEST.");
+                Long count = jdbc.queryForObject("SELECT COUNT(*) FROM \"@" + step.path("table").asText() + "\"", Long.class);
+                if (count == null || count == 0)
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Tidak tersedia: tabel Retail sumber WBI_TEST belum berisi data.");
+            }
         }
         final boolean branches;
         try { branches = branchMode(); }

@@ -1,0 +1,484 @@
+[
+  {
+    "id": "st-plcategory",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Kategori Price List",
+    "doc": "udt",
+    "ref": "@ST_PLCATEGORY",
+    "entity": "ST_PLCATEGORY",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_Level",
+      "U_ConfigName",
+      "U_CategoryCode",
+      "U_CategoryName",
+      "U_Active"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_Level": "Edm.Int32",
+      "U_ConfigName": "Edm.String",
+      "U_CategoryCode": "Edm.String",
+      "U_CategoryName": "Edm.String",
+      "U_Active": "Edm.String"
+    },
+    "numeric": [
+      "U_Level"
+    ],
+    "table": "ST_PLCATEGORY",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA."
+  },
+  {
+    "id": "st-plconfig",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Konfigurasi Price List",
+    "doc": "udt",
+    "ref": "@ST_PLCONFIG",
+    "entity": "ST_PLCONFIG",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_Level",
+      "U_ConfigName",
+      "U_Active"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_Level": "Edm.Int32",
+      "U_ConfigName": "Edm.String",
+      "U_Active": "Edm.String"
+    },
+    "numeric": [
+      "U_Level"
+    ],
+    "table": "ST_PLCONFIG",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA.",
+    "requires": [
+      "Kategori Price List"
+    ]
+  },
+  {
+    "id": "st-udroute",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Route Produksi (header + detail)",
+    "doc": "udt",
+    "ref": "@ST_UDRTH",
+    "entity": "ST_UDROUTE",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name",
+      "U_IsActive"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_IsActive"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_IsActive": "Edm.String"
+    },
+    "numeric": [],
+    "table": "ST_UDRTH",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA. Route baru membawa detail JSON tanpa LineId. Semua perbedaan detail pada route lama ditolak; ubah di SAP.",
+    "requires": [
+      "Work Center"
+    ],
+    "children": [
+      {
+        "collection": "ST_UDRTDCollection",
+        "json": true,
+        "fields": [
+          "U_WCCode",
+          "U_WCDesc",
+          "U_Seq"
+        ],
+        "fieldTypes": {
+          "U_WCCode": "Edm.String",
+          "U_WCDesc": "Edm.String",
+          "U_Seq": "Edm.Int32"
+        },
+        "numeric": [
+          "U_Seq"
+        ],
+        "from": "_Detail"
+      }
+    ],
+    "blockChildUpdates": true
+  },
+  {
+    "id": "st-operqc",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Operasi QC",
+    "doc": "udt",
+    "ref": "@ST_OPERQC",
+    "entity": "ST_OPERQC",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name",
+      "U_IsActive"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_IsActive"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_IsActive": "Edm.String"
+    },
+    "numeric": [],
+    "table": "ST_OPERQC",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA."
+  },
+  {
+    "id": "st-instype",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Tipe Inspeksi QC",
+    "doc": "udt",
+    "ref": "@ST_INSTYPE",
+    "entity": "ST_INSTYPE",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name",
+      "U_IsActive"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_IsActive"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_IsActive": "Edm.String"
+    },
+    "numeric": [],
+    "table": "ST_INSTYPE",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA."
+  },
+  {
+    "id": "st-instypemap",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Mapping Tipe Inspeksi",
+    "doc": "udt",
+    "ref": "@ST_INSTYPEMAP",
+    "entity": "U_ST_INSTYPEMAP",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_InsTypeCode",
+      "U_WarehouseCode",
+      "U_BatchStatus"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_InsTypeCode": "Edm.String",
+      "U_WarehouseCode": "Edm.String",
+      "U_BatchStatus": "Edm.String"
+    },
+    "numeric": [],
+    "table": "ST_INSTYPEMAP",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA.",
+    "requires": [
+      "Tipe Inspeksi QC",
+      "Warehouse"
+    ]
+  },
+  {
+    "id": "st-paramqc",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Parameter QC",
+    "doc": "udt",
+    "ref": "@ST_PARAMQC",
+    "entity": "ST_PARAMQC",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name",
+      "U_IsActive"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_ParamType",
+      "U_OpCode",
+      "U_OpName",
+      "U_InCode",
+      "U_InName",
+      "U_MinValue",
+      "U_MaxValue",
+      "U_Rafaksi",
+      "U_QualValue",
+      "U_IsActive"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_ParamType": "Edm.String",
+      "U_OpCode": "Edm.String",
+      "U_OpName": "Edm.String",
+      "U_InCode": "Edm.String",
+      "U_InName": "Edm.String",
+      "U_MinValue": "Edm.Double",
+      "U_MaxValue": "Edm.Double",
+      "U_Rafaksi": "Edm.Double",
+      "U_QualValue": "Edm.String",
+      "U_IsActive": "Edm.String"
+    },
+    "numeric": [
+      "U_MinValue",
+      "U_MaxValue",
+      "U_Rafaksi"
+    ],
+    "table": "ST_PARAMQC",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA.",
+    "requires": [
+      "Operasi QC",
+      "Tipe Inspeksi QC"
+    ]
+  },
+  {
+    "id": "stem-pettycashcat",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Kategori Kas Kecil",
+    "doc": "udt",
+    "ref": "@STEM_PETTYCASHCAT",
+    "entity": "STEM_PETTYCASHCAT",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name",
+      "U_IsMobile"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_GLAccount",
+      "U_IsMobile",
+      "U_Desc"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_GLAccount": "Edm.String",
+      "U_IsMobile": "Edm.String",
+      "U_Desc": "Edm.String"
+    },
+    "numeric": [],
+    "table": "STEM_PETTYCASHCAT",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA.",
+    "accounts": [
+      "U_GLAccount"
+    ],
+    "requires": [
+      "Chart of Accounts"
+    ]
+  },
+  {
+    "id": "stem-ruletransfer",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Aturan Transfer Gudang",
+    "doc": "udt",
+    "ref": "@STEM_RULETRANSFER",
+    "entity": "U_STEM_RULETRANSFER",
+    "keyField": "Code",
+    "keyString": false,
+    "match": [
+      "U_ST_CK_User",
+      "U_ST_CK_WhsFrom",
+      "U_ST_CK_WhsTo",
+      "U_ST_ItemGroup",
+      "U_ST_SubGroup3"
+    ],
+    "required": [
+      "Name"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_ST_CK_User",
+      "U_ST_CK_WhsFrom",
+      "U_ST_CK_WhsTo",
+      "U_ST_ItemGroup",
+      "U_ST_SubGroup3"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.Int32",
+      "Name": "Edm.String",
+      "U_ST_CK_User": "Edm.String",
+      "U_ST_CK_WhsFrom": "Edm.String",
+      "U_ST_CK_WhsTo": "Edm.String",
+      "U_ST_ItemGroup": "Edm.String",
+      "U_ST_SubGroup3": "Edm.String"
+    },
+    "numeric": [
+      "Code"
+    ],
+    "table": "STEM_RULETRANSFER",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA. Code Int32 otomatis tidak dikirim saat create; dicocokkan lewat gabungan lima field aturan, bukan Code.",
+    "omitOnCreate": [
+      "Code"
+    ],
+    "info": [
+      "Code"
+    ]
+  },
+  {
+    "id": "stem-orpurpose",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Tujuan Order",
+    "doc": "udt",
+    "ref": "@STEM_ORPURPOSE",
+    "entity": "STEM_ORPURPOSE",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name",
+      "U_IsActive",
+      "U_TransferType"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_IsActive",
+      "U_TransferType"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_IsActive": "Edm.String",
+      "U_TransferType": "Edm.String"
+    },
+    "numeric": [],
+    "table": "STEM_ORPURPOSE",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA."
+  },
+  {
+    "id": "stem-reason",
+    "tier": "G",
+    "tierName": "Retail",
+    "retail": true,
+    "kind": "data",
+    "title": "Alasan Operasional",
+    "doc": "udt",
+    "ref": "@STEM_REASON",
+    "entity": "STEM_REASON",
+    "keyField": "Code",
+    "keyString": true,
+    "match": [
+      "Code"
+    ],
+    "required": [
+      "Code",
+      "Name",
+      "U_IsActive",
+      "U_TransferType"
+    ],
+    "fields": [
+      "Code",
+      "Name",
+      "U_IsActive",
+      "U_TransferType"
+    ],
+    "fieldTypes": {
+      "Code": "Edm.String",
+      "Name": "Edm.String",
+      "U_IsActive": "Edm.String",
+      "U_TransferType": "Edm.String"
+    },
+    "numeric": [],
+    "table": "STEM_REASON",
+    "note": "Metadata SL WBI_TEST terverifikasi 2026-11-23. Hanya aktif bila tabel sumber berisi data; sumber = tujuan WBI_TEST. Payload tulis belum diuji di QA."
+  }
+]

@@ -209,8 +209,14 @@ export function compare(step, data, lookups = {}) {
     }
     // baris anak (step.children): upload tidak mengubah detail yang sudah ada (PATCH koleksi UDO bisa menggandakan baris)
     const childFrom = new Set((step.children || []).map(c => c.from));
-    if (t && childFrom.size && diffs.size && [...diffs].every(f => childFrom.has(f)))
+    if (t && childFrom.size && diffs.size && (step.blockChildUpdates ? [...diffs].some(f => childFrom.has(f)) : [...diffs].every(f => childFrom.has(f))))
       errors.push("Detail beda dengan sumber; upload tidak bisa mengubah baris detail, ubah di SAP");
+    for (const c of step.children || []) if (c.json) {
+      try { if (!Array.isArray(JSON.parse(s[c.from] || '[]'))) throw new Error(); }
+      catch { errors.push('Detail Route harus berupa array JSON yang valid'); }
+    }
+    if (step.id === 'stem-ruletransfer' && step.match.every(f => isEmpty(norm(s[f]))))
+      errors.push('Minimal satu field aturan transfer wajib diisi');
     const status = errors.length ? "error" : t && !diffs.size ? "same" : t ? "diff" : "new";
     rows.push({ status, src: s, tgt: t, diffs, errors });
   }
@@ -231,7 +237,7 @@ export function payload(step, r, lookups) {
   const numeric = new Set(step.numeric || []);
   const val = (f, v) => numeric.has(f) ? +v : v;
   const fs = (r.status === "new" ? Object.keys(r.src) : [...new Set([...r.diffs, ...(step.alwaysSend || [])])])
-    .filter(f => !f.startsWith("_") && !isEmpty(norm(r.src[f])));
+    .filter(f => !f.startsWith("_") && !isEmpty(norm(r.src[f])) && !(r.status === "new" && (step.omitOnCreate || []).includes(f)));
   const data = Object.fromEntries(fs.map(f => [f, val(f, norm(r.src[f]))]));
   for (const l of step.lookups || []) {
     const v = norm(r.src[l.from]);
@@ -245,7 +251,8 @@ export function payload(step, r, lookups) {
     const v = norm(r.src[c.from]);
     if (!v) continue;
     // anak banyak kolom (c.fields): baris dipisah c.rowSep, kolom dipisah c.colSep, kolom kosong tidak dikirim
-    if (c.fields) data[c.collection] = v.split(c.rowSep || "¦").map(row => Object.fromEntries(row.split(c.colSep || "^")
+    if (c.json) data[c.collection] = JSON.parse(v);
+    else if (c.fields) data[c.collection] = v.split(c.rowSep || "¦").map(row => Object.fromEntries(row.split(c.colSep || "^")
       .map((x, i) => [c.fields[i], x.trim()]).filter(([k, x]) => k && x !== "").map(([k, x]) => [k, (c.numeric || []).includes(k) ? +x : x]))).filter(o => Object.keys(o).length);
     else data[c.collection] = v.split(c.sep || "|").map(x => x.trim()).filter(Boolean).map(x => ({ [c.field]: x }));
   }
@@ -298,7 +305,8 @@ function stepPage(step) {
     mount: box => { const b = $("[data-sx-tpl]", box); if (b) b.onclick = () => getTemplate(step, b); }
   };
   return {
-    lead: `Isi data ${esc(step.title)} dengan salah satu dari 2 cara, cek perbandingannya dengan SAP tujuan, lalu upload baris yang dipilih`
+    lead: step.retail ? 'Baca master Retail yang sudah terisi di WBI_TEST. Sumber dan tujuan saat ini sama, sehingga data normalnya berstatus Sama; tidak ada perubahan untuk di-upload.'
+      : `Isi data ${esc(step.title)} dengan salah satu dari 2 cara, cek perbandingannya dengan SAP tujuan, lalu upload baris yang dipilih`
       + (canUpload(step) ? "." : " (upload untuk langkah ini menyusul; sekarang bandingkan & export dulu)."),
     menu: canUpload(step) ? `Service Layer › ${step.action ? step.action.create : step.entity}` : "",
     doc: step.doc,
@@ -307,7 +315,7 @@ function stepPage(step) {
       onMount(() => mountStep(step, $(`#${id}`)));
       return stepHead(step) + `<div class="sx" id="${id}">
         <ol class="sx-steps" aria-label="Tahapan">
-          <li data-n="1"><span class="sx-num">1</span><span><b>Pilih cara isi data</b><small data-sx-s1>database lain atau Excel</small></span></li>
+          <li data-n="1"><span class="sx-num">1</span><span><b>Pilih cara isi data</b><small data-sx-s1>${step.retail ? 'database WBI_TEST' : 'database lain atau Excel'}</small></span></li>
           <li data-n="2"><span class="sx-num">2</span><span><b>Cek &amp; bandingkan</b><small>dengan data di SAP tujuan</small></span></li>
           <li data-n="3"><span class="sx-num">3</span><span><b>Upload ke SAP</b><small>baris yang dipilih</small></span></li>
         </ol>
@@ -316,8 +324,8 @@ function stepPage(step) {
         <h2 class="sx-h">1. Pilih cara isi data</h2>
         <div class="sx-ways" role="radiogroup" aria-label="Cara isi data">
           <div class="sx-way" data-way="db">
-            <label class="sx-way-h"><input type="radio" name="way-${step.id}" value="db"><b>Copy dari database lain</b></label>
-            <p class="sx-way-d">Ambil ${esc(step.title)} langsung dari company DB lain, mis. DB lama untuk cut off.</p>
+            <label class="sx-way-h"><input type="radio" name="way-${step.id}" value="db"><b>${step.retail ? 'Baca dari database WBI_TEST' : 'Copy dari database lain'}</b></label>
+            <p class="sx-way-d">${step.retail ? 'Pilih WBI_TEST. Master kosong atau belum terpasang ditandai tidak tersedia. Sumber lain belum diaktifkan.' : `Ambil ${esc(step.title)} langsung dari company DB lain, mis. DB lama untuk cut off.`}</p>
             <div class="sx-way-b" data-body="db"></div>
           </div>
           <div class="sx-way" data-way="excel">
@@ -616,7 +624,7 @@ function drawStep(step, body, cmp, opt) {
     try {
       const url = `api/setup/${step.id}/upload`;
       const { results, aborted } = await uploadInChunks(list.map(r => payload(step, r, opt.lookups)),
-        part => getJson(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: part }) }),
+        part => getJson(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rows: part, source: currentSrc() }) }),
         { onProgress: prog.update, shouldStop: prog.isStopped });
       prog.close();
       const ok = results.filter(x => x.ok).length, unsent = list.length - results.length;
@@ -782,6 +790,7 @@ export async function startSetupApp() {
     const capability = await getJson("api/setup/capabilities");
     const enabled = capability.uploadAllowed && typeof capability.branchEnabled === 'boolean' ? capability.branchEnabled : null;
     steps = (await getJson("api/setup/steps")).filter(s => s.kind !== "ref").map(s => branchStep(s, enabled));
+    if (steps.some(s => s.retail)) TIERS.G = ['Retail', 'Master dan konfigurasi Retail yang tersedia serta berisi data. Sumber dan tujuan saat ini WBI_TEST. Transaksi/log/buffer dan saldo awal tidak di-upload di sini.'];
     const status = document.getElementById('setup-capability');
     status.textContent = enabled === null ? capability.message || 'Mode branch tujuan belum dapat dipastikan. Upload diblokir.'
       : enabled ? 'Company tujuan memakai branch.' : 'Company tujuan tidak memakai branch. Kolom branch harus kosong.';
