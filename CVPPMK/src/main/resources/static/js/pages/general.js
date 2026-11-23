@@ -508,7 +508,7 @@ export const PAGES = {
     },
     render: d => section("accounts", "House Bank Accounts", table([{ key: "BankCode", label: "Bank Code" }, { key: "BankName", label: "Bank" },
       { key: "Branch", label: "Branch" }, { key: "Account", label: "Account No." }, { key: "AcctName", label: "Account Name" },
-      { key: "GLAccount", label: "Akun G/L", fmt: acct("GLAccount", "GLName") }, ...udfCols(d.accounts)], rowsOf(d.accounts)))
+      { key: "GLAccount", label: "Akun G/L", fmt: acct("GLAccount", "GLName") }, ...udfCols(d.accounts)], rowsOf(d.accounts), { keep: ["GLAccount"] }))
   },
 
   "banks": {
@@ -540,7 +540,7 @@ export const PAGES = {
       return noCt.length ? [["warn", `Satuan tanpa kode UoM CoreTax: ${noCt.join(", ")}.`]] : [];
     },
     render: d => section("uom", "Units of Measure", table([{ key: "UomCode", label: "UoM" }, { key: "UomName", label: "Nama" },
-      { key: "Locked", label: "Dikunci", fmt: badgeYN }, ...udfCols(d.uom)], rowsOf(d.uom)))
+      { key: "Locked", label: "Dikunci", fmt: badgeYN }, ...udfCols(d.uom)], rowsOf(d.uom), { keep: ["U_STEM_CT_UOM"] }))
   },
 
   "uom-groups": {
@@ -756,7 +756,7 @@ sap.sld.password=[PASSWORD]</pre></div>`) + users;
       // Excel: branch bisa lebih dari satu per user, jadi dipisah ke sheet "Branch Assignment" (sql/users/02_branches.sql)
       const xlsx = exportSheets([{ name: "Users", cols: cols.filter(c => c.key !== "Branches"), rows: rowsOf(d.users) },
         ...(!nonBranch() ? sqlSheets(d, { branches: "Branch Assignment" }) : [])], "User");
-      return section("users", "User SAP B1", xlsx + table(cols, rowsOf(d.users), { noExport: true }));
+      return section("users", "User SAP B1", xlsx + table(cols, rowsOf(d.users), { noExport: true, keep: ["Branches"] }));
     }
   },
 
@@ -824,7 +824,7 @@ sap.sld.password=[PASSWORD]</pre></div>`) + users;
           { key: "MainBPL", label: "Branch utama", fmt: badgeYN }, { key: "Disabled", label: "Nonaktif", fmt: badgeYN },
           { key: "DflWhs", label: "Warehouse default" }, { key: "TaxIdNum", label: "NPWP" },
           { key: "WhsCount", label: "Warehouse", num: 1, fmt: v => `<a href="#/warehouses">${esc(v)}</a>` }, { key: "UserCount", label: "User", num: 1 }, ...udfCols(d.branches)],
-        rowsOf(d.branches)));
+        rowsOf(d.branches), { keep: ["TaxIdNum"] }));
     }
   }
 };

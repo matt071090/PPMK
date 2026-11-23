@@ -1,5 +1,6 @@
 import { mountPager } from "./paging.js";
 import { emptyPreference, saveEmptyPreference } from "./data-policy.js";
+import { emptyColumnKeys, colPrefKey } from "./table-cols.js";
 // Helper render yang dipakai semua halaman.
 export const $ = (sel, el = document) => el.querySelector(sel);
 export const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
@@ -152,6 +153,16 @@ export function cellText(html) {
   $$(".raw", el).forEach(s => s.prepend(" "));
   return el.textContent.replace(/\s+/g, " ").trim();
 }
+// Sel persis seperti yang dirender tabel (dipakai juga untuk menentukan kolom kosong).
+const cellHtml = (c, r) => c.fmt ? c.fmt(r[c.key], r) : val(r[c.key]);
+// Kolom Excel = kolom yang tampil di layar: kolom kosong di semua baris tidak ikut, kecuali toggle "Tampilkan kolom kosong" tabel itu menyala.
+// x: entri registri export. Hanya export milik tabel (membawa pref + emptyKeys) yang mengikuti; export lepas
+// (exportButton/exportSheets: sheet query apa adanya, dipakai sebagai template) tetap memuat semua kolom.
+export function exportColsOf(x) {
+  if (x.pref == null || emptyPreference(`cols:${x.pref}`)) return x.cols;
+  const hide = new Set(x.emptyKeys || []);
+  return x.cols.filter(c => !hide.has(c.key));
+}
 // Baris tabel -> baris Excel. Kolom angka diekspor sebagai angka dari nilai mentahnya.
 export function exportRows(cols, rows) {
   return [cols.map(c => c.label), ...rows.map(r => cols.map(c => {
@@ -186,34 +197,45 @@ export const sqlSheets = (d, names) => Object.entries(names).filter(([k]) => d[k
 // expand(r): HTML detail baris; baris jadi bisa diklik untuk buka/tutup detail di bawahnya.
 // exportCols: kolom Excel kalau berbeda dari kolom yang tampil (mis. isi detail ikut diekspor).
 // lazy: detail baru dirender saat baris dibuka (data besar).
-export function table(cols, rows, { flag, xid, allRows, noExport, expand, exportCols, lazy, paginate = true } = {}) {
+export function table(cols, rows, { flag, xid, allRows, noExport, expand, exportCols, lazy, paginate = true, keep, emptyKeys, basis, prefId } = {}) {
+  // Kolom yang kosong di semua baris disembunyikan (CSS, bisa dinyalakan lagi). Keputusan dari seluruh data (basis), bukan halaman/filter aktif.
+  const hide = emptyKeys || emptyColumnKeys(cols, basis || allRows || rows, cellHtml, keep), hideSet = new Set(hide);
+  const pref = prefId || colPrefKey(cols, xid), showAll = hide.length ? emptyPreference(`cols:${pref}`) : false;
   if (paginate && rows.length > 25) {
     const pid = `pg${++pagingSeq}`;
     // Register export against all rows, including when this table sits inside a search result.
     const exportId = xid || `x${++exportSeq}`;
-    if (!noExport) exportsReg.set(exportId, { cols: exportCols || cols, rows: allRows || rows });
+    if (!noExport) exportsReg.set(exportId, { cols: exportCols || cols, rows: allRows || rows, emptyKeys: hide, pref, keep });
     onMount(() => {
       const box = document.getElementById(pid); if (!box) return;
-      mountPager(box, rows, visible => table(cols, visible, { flag, xid: exportId, allRows: allRows || rows, noExport, expand, exportCols, lazy, paginate: false }), flushMounts);
+      mountPager(box, rows, visible => table(cols, visible, { flag, xid: exportId, allRows: allRows || rows, noExport, expand, exportCols, lazy, paginate: false, keep, emptyKeys: hide, prefId: pref }), flushMounts);
     });
     return `${noExport || xid ? "" : `<div class="xbar">${exportBtn(exportId)}</div>`}<div id="${pid}"></div>`;
   }
   const id = xid || `x${++exportSeq}`;
-  if (!noExport) exportsReg.set(id, { cols: exportCols || cols, rows: allRows || rows });
+  if (!noExport) exportsReg.set(id, { cols: exportCols || cols, rows: allRows || rows, emptyKeys: hide, pref, keep });
   const n = cols.length + (expand ? 1 : 0);
   const row = r => {
-    const cells = cols.map(c => `<td class="${c.num ? "num" : ""}">${c.fmt ? c.fmt(r[c.key], r) : val(r[c.key])}</td>`).join("");
+    const cells = cols.map(c => `<td class="${[c.num ? "num" : "", hideSet.has(c.key) ? "col-empty" : ""].join(" ").trim()}">${cellHtml(c, r)}</td>`).join("");
     const cls = [flag && flag(r) ? "flag" : "", expand ? "has-exp" : ""].join(" ").trim();
     return expand
       ? `<tr class="${cls}" aria-expanded="false"><td class="exp-tg"></td>${cells}</tr><tr class="exp-row" hidden>${lazy ? `<td colspan="${n}" data-lazy="${lazyKey(() => expand(r))}"></td>` : `<td colspan="${n}">${expand(r)}</td>`}</tr>`
       : `<tr class="${cls}">${cells}</tr>`;
   };
-  return `${noExport || xid ? "" : `<div class="xbar">${exportBtn(id)}</div>`}<div class="table-wrap"><table class="data${expand ? " expandable" : ""}">
-    <thead><tr>${expand ? "<th></th>" : ""}${cols.map(c => `<th${c.num ? " class=\"num\"" : ""}>${esc(c.label)}</th>`).join("")}</tr></thead>
+  return `${noExport || xid ? "" : `<div class="xbar">${exportBtn(id)}</div>`}${hide.length ? `<div class="colbar"><span>${hide.length} kolom kosong disembunyikan</span><label><input type="checkbox" data-empty-cols="${esc(pref)}"${showAll ? " checked" : ""}> Tampilkan kolom kosong</label></div>` : ""}<div class="table-wrap${hide.length && !showAll ? " hide-empty-cols" : ""}"${hide.length ? ` data-colpref="${esc(pref)}"` : ""}><table class="data${expand ? " expandable" : ""}">
+    <thead><tr>${expand ? "<th></th>" : ""}${cols.map(c => { const k = [c.num ? "num" : "", hideSet.has(c.key) ? "col-empty" : ""].join(" ").trim(); return `<th${k ? ` class="${k}"` : ""}>${esc(c.label)}</th>`; }).join("")}</tr></thead>
     <tbody>${rows.map(row).join("")
       || `<tr><td colspan="${n}" style="text-align:center;color:var(--muted);padding:28px">Tidak ada data</td></tr>`}</tbody>
   </table></div>`;
 }
+// Toggle "Tampilkan kolom kosong": simpan per browser per tabel, semua tabel dengan kunci sama di halaman ikut.
+document.addEventListener("change", e => {
+  const t = e.target.closest?.("input[data-empty-cols]");
+  if (!t) return;
+  saveEmptyPreference(`cols:${t.dataset.emptyCols}`, t.checked);
+  $$("[data-colpref]").forEach(w => { if (w.dataset.colpref === t.dataset.emptyCols) w.classList.toggle("hide-empty-cols", !t.checked); });
+  $$("input[data-empty-cols]").forEach(i => { if (i.dataset.emptyCols === t.dataset.emptyCols) i.checked = t.checked; });
+});
 const lazyKey = fn => { const k = `l${++lazySeq}`; lazyReg.set(k, fn); return k; };
 export function toggleRow(tr, open = tr.getAttribute("aria-expanded") !== "true") {
   tr.setAttribute("aria-expanded", open);
@@ -242,6 +264,7 @@ export function searchable(id, cols, rows, opts = {}) {
     if (!searchCache.has(r)) searchCache.set(r, basic + ' ' + cellText(opts.expand(r)));
     return searchCache.get(r);
   };
+  let emptyKeys;
   const filters = filterKey ? [...new Set(rows.map(r => r[filterKey]))].filter(Boolean) : [];
   onMount(() => {
     const box = document.getElementById(id); if (!box) return;
@@ -255,7 +278,8 @@ export function searchable(id, cols, rows, opts = {}) {
       const hidden = emptyRow && !showEmpty.checked ? matches.filter(emptyRow).length : 0;
       const list = matches.filter(r => !emptyRow || showEmpty.checked || !emptyRow(r));
       opts.onFilter?.(list);
-      out.innerHTML = table(cols, list, { ...opts, xid: id, allRows: list });
+      emptyKeys ??= emptyColumnKeys(cols, rows, cellHtml, opts.keep);
+      out.innerHTML = table(cols, list, { ...opts, xid: id, allRows: list, emptyKeys });
       cnt.textContent = `${list.length} dari ${rows.length} baris`;
       if (hiddenCount) hiddenCount.textContent = `${hidden} item kosong disembunyikan`;
       flushMounts();

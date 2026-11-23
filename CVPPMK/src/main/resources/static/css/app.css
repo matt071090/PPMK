@@ -1014,3 +1014,7 @@ table.data th.num { text-align: right; }
 .hn-chk small { font-size: 12px; }
 /* Count Document: jarak judul ke kartu pertama */
 .cd-app > h1 + .cd-card { margin-top: 14px; }
+/* Kolom kosong di semua baris: disembunyikan, bisa dinyalakan lewat "Tampilkan kolom kosong" */
+.hide-empty-cols .col-empty { display: none; }
+.colbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+.colbar label { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); cursor: pointer; min-height: 28px; }

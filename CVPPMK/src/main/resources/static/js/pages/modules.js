@@ -29,7 +29,7 @@ function assetReadiness(d) {
     add(!good.length ? "danger" : bad.length ? "warn" : "ok", "Asset Class", `${good.length} class lengkap${bad.length ? `, ${bad.length} belum lengkap akun G/L (tidak masalah kalau tidak dipakai aset)` : ""}`,
       "Setiap aset butuh asset class dengan Main Area dan account determination yang akun G/L-nya lengkap. Kode class dipakai kolom Asset Class di file aset; class yang belum lengkap jangan dipakai.",
       table([{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" }, { key: "AcctDtn", label: "Account Determination" }, { key: "DprTypID", label: "Tipe" }, { key: "UseLife", label: "Umur default (bulan)", num: 1 },
-        { key: "Kurang", label: "Akun belum lengkap", fmt: v => v ? esc(v) : `<span class="badge yes">Lengkap</span>` }], main, { flag: r => !!r.Kurang }), "01_classes.sql");
+        { key: "Kurang", label: "Akun belum lengkap", fmt: v => v ? esc(v) : `<span class="badge yes">Lengkap</span>` }], main, { flag: r => !!r.Kurang, keep: ["AcctDtn"] }), "01_classes.sql");
   });
   guard("dep_types", "Depreciation Type", "02_dep_types.sql", "Nama tipe penyusutan di file harus sama persis dengan di SAP (mis. Straight Line, bukan straight-line).", rows => {
     const sl = rows.filter(t => /straight/i.test(t.Code));
@@ -497,13 +497,13 @@ export const PAGES = {
           { key: "AssetType", label: "Asset Type", fmt: codedCell(ASSET_TYPE) }, { key: "DprAreaID", label: "Depreciation Area" },
           { key: "AcctDtn", label: "Account Determination", fmt: v => isEmpty(v) ? val(v) : `<a href="#/gl-determination">${esc(v)}</a>` },
           { key: "DprTypID", label: "Depreciation Type", fmt: deprType },
-          { key: "UseLife", label: "Masa manfaat (bulan)", num: 1 }, { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.classes)], rowsOf(d.classes)),
+          { key: "UseLife", label: "Masa manfaat (bulan)", num: 1 }, { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.classes)], rowsOf(d.classes), { keep: ["AcctDtn"] }),
           { no: "2.13.1", lead: "Satu kelas bisa punya beberapa depreciation area (mis. komersial dan fiskal). Setiap kelas terikat ke satu branch: prefix T- = CV-TRADING, K- = CV-KOMERSIAL. "
             + "Kolom Depreciation Type ikut menampilkan metode penyusutannya." })
         + section("assets", "Fixed Asset Master Data", table([{ key: "ItemCode", label: "Kode Aset" }, { key: "ItemName", label: "Nama" },
           { key: "AssetClass", label: "Asset Class" }, { key: "ItmsGrpNam", label: "Item Group" }, { key: "DprArea", label: "Depreciation Area" },
           { key: "DprStart", label: "Mulai penyusutan" }, { key: "UsefulLife", label: "Masa manfaat (bulan)", num: 1 },
-          { key: "DprType", label: "Depreciation Type", fmt: deprType }], rowsOf(d.assets)),
+          { key: "DprType", label: "Depreciation Type", fmt: deprType }], rowsOf(d.assets), { keep: ["DprArea", "DprStart", "UsefulLife"] }),
           { no: "2.13.2", lead: "Item tipe Fixed Asset beserta parameter penyusutannya (satu baris per depreciation area). Nilai perolehan masuk lewat dokumen Asset Capitalization. "
             + "Upload aset: Setup tahap E, langkah Fixed Asset Master Data (template T25) lalu Asset Capitalization (T26)." });
     }
