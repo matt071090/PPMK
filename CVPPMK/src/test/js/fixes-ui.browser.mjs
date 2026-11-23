@@ -75,7 +75,8 @@ try {
  await page.locator('#save').click();await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Jadwal tersimpan'));
  const saved=await page.evaluate(()=>fetch('/api/schedule').then(r=>r.json()));
  assert.equal(saved.data.items.find(i=>i.id==='upload-master').pic,chosenPic);
- assert.equal(saved.data.items.find(i=>i.id==='training').pic,'');
+ assert.equal(saved.data.items.some(i=>i.id==='training'),false);
+ assert.equal(saved.data.items.find(i=>i.id==='fa').pic,'');
  assert.equal(saved.data.items.find(i=>i.id==='upload-master').status,'proses');
  evidence.checks.push('Non-admin WBI saves free PIC + status; untouched STEM items remain blank; dates/note editor inaccessible');
  await open('schedule.html#/training',18637);await page.locator('.pic-fixed').first().waitFor();

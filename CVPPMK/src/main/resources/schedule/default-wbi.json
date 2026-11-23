@@ -5,7 +5,8 @@
   },
   "rules": [
     "Setelah 21 Desember, master data baru/perubahan diinput sendiri oleh user. Tidak ada upload susulan STEM.",
-    "Inventory sudah diupload 31 Des malam, lalu Go Live 1 Januari 2027. A/P, A/R, Fixed Asset, dan G/L diupload setelah Go Live (7 s/d 14 Jan)."
+    "Inventory sudah diupload 31 Des malam, lalu Go Live 1 Januari 2027. A/P, A/R, Fixed Asset, dan G/L diupload setelah Go Live (7 s/d 14 Jan).",
+    "Stock Opname berlaku untuk Pabrik dan Toko. Tanpa penerimaan/pengiriman selama opname; pergerakan setelah cut off dikoordinasikan dengan STEM."
   ],
   "items": [
     {
@@ -28,17 +29,6 @@
       "status": "belum",
       "pic": "",
       "note": "",
-      "cutover": false
-    },
-    {
-      "id": "training",
-      "section": "milestone",
-      "title": "Training",
-      "startDate": "2026-12-14",
-      "endDate": "2026-12-14",
-      "status": "belum",
-      "pic": "",
-      "note": "IT WBI",
       "cutover": false
     },
     {
@@ -82,7 +72,7 @@
       "endDate": "2026-12-31",
       "status": "belum",
       "pic": "",
-      "note": "Hitung fisik oleh Tim WBI, tanpa penerimaan/pengiriman. Pergerakan setelah cut off dikoordinasikan dengan STEM.",
+      "note": "Pabrik dan Toko. Hitung fisik oleh Tim WBI, tanpa penerimaan/pengiriman.",
       "cutover": true
     },
     {
@@ -341,23 +331,13 @@
     {
       "id": "master-E0",
       "section": "master",
-      "title": "Add-On Master Data (STEM, Farm Aquatic, iReapBiz)",
+      "title": "Add-On Master Data (STEM, Retail, iReapBiz)",
       "startDate": "2026-12-14",
       "endDate": "2026-12-14",
       "status": "belum",
       "pic": "",
       "note": "Batas akhir data dari user: 18 Desember 2026.",
       "group": "E"
-    },
-    {
-      "id": "training-1",
-      "section": "training",
-      "title": "Training",
-      "startDate": "2026-12-14",
-      "endDate": "2026-12-14",
-      "status": "belum",
-      "pic": "",
-      "note": "IT WBI"
     },
     {
       "id": "balance-inv",

@@ -14,7 +14,7 @@ test('browser data keys isolated; old CV keys preserved', () => {
   company.code='';
 });
 test('WBI PIC starts empty in UI as well as seed', () => {
-  const items=[{id:'training',pic:'',status:'belum'}];
+  const items=[{id:'upload-master',pic:'',status:'belum'}];
   assert.equal(withFixedPic(items,false)[0].pic,'');
   assert.equal(withFixedPic(items)[0].pic,'STEM');
   assert.equal(items[0].pic,'');

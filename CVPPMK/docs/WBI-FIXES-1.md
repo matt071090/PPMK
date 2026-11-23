@@ -2,6 +2,10 @@
 
 Branch `wbi/fixes-1`, dibuat dari `wbi/ui-warna` (`57b76b5`, mencakup `7b9c16e`). Semua pengujian memakai fixture/mock; tidak menyambung ke SAP, WBI_TEST, atau HANA. Commit lokal saja, tanpa push dan tanpa `git add -A`.
 
+## Revisi seed jadwal WBI
+
+Seed WBI kini **35 kegiatan**, tanpa Training, Tahap E memakai Retail, dan Stock Opname mencakup Pabrik dan Toko. CV tetap 37 kegiatan dan seed CV tidak diubah; tidak ada migrasi berkas jadwal lama. Lihat [laporan revisi jadwal dan bukti terbaru](WBI-SCHEDULE-REVISION.md): 165 Java lulus, 195 JS lulus/18 skip, serta 6 skenario browser lulus.
+
 ## Koreksi: flag publik untuk sesi Setup terkunci
 
 Temuan koordinator benar: `SetupController` mempunyai `@ModelAttribute` yang memanggil `SetupAccessController.require()` sebelum **semua** handler Setup, termasuk GET capabilities. Fixture awal mengembalikan dev/unlocked true, sehingga 13 skenario browser dan 60 screenshot awal **belum membuktikan** perilaku sesi Setup terkunci.

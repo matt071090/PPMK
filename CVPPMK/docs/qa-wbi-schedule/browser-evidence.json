@@ -1,0 +1,22 @@
+{
+  "checks": [
+    "WBI: 35 activities, 10 milestones, 5 area rows, 8 days to Kick Off; no Training tab, topic or milestone",
+    "WBI phase E uses STEM, Retail and iReapBiz",
+    "Stock Opname 29-31 Dec covers Pabrik dan Toko in activity note, inventory timeline card and rules at 1440/390px",
+    "Old WBI training URL falls back to Ringkasan without an empty Training page",
+    "WBI Home totals use 35 activities without a Training link",
+    "CV retains 37 activities, 5 tabs, Training topic/page and unchanged stock rules"
+  ],
+  "screenshots": [
+    "wbi-summary-desktop.png",
+    "wbi-summary-mobile.png",
+    "wbi-stock-desktop.png",
+    "wbi-stock-mobile.png"
+  ],
+  "errors": [],
+  "seedCounts": {
+    "wbi": 35,
+    "cv": 37
+  },
+  "date": "2026-11-23"
+}

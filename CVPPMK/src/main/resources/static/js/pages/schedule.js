@@ -27,6 +27,12 @@ export function needsAttention(items, today = todayLocal()) {
   return items.filter(it => it.status !== 'selesai' && countdown(it.endDate, today) <= 3)
     .sort((a,b) => a.endDate.localeCompare(b.endDate) || a.id.localeCompare(b.id));
 }
+// Tabs follow stored schedule content: removing a seed section does not migrate existing documents.
+export function scheduleTabs(items) {
+  return { ringkasan:'Ringkasan', master:'Master Data',
+    ...(items.some(it => it.section === 'training' || it.id === 'training') ? { training:'Training' } : {}),
+    stock:'Stock Opname', balance:'Beginning Balance' };
+}
 export function timelineMilestones(items) {
   return ['kickoff','training','upload-master','verify','opname','inventory','golive','ap-ar','fa','gl','final']
     .map(id => items.find(it => it.id === id)).filter(Boolean);
@@ -185,7 +191,8 @@ function mount() {
     $('#pic-suggestions-help').innerHTML = 'Klik kolom <b>PIC</b> pada baris kegiatan. Pilih STEM dari saran atau ketik nama PIC sendiri.';
     $('#cv-pic-help').hidden = true; $('#fixed-pic-help').hidden = true;
   }
-  const names = {ringkasan:'Ringkasan',master:'Master Data',training:'Training',stock:'Stock Opname',balance:'Beginning Balance'};
+  let names = scheduleTabs([]);
+  const chatThreads = [];
   let chat = null, reviewPages = null, RV = null, editable = false, lockConfigured = true;
   let picUsers = [];
   async function loadPicUsers() {
@@ -235,7 +242,7 @@ function mount() {
   const threadTitle = id => id === 'umum' ? 'Umum' : id.startsWith('tab:') ? (names[id.slice(4)] || id) : id.startsWith('item:') ? (doc?.data.items.find(it=>it.id===id.slice(5))?.title || id) : id;
   Promise.all([import('./schedule-chat.js'), import('./schedule-review.js')]).then(async ([C, R]) => {
     RV = R;
-    chat = C.createChat({ threads: [{id:'umum',label:'Umum'}, ...Object.entries(names).filter(([k])=>k!=='ringkasan').map(([k,v])=>({id:'tab:'+k,label:v}))], titleOf: threadTitle });
+    chat = C.createChat({ threads: chatThreads, titleOf: threadTitle });
     reviewPages = await R.loadReview(); if (doc) render();
     const refreshReview = async () => { const next = await R.loadReview(); if (JSON.stringify(next) !== JSON.stringify(reviewPages)) { reviewPages = next; if (doc && !editorId) render(); } };
     setInterval(refreshReview, 30000); window.addEventListener('focus', refreshReview);
@@ -248,11 +255,14 @@ function mount() {
   const message = text => { notice.textContent = text; };
   function controls() { $('#discard').disabled = busy; $('#draft-bar').hidden = !dirty; $('#saved-tools').hidden = dirty && !conflict; $('#draft-count').textContent = `${doc ? draftChanges(baseline,doc.data.items).length : 0} perubahan belum disimpan`;  $('#save').disabled = !doc || !dirty || busy || conflict; $('#reload').disabled = busy; view.querySelectorAll('button,input,select,textarea').forEach(e => e.disabled = busy); }
   function render() {
+    names = scheduleTabs(doc?.data?.items || []);
+    chatThreads.splice(0, chatThreads.length, {id:'umum',label:'Umum'}, ...Object.entries(names).filter(([k])=>k!=='ringkasan').map(([k,v])=>({id:'tab:'+k,label:v})));
+    if (doc && !names.training && /^#\/?training$/.test(location.hash)) history.replaceState(null, '', '#/ringkasan');
     const tab = current(), projectName = company.code ? company.name : (doc?.data?.project?.name || company.name);
     renderedTab=tab; $('#page-title').textContent = names[tab]; document.title = `${names[tab]} · Schedule ${projectName}`;
     const brand = document.getElementById('schedule-company-name'); if (brand) brand.textContent = projectName;
     const logo = document.getElementById('schedule-company-logo'); if (logo) logo.textContent = company.code ? company.code.toUpperCase() : 'PP';
-    document.querySelectorAll('[data-tab]').forEach(a => { a.classList.toggle('active',a.dataset.tab===tab); if(a.dataset.tab===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+    document.querySelectorAll('[data-tab]').forEach(a => { a.closest('li').hidden = !Object.hasOwn(names, a.dataset.tab); a.classList.toggle('active',a.dataset.tab===tab); if(a.dataset.tab===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
     if (!doc) return;
     $('#revision').textContent = `Disimpan terakhir: ${savedAt(doc.updatedAt)}${dirty ? ' • Ada perubahan lokal' : ''}`;
     const all = withTrainingRollup(withFixedPic(RV ? RV.withReview(doc.data.items, reviewPages) : doc.data.items, !company.code));
@@ -313,13 +323,13 @@ function mount() {
     if (tab === 'stock') {
       const get=id=>all.find(it=>it.id===id), inv=get('balance-inv');
       const steps=inv?[
-        {id:'st-opname',title:'Hitung fisik',startDate:get('opname').startDate,endDate:get('opname').endDate,status:get('opname').status,note:'Oleh tim perusahaan, tanpa penerimaan/pengiriman.',target:'stock'},
+        {id:'st-opname',title:'Hitung fisik',startDate:get('opname').startDate,endDate:get('opname').endDate,status:get('opname').status,note:company.code === 'wbi' ? get('opname').note : 'Oleh tim perusahaan, tanpa penerimaan/pengiriman.',target:'stock'},
         {id:'st-cutoff',title:'Cut off inventory',startDate:inv.cutoffDate,endDate:inv.cutoffDate,status:get('cutoff').status,note:'',target:'stock'},
         {id:'st-serah',title:'Serah ke STEM',startDate:inv.handoverDate,endDate:inv.handoverDate,status:get('inventory').status,note:'',time:inv.handoverTime,target:'stock'},
         {id:'st-upload',title:'Upload SAP',startDate:inv.uploadDate,endDate:inv.uploadDate,status:(get('inventory-upload')||inv).status,note:'Dicek tim perusahaan.',time:inv.uploadTime,target:'stock'}
       ]:[];
       if(inv) html += `<h2>Alur inventory</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps, null, timelinePosition(steps))}
-      <section class="rules"><h2>Aturan</h2><ul><li>Tanpa penerimaan/pengiriman selama opname.</li><li>Transaksi 31 Des diakui Januari 2027.</li><li>Pergerakan setelah cut off dikoordinasikan dengan STEM.</li></ul></section>`;
+      <section class="rules"><h2>Aturan</h2><ul><li>${esc(company.code === 'wbi' ? get('opname').note : 'Tanpa penerimaan/pengiriman selama opname.')}</li><li>Transaksi 31 Des diakui Januari 2027.</li><li>Pergerakan setelah cut off dikoordinasikan dengan STEM.</li></ul></section>`;
     }
     if (tab === 'balance') { const steps=balanceTimeline(all); html += `<h2>Alur saldo awal</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${steps.length?timelineHtml(steps, null, timelinePosition(steps)):''}<p>Status di sini mencatat kesiapan saldo awal per area, terpisah dari status milestone Ringkasan.</p>`; }
     html += '<div id="editor-slot"></div>';
