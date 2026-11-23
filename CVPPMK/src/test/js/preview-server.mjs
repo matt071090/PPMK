@@ -23,7 +23,7 @@ const server=http.createServer(async(req,res)=>{
     if(p==='/api/addon/objects')return reply(res,{objects:[],categories:[],stale:[]});
     if(p==='/api/setup/capabilities')return reply(res,{branchEnabled:mode!=='wbi',uploadAllowed:true});
     if(p==='/api/setup/steps')return reply(res,steps);
-    if(p==='/api/setup/sources')return reply(res,{target:'WBI_DEMO',same:[],others:[],missing:[],declared:true});
+    if(p==='/api/setup/sources')return reply(res,{target:'WBI_DEMO',same:[{id:'same:DEMO_SOURCE',schema:'DEMO_SOURCE',company:'Sumber fixture lokal'}],others:[],missing:[],declared:true});
     if(p==='/api/schedule')return reply(res,{rev:0,updatedAt:'2026-11-23T12:00:00Z',data:seed});
     if(p.includes('/chat')){
       if(p.endsWith('/summary'))return reply(res,{threads:{}});
@@ -47,7 +47,8 @@ const server=http.createServer(async(req,res)=>{
       let target=table();
       if(s?.tier==='G')target={...target,unavailable:true,message:'Tidak tersedia di company ini: tabel Farm Breeding belum terpasang.'};
       if(id==='warehouses')target=table(['_key','WarehouseCode','WarehouseName','_Branch'],[['GDG01','GDG01','Gudang pusat',null]]);
-      return reply(res,{target,generatedAt:'2026-11-23T12:00:00'});
+      const source=id==='warehouses'&&url.searchParams.has('src')?table(target.columns,[['GDG02','GDG02','Gudang baru',null],['GDG01','GDG01','Gudang pusat diperbarui',null],['ERR01','ERR01','Branch harus dikosongkan',0]]):undefined;
+      return reply(res,{target,source,generatedAt:'2026-11-23T12:00:00'});
     }
     if(p.startsWith('/api/'))return reply(res,{message:'Tidak tersedia dalam demo lokal'},404);
     const filename=path.resolve(root,'.'+(p==='/'?'/home.html':decodeURIComponent(p)));
@@ -56,4 +57,5 @@ const server=http.createServer(async(req,res)=>{
     res.writeHead(200,{'Content-Type':({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.ico':'image/x-icon'})[ext]||'application/octet-stream'});res.end(data);
   }catch(e){reply(res,{message:'Fixture tidak ditemukan'},404);}
 });
-server.listen(18635,'127.0.0.1',()=>process.stdout.write('Preview fixtures http://127.0.0.1:18635\n'));
+const port=Number(process.env.PREVIEW_PORT || 18635);
+server.listen(port,'127.0.0.1',()=>process.stdout.write(`Preview fixtures http://127.0.0.1:${port}\n`));
