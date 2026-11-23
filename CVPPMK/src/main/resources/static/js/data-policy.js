@@ -1,3 +1,4 @@
+import { company } from './company.js';
 // Public display flag uses the same server reader as Setup, without requiring its unlock session.
 // Unknown preserves checks; this flag never grants permission to upload.
 export const capabilities = { branchEnabled: null };
@@ -33,3 +34,5 @@ export const emptyDataRow = row => {
   const fields = Object.keys(row).filter(k => k.startsWith('U_'));
   return fields.length > 0 && fields.every(k => blankValue(row[k]));
 };
+
+export const hiddenAddonTable = name => company.addonRules.some(rule => rule.hide && rule.prefixes.some(prefix => String(name||'').replace(/^@/,'').toUpperCase().startsWith(prefix.toUpperCase())));

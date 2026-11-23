@@ -1,6 +1,6 @@
 import { loadCapabilities, nonBranch, emptyPreference, saveEmptyPreference, addonHasData, reviewableMenus } from "./data-policy.js";
 import { $, $$, esc, slug, company, showCompanyName, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, revealTab } from "./ui.js";
-import { companyTitle } from './company.js';
+import { companyTitle, loadCompany } from './company.js';
 import { xlsxBlob, download } from "./xlsx.js";
 import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
@@ -620,7 +620,7 @@ function toggleTheme() {
 (async () => {
   applyTheme(store.get("theme") === "dark" ? "dark" : "light");   // bawaan terang; gelap hanya bila dipilih
   if (store.get("show-cols")) document.body.classList.add("show-cols");
-  await loadCapabilities();
+  await Promise.all([loadCapabilities(),loadCompany()]);
   let editable;
   [chapters, editable] = await Promise.all([
     fetch("sections.json").then(r => r.json()),

@@ -1,5 +1,5 @@
-import { ADDONS } from "./addon-data.js";
-import { addonHasData, nonBranch, emptyPreference, branchOnly, branchNotice, emptyDataRow, blankValue } from "../data-policy.js";
+import { ADDONS, excludedAddonParam } from "./addon-data.js";
+import { addonHasData, nonBranch, emptyPreference, branchOnly, branchNotice, hiddenAddonTable, emptyDataRow, blankValue } from "../data-policy.js";
 // Bab 7 Addon: daftar dinamis dari DB (api/addon/objects): UDO Master Data + UDT No Object + UDO Document yang di mapping
 // ditandai sebagai master. Dikelompokkan per sub kategori (mapping, diatur di menu Setup), urut nama.
 // Halaman generik: isi tabel header + child apa adanya (kolom kunci + UDF berlabel CUFD), baca-saja.
@@ -14,7 +14,7 @@ export const objTitle = o => o.title || o.name.replace(/_/g, " ");
 
 // halaman sidebar: sub kategori abjad, "Belum dikategorikan" paling bawah, item urut nama
 export function addonPages(objects, showEmpty = emptyPreference("addon-menu")) {
-  return objects.filter(o => o.shown && (!nonBranch() || !o.tables?.some(t => t.name === "STEM_TIBRANCHH")) && (showEmpty || addonHasData(o)))
+  return objects.filter(o => o.shown && !o.tables?.some(t=>hiddenAddonTable(t.name)) && (!nonBranch() || !o.tables?.some(t => t.name === "STEM_TIBRANCHH")) && (showEmpty || addonHasData(o)))
     .map(o => ({ id: addonPageId(o.code), title: objTitle(o), cat: o.cat || UNCAT, status: addonHasData(o) ? "progress" : null, empty: !addonHasData(o), addon: o.code }))
     .sort((a, b) => (a.cat === UNCAT) - (b.cat === UNCAT) || a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title));
 }
@@ -35,7 +35,8 @@ export function addonPage(o) {
       const res = d[head.name] || {}, allRows = rowsOf(res), key = linkKey(head);
       const branchParams = new Set(ADDONS.flatMap(a => a.PARAMS.filter(r => branchOnly('PARAMS', r)).map(r => r[0])));
       const isBranchParam = r => head.name === 'ST_PARAM' && branchParams.has(String(r.U_Key || r.Code).toUpperCase());
-      const rows = nonBranch() ? allRows.filter(r => !isBranchParam(r)) : allRows;
+      const branchRows = nonBranch() ? allRows.filter(r => !isBranchParam(r)) : allRows;
+      const rows = head.name==='ST_PARAM' ? branchRows.filter(r=>!excludedAddonParam(r.U_Key||r.Code)) : branchRows;
       const candidateEmpty = head.name === 'ST_PARAM' ? r => blankValue(r.U_Value) : emptyDataRow;
       const kids = children.map(t => {
         const r = d[t.name] || {};
@@ -74,7 +75,7 @@ export function addonPage(o) {
         body = exportSheets(sheets, objTitle(o))
           + expandList(`ad-${o.code}`, cols, rows, { expand: detail, lazy: true, noExport: true, onFilter, emptyRow, searchText: h => JSON.stringify([h, ...kids.map(k => childOf(k, h))]), placeholder: "Cari kode / nama / isi child…" });
       }
-      return branchNotice(allRows.length - rows.length) + info + kpis
+      return branchNotice(allRows.length - branchRows.length) + info + kpis
         + (errs.length ? `<div class="error">Data gagal dibaca dari DB. Coba muat ulang halaman.<br><small>${errs.map(esc).join("<br>")}</small></div>` : "")
         + (trunc.length ? `<div class="callouts"><div class="callout info"><span class="ci">i</span><div class="ct"><b>Info</b>${esc(trunc.join(" "))}</div></div></div>` : "")
         + section("data", "Data", body, kids.length && rows.length ? { lead: "Klik baris untuk melihat baris child-nya. Excel berisi sheet header + satu sheet per child." } : {});

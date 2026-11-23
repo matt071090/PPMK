@@ -74,6 +74,12 @@ class CompanyDataTest {
         assertEquals(Integer.valueOf(6),sections.get("balance"));assertEquals(3,sections.size());
         assertTrue(data.path("rules").toString().contains("Produksi / Pabrik / Central Kitchen"));
     }
+    @Test void midnightIsSingleTimeAndKeepsCalendarDate() throws Exception {
+        JsonNode data=new ScheduleStore(company("wbi").dir(root.toString()),"schedule/default-wbi.json").get().data.deepCopy();
+        ObjectNode row=null;for(JsonNode item:data.path("items"))if("balance-inv-toko".equals(item.path("id").asText()))row=(ObjectNode)item;
+        assertNotNull(row);ScheduleStore.validate(data);assertEquals("2026-12-31",row.path("uploadDate").asText());
+        for(String invalid:Arrays.asList("24:01","24:00-24:00","25:00")) {row.put("uploadTime",invalid);assertThrows(ScheduleStore.ScheduleException.class,()->ScheduleStore.validate(data));}
+    }
     private Set<String> wbiFixedIds() { return new HashSet<>(Arrays.asList("upload-master","inventory","inventory-upload","inventory-toko","inventory-upload-toko","ap-ar","fa","gl")); }
     @Test void wbiLocationsHaveSeparateTimesAndStemRoles() throws Exception {
         ScheduleStore store=new ScheduleStore(company("wbi").dir(root.toString()),"schedule/default-wbi.json");

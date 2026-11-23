@@ -1,6 +1,8 @@
 // 4.4 Stored procedure di company ini + breakdown SBO_SP_TransactionNotification / SBO_SP_PostTransactionNotice per object.
 // Sumber: DB di config aplikasi (sql/sp-validation). Cara breakdown: sp-parse.js. Penjelasan bahasa awam (opsional): sp-rules.js.
 import { $, $$, esc, rowsOf, section, searchable, onMount, OBJECTS as SAP_OBJECTS } from "../ui.js";
+import { hiddenAddonTable } from '../data-policy.js';
+import { excludedAddonProc } from './addon-data.js';
 import { parseSp } from "./sp-parse.js";
 import { OBJECTS as NOTES, MODULES } from "./sp-rules.js";
 
@@ -28,6 +30,7 @@ function build(d) {
     if (!defs[name] || defs[name].length < TEMPLATE_LEN) continue;
     const res = parseSp(defs[name], key);
     for (const r of res.rules) for (const t of r.types) {
+      if(hiddenAddonTable(t))continue;
       const o = objs.get(t) || objs.set(t, { type: t, rules: [], blocks: [] }).get(t);
       o.rules.push({ ...r, type: t });
     }
@@ -98,7 +101,7 @@ function objBlock(o) {
 }
 
 function procList(d, defs) {
-  const all = rowsOf(d.procs), mine = all.filter(p => /^SBO_SP_/i.test(p.Name) || !SAP_BUILTIN.test(p.Name));
+  const all = rowsOf(d.procs).filter(p=>!excludedAddonProc(p.Name)), mine = all.filter(p => /^SBO_SP_/i.test(p.Name) || !SAP_BUILTIN.test(p.Name));
   const sboText = Object.values(defs).join("\n").toUpperCase();
   const rows = mine.map(p => ({ ...p, Jenis: kindOf(p.Name),
     Catatan: /^SBO_SP_/i.test(p.Name) && +p.Len < TEMPLATE_LEN ? "Masih template kosong bawaan SAP"

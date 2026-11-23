@@ -1,4 +1,4 @@
-import { nonBranch } from "../data-policy.js";
+import { nonBranch, hiddenAddonTable } from "../data-policy.js";
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
 import { mainTable, tableName, tableModule } from "../sap-tables.js";
@@ -711,7 +711,7 @@ export const PAGES = {
     tables: ["OUDO", "UDO1"],
     render(d) {
       const counts = new Map((addonState.objects || []).map(o => [o.code, o.rowCount]));
-      const u = rowsOf(d.udo).map(r => ({ ...r, Rows: counts.get(r.Code) }));
+      const u = rowsOf(d.udo).filter(r=>!hiddenAddonTable(r.TableName)&&!hiddenAddonTable(r.Code)).map(r => ({ ...r, Rows: counts.get(r.Code) }));
       const filled = u.filter(r => r.Rows === null || r.Rows === undefined || +r.Rows > 0);
       return kpis([[filled.length, "UDO ditampilkan"], [filled.filter(x => x.TYPE === "3").length, "Tipe Document"], [filled.filter(x => x.TYPE === "1").length, "Tipe Master Data"]])
         + section("list", "Daftar UDO", searchable("udo-t", [{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
@@ -729,7 +729,7 @@ export const PAGES = {
     tables: ["OUTB", "CUFD", "OUDO", "UDO1"],
     render(d) {
       const rowCounts = new Map(rowsOf(d.addon_rows).map(r => [String(r.Name).replace(/^@/, ""), r.Rows]));
-      const t = rowsOf(d.udt).map(x => ({ ...x, Rows: rowCounts.get(x.TableName), Pemakai: x.UdoCode ? `UDO ${x.UdoCode}` : x.UdoChildOf ? `UDO ${x.UdoChildOf} (baris)` : "" }));
+      const t = rowsOf(d.udt).filter(r=>!hiddenAddonTable(r.TableName)).map(x => ({ ...x, Rows: rowCounts.get(x.TableName), Pemakai: x.UdoCode ? `UDO ${x.UdoCode}` : x.UdoChildOf ? `UDO ${x.UdoChildOf} (baris)` : "" }));
       return section("list", "Daftar UDT", searchable("udt-t", [{ key: "TableName", label: "Tabel", fmt: v => `<code>@${esc(v)}</code>` },
         { key: "Descr", label: "Deskripsi" }, { key: "ObjectType", label: "Tipe", fmt: codedCell(UDT_TYPE) },
         { key: "Rows", label: "Baris data", num: 1 }, { key: "FieldCount", label: "Jumlah field", num: 1 }, { key: "Pemakai", label: "Dipakai oleh" }], t, { emptyRow: r => r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }));
@@ -742,7 +742,7 @@ export const PAGES = {
     menu: "Tools › Customization Tools › User-Defined Fields - Management",
     tables: ["CUFD"],
     render(d) {
-      const objs = udfObjects(rowsOf(d.fields));
+      const objs = udfObjects(rowsOf(d.fields).filter(r=>!hiddenAddonTable(r.TableID)));
       const cats = UDF_CATS.filter(c => objs.some(o => o.cat === c)).concat(objs.some(o => !UDF_CATS.includes(o.cat)) ? ["Lainnya"] : []);
       const cols = [{ key: "Field", label: "Title" }, { key: "Descr", label: "Description" }, { key: "TypeID", label: "Type", fmt: codedCell(UDF_TYPE) },
         { key: "SizeID", label: "Panjang", num: 1 }, { key: "Dflt", label: "Dflt" }, { key: "NotNull", label: "Mand.", fmt: badgeYN },

@@ -1,6 +1,8 @@
 // Daftar yang DIHARAPKAN addon STEM dan Farm Breeding, diambil dari kodenya (STEM 1.04 + Farm Breeding 1.03).
 // Dibandingkan dengan isi DB oleh addon-sections.js. Ubah di sini kalau addon berubah, bukan di halaman.
 // level: w = dibaca langsung di jalur utama, o = opsional / fitur tertentu. Format baris sama dengan breeding-data.js.
+import { company } from '../company.js';
+import { hiddenAddonTable } from '../data-policy.js';
 import * as B from "./breeding-data.js";
 
 const STEM = {
@@ -85,3 +87,16 @@ export const ADDONS = [
   { id: "stem", name: "Addon STEM", ...STEM },
   { id: "breeding", name: "Addon Farm Breeding", PARAMS: B.PARAMS, TABLES: B.TABLES, PROCS: B.PROCS, UDFS: B.UDFS }
 ];
+
+// Configured companies select catalogs at render time; the legacy CV catalogs stay unchanged.
+export function activeAddons() {
+  if(!company.addonCatalogs.length)return ADDONS;
+  const known=new Map(STEM.TABLES.map(row=>[row[0],row]));
+  return company.addonCatalogs.map(c=>({id:c.id,name:c.name,
+    PARAMS:c.base==='stem'?STEM.PARAMS:[],UDFS:c.base==='stem'?STEM.UDFS:[],PROCS:c.base==='stem'?STEM.PROCS:[],
+    TABLES:(c.tables||[]).filter(name=>!hiddenAddonTable(name)).map(name=>known.get(name)||[name,c.name,true,c.name,''])}));
+}
+export const excludedAddonParam = key => company.addonCatalogs.length>0 && B.PARAMS.some(row=>row[0]===String(key).toUpperCase()) && !STEM.PARAMS.some(row=>row[0]===String(key).toUpperCase());
+export const addonHeading = () => company.addonCatalogs.length ? 'Kebutuhan add-on '+activeAddons().map(a=>a.name).join(', ') : 'Kebutuhan addon STEM dan Farm Breeding';
+
+export const excludedAddonProc = name => company.addonCatalogs.length>0 && B.PROCS.some(row=>row[0].toUpperCase()===String(name).toUpperCase()) && !STEM.PROCS.some(row=>row[0].toUpperCase()===String(name).toUpperCase());

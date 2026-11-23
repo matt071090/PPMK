@@ -1,0 +1,19 @@
+{
+  "checks": [
+    "Locked session: Setup 403, public company 200; five groups; Master Report Web under WebPortal; Farm absent even when empty toggle enabled; review count stable",
+    "Bab 5.2/5.3 exclude Farm records and expected catalog; filled Farm parameter hidden alongside branch keys; shared WHTRS retained",
+    "CV sidebar HTML before/after byte-identical; Farm Breeding/STEM Addon order and review counts preserved"
+  ],
+  "screenshots": [
+    "wbi-before-desktop.png",
+    "wbi-before-mobile.png",
+    "cv-before-desktop.png",
+    "cv-before-mobile.png",
+    "cv-after-desktop.png",
+    "cv-after-mobile.png",
+    "wbi-addon-desktop.png",
+    "wbi-addon-mobile.png"
+  ],
+  "errors": [],
+  "cvSidebarSha256": "5114df44993fe33fcd70364465a38f4ce4e8a1afea0cfa61bc0412b5ca0c8dab"
+}

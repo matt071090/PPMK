@@ -1,0 +1,168 @@
+{
+  "categories": [
+    "Retail & iReapBiz",
+    "STEM Base",
+    "WebPortal SAP",
+    "Transaksi/Log",
+    "Lainnya"
+  ],
+  "legacyCategories": [
+    "Farm Breeding",
+    "STEM Addon"
+  ],
+  "rules": [
+    {
+      "prefixes": [
+        "STEM_MPLAN",
+        "STEM_DPLAN",
+        "STEM_MSTATISTIC",
+        "STEM_DSTATISTIC",
+        "STEM_MSETTER",
+        "STEM_DSETTER",
+        "STEM_MHATCHER",
+        "STEM_DHATCHER",
+        "STEM_MTRANSFER",
+        "STEM_DTRANSFER",
+        "STEM_TYPEOFSTAT",
+        "STEM_STATSMAP",
+        "STEM_EXPMAP",
+        "STEM_MSTD",
+        "ST_MACHINE",
+        "STEM_EMPWHSMAP",
+        "STEM_DISRULEMAP",
+        "STEM_MTMPLSURVEY",
+        "STEM_DTMPLSURVEY",
+        "STEM_MASTERSURVEY",
+        "STEM_MASTERAUDIT",
+        "STEM_QSTD",
+        "STEM_BONUSTYPE",
+        "STEM_APPROVAL",
+        "STEM_DRAFT_MODAL",
+        "STEM_MSTATAUDIT",
+        "ST_STATGRP",
+        "STEM_DTYPEOFSTAT",
+        "STEM_DSTD",
+        "STEM_DSTATAUDIT",
+        "STEM_HARVEST",
+        "STEM_MBNSSTC",
+        "STEM_DBNSSTC"
+      ],
+      "hide": true
+    },
+    {
+      "prefixes": [
+        "ST_ITR_DOCWEB",
+        "ST_TO_DOCWEB",
+        "ST_TI_DOCWEB",
+        "ST_PR_DOCWEB",
+        "ST_GRPO_DOCWEB",
+        "ST_GRPC_DOCWEB",
+        "ST_GI_DOCWEB",
+        "ST_GIW_DOCWEB",
+        "ST_MR_DOCWEB",
+        "ST_CR_DOCWEB",
+        "ST_PCREQ_DOCWEB",
+        "ST_PCEXP_DOCWEB",
+        "STEM_DAILYSTOCK",
+        "ST_BUFFER",
+        "ST_IMPORT",
+        "ST_LOG",
+        "STEM_LOG",
+        "STEM_BUFFER"
+      ],
+      "cat": "Transaksi/Log",
+      "master": true
+    },
+    {
+      "prefixes": [
+        "ST_PLCATEGORY",
+        "ST_PLCONFIG",
+        "ST_PRICE",
+        "ST_VOUCHER",
+        "ST_CCCONFIG",
+        "ST_CC",
+        "ST_IREAPCOMP",
+        "ST_COMPMASTER",
+        "ST_COMPMAP",
+        "ST_BANKUPLOAD",
+        "ST_INTERNALRECON",
+        "ST_UDRT",
+        "ST_ROUTEP",
+        "ST_PARAMQC",
+        "ST_OPERQC",
+        "ST_INSTYPE",
+        "ST_INSTQC",
+        "ST_PLANQC",
+        "ST_QCINSP",
+        "ST_QCRND",
+        "ST_UDWC",
+        "ST_WCGROUP",
+        "ST_WCWHS_MAP",
+        "ST_MOP",
+        "ST_WHSCONNECT"
+      ],
+      "cat": "Retail & iReapBiz",
+      "master": true
+    },
+    {
+      "prefixes": [
+        "STEM_PETTYCASH",
+        "STEM_MODULEWEB",
+        "STEM_REPORTWEB",
+        "STEM_AUTHWEB",
+        "STEM_WHSASGNWEB",
+        "STEM_REASON",
+        "STEM_ORPURPOSE",
+        "STEM_RULETRANSFER",
+        "STEM_TEMPLATEWEB"
+      ],
+      "cat": "WebPortal SAP",
+      "master": true
+    },
+    {
+      "prefixes": [
+        "ST_PARAM",
+        "ST_SHIFT",
+        "ST_RTYPE",
+        "STEM_MREWORK",
+        "STEM_DREWORK",
+        "STEM_MPREWORK",
+        "STEM_DPREWORK",
+        "STEM_SERIES",
+        "STEM_STDSPEC",
+        "STEM_SPECCRITERIA",
+        "STEM_PRDSPEC",
+        "STEM_REJECT",
+        "STEM_ACCGIGRMAP",
+        "STEM_BOMMAP",
+        "STEM_BOMCOS",
+        "STEM_FPCONFIG",
+        "STEM_FACILITYREF",
+        "STEM_MODULEIFLOCS",
+        "STEM_WHSASGNIFLOCS",
+        "STEM_AUTHIFLOCS",
+        "STEM_TIBRANCH"
+      ],
+      "cat": "STEM Base",
+      "master": true
+    },
+    {
+      "prefixes": [
+        ""
+      ],
+      "cat": "Lainnya"
+    }
+  ],
+  "objects": {
+    "STEM_REPORTWEB": {
+      "cat": "WebPortal SAP",
+      "title": "Master Report Web"
+    },
+    "ST_PARAM": {
+      "cat": "STEM Base"
+    },
+    "ST_PARAMREPORT": {
+      "cat": "Lainnya"
+    }
+  }
+}

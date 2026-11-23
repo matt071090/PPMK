@@ -4,7 +4,7 @@
 // Status: ok = sesuai, warn = ada tapi perlu diisi, danger = belum ada, none = opsional.
 import { esc, rowsOf, section, searchable } from "../ui.js";
 import { applicable, branchNotice } from "../data-policy.js";
-import { ADDONS } from "./addon-data.js";
+import { activeAddons, addonHeading } from "./addon-data.js";
 
 const kpis = list => `<div class="kpis">${list.map(([n, l]) => `<div class="kpi"><b>${n.toLocaleString("id-ID")}</b><span>${esc(l)}</span></div>`).join("")}</div>`;
 const LABEL = { ok: ["yes", "Siap"], warn: ["warn", "Perlu diisi"], danger: ["danger", "Belum ada"], none: ["", "Opsional"] };
@@ -99,9 +99,9 @@ function wrap(PAGES, id, keys, build, find) {
   const p = PAGES[id];
   if (!p) return;
   const render = p.render, checks = p.checks;
-  p.render = d => render.call(p, d) + (failed(d, keys) ? section(`addon-${id}`, "Kebutuhan addon STEM dan Farm Breeding", NOTICE, { level: 2 })
-    : section(`addon-${id}`, "Kebutuhan addon STEM dan Farm Breeding", "", { level: 2, lead: "Dibandingkan dengan isi DB ini. Daftar kebutuhan diambil dari kode addon." }) + ADDONS.map(a => build(a, d)).join(""));
-  p.checks = d => [...(checks ? checks.call(p, d) : []), ...(failed(d, keys) ? [] : ADDONS.flatMap(a => find(a, d)))];
+  p.render = d => render.call(p, d) + (failed(d, keys) ? section(`addon-${id}`, addonHeading(), NOTICE, { level: 2 })
+    : section(`addon-${id}`, addonHeading(), "", { level: 2, lead: "Dibandingkan dengan isi DB ini. Daftar kebutuhan diambil dari kode addon." }) + activeAddons().map(a => build(a, d)).join(""));
+  p.checks = d => [...(checks ? checks.call(p, d) : []), ...(failed(d, keys) ? [] : activeAddons().flatMap(a => find(a, d)))];
 }
 
 export function extendPages(PAGES) {

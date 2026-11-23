@@ -62,6 +62,12 @@ class PublicReadAccessTest {
     void checkListHomeScheduleReadsDoNotRequireSetupSession(String path) throws Exception {
         mvc.perform(get(path)).andExpect(status().isOk());
     }
+    @Test void companySelectedMappingReachesPublicAddonEndpoint() throws Exception {
+        mvc.perform(get("/api/addon/objects")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.objects[0].code").value("ST_PARAM"))
+            .andExpect(jsonPath("$.objects[0].cat").value("STEM Base"))
+            .andExpect(jsonPath("$.categories[?(@ == 'Farm Breeding')]").isEmpty());
+    }
     @Test void templateReferenceKeepsItsExistingSetupGate() throws Exception {
         mvc.perform(get("/api/section/template-ref")).andExpect(status().isForbidden());
     }

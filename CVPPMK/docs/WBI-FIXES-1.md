@@ -2,13 +2,19 @@
 
 Branch `wbi/fixes-1`, dibuat dari `wbi/ui-warna` (`57b76b5`, mencakup `7b9c16e`). Semua pengujian memakai fixture/mock; tidak menyambung ke SAP, WBI_TEST, atau HANA. Commit lokal saja, tanpa push dan tanpa `git add -A`.
 
-## Inventory per lokasi dan PIC STEM
+## Status terbaru: jadwal, PIC dan Addon WBI
 
-Revisi berikutnya: **40 kegiatan**, alur Produksi / Pabrik / Central Kitchen dan Toko / Store terpisah, serah Toko paling lambat 22:00, serta 8 PIC STEM terkunci. [Rincian, asumsi dan bukti](WBI-INVENTORY-REVISION.md).
+**40 kegiatan**, 6 area, 4 tab tanpa Training. Satu alur inventory berisi 6 kartu; opname/cut off sejadwal digabung, serah/upload tetap terpisah: Produksi/Pabrik 19:00 dan 19:00–20:00, Toko/Store batas serah 22:00 lalu upload **31 Desember 24:00** tanpa jam selesai. Garis waktu utama 14 kartu, jarak kartu diuji tidak berpotongan; desktop bisa digeser, HP 390px tetap satu sumbu vertikal. [Revisi terakhir dan perubahan kata-kata](WBI-TIMELINE-REVISION.md) menggantikan asumsi jam upload Toko pada laporan terdahulu.
 
-## Revisi seed jadwal WBI
+Delapan PIC STEM terkunci mengikuti penanda seed; PIC WBI lain dipilih dari user SAP aktif lewat Check List 1.5 atau teks bebas saat direktori gagal. Tidak ada menu/CRUD User WBI baru; CV tetap memakai `ppmk-users.json`. [Direktori PIC dan bukti](WBI-PIC-DIRECTORY.md), [rincian pemisahan kegiatan/PIC STEM](WBI-INVENTORY-REVISION.md).
 
-Seed WBI kini **35 kegiatan**, tanpa Training, Tahap E memakai Retail, dan Stock Opname mencakup Pabrik dan Toko. CV tetap 37 kegiatan dan seed CV tidak diubah; tidak ada migrasi berkas jadwal lama. Lihat [laporan revisi jadwal dan bukti terbaru](WBI-SCHEDULE-REVISION.md): 165 Java lulus, 195 JS lulus/18 skip, serta 6 skenario browser lulus.
+Addon memakai profil company: Retail & iReapBiz, STEM Base, WebPortal SAP; transaksi/log terpisah dan kode belum dikenal Lainnya. Master Report Web masuk WebPortal; Farm disembunyikan dan tidak masuk review WBI. CV sidebar sebelum/sesudah identik byte demi byte. [Audit, ambiguitas dan 8 screenshot](WBI-ADDON-PROFILE.md).
+
+Verifikasi akhir: **176 Java lulus**, **205 JS lulus / 18 skip**, 0 gagal; 1 skenario inventory (5 kelompok, 7 screenshot) dan 3 kelompok Addon (8 screenshot), seluruhnya fixture/mock lokal. [Log Java](qa-wbi-addon/java8-tests.log), [log JS](qa-wbi-addon/js-tests.log). Belum SAP/SL/HANA nyata, deployment atau 18 tes jsdom. Tidak ada migrasi jadwal lama; seed dipakai hanya jika berkas jadwal company belum ada.
+
+## Riwayat revisi seed WBI
+
+Commit `9d693d5` menghapus Training dan mengganti Farm Aquatic menjadi Retail (35 kegiatan saat itu); pemisahan inventory kemudian menambah 5 kegiatan menjadi 40. CV tetap 37 kegiatan dan seed CV tidak berubah. [Laporan tahap tersebut](WBI-SCHEDULE-REVISION.md) dipertahankan sebagai riwayat, bukan angka jadwal terbaru.
 
 ## Koreksi: flag publik untuk sesi Setup terkunci
 
@@ -77,7 +83,7 @@ Tidak menyambung ke SAP/WBI_TEST/HANA, tidak memasang paket, tidak mengubah CSS/
 | Halaman | Sumber dan apa yang diperiksa | Perlakuan kosong |
 |---|---|---|
 | 5.1 UDO | `sql/udo/01_udo.sql`: registrasi OUDO, tipe, header, kemampuan series/cancel/log, daftar child UDO1; bukan pemeriksaan isi transaksi. Metadata jumlah baris memakai `api/addon/objects` yang juga dipakai bab 7. | UDO dengan total header + child 0 disembunyikan; data tidak diketahui tetap terlihat. Tidak ada temuan otomatis khusus UDO sebelumnya maupun sesudahnya. |
-| 5.2 UDT | `sql/udt/01_udt.sql`: OUTB, jumlah CUFD, pemakai OUDO/UDO1. `02_addon_rows.sql`: SYS.TABLES + SYS.M_TABLES per schema. `03_addon_params.sql`: key/nilai/deskripsi @ST_PARAM. `addon-sections.js` membandingkan katalog STEM/Breeding pada `addon-data.js`/`breeding-data.js`. | Baris data 0, katalog tabel tidak tersedia, dan parameter blank/tidak ada disembunyikan dan tidak menjadi temuan. Statistik null tetap belum diketahui. Katalog branch disaring sebelum KPI, temuan, tabel, dan ekspor. |
+| 5.2 UDT | `sql/udt/01_udt.sql`: OUTB, jumlah CUFD, pemakai OUDO/UDO1. `02_addon_rows.sql`: SYS.TABLES + SYS.M_TABLES per schema. `03_addon_params.sql`: key/nilai/deskripsi @ST_PARAM. `addon-sections.js` membandingkan katalog aktif: CV memakai STEM/Breeding; WBI memakai profil STEM Base/Retail/WebPortal. | Baris data 0, katalog tabel tidak tersedia, dan parameter blank/tidak ada disembunyikan dan tidak menjadi temuan. Statistik null tetap belum diketahui. Katalog branch disaring sebelum KPI, temuan, tabel, dan ekspor. |
 | 5.3 UDF | `01_by_table.sql` + `02_fields.sql`: definisi CUFD di tabel standar, mengecualikan UDT dan salinan arsip; object dengan definisi identik dikelompokkan. `03_addon_udf.sql`: alias pada tabel relevan dan BRANCH. Membandingkan keberadaan definisi UDF dengan katalog, bukan membaca isi transaksi untuk tiap field. | Daftar definisi aktual tidak membuat baris untuk object tanpa field. Entri kebutuhan UDF yang belum terpasang disembunyikan/netral, tidak menjadi masalah. UDF khusus branch disaring sebelum hitungan. Nilai default kosong pada definisi UDF yang sah tidak membuat definisinya dianggap kosong. |
 | 5.4 Saved Query | `01_categories.sql`: OQCN dan jumlah OUQR. `02_queries.sql`: kategori/nama/panjang teks/tanggal dibuat/terakhir dijalankan; kategori sistem disaring. Halaman ini **tidak mengeksekusi saved query**. | Kategori 0 query dan entri dengan panjang teks 0 disembunyikan, bisa ditampilkan lewat toggle; tidak ada temuan otomatis khusus sebelumnya maupun sesudahnya. |
 | 7: UDT No Object | `AddonController.objectList`: OUTB tipe 0/5 yang bukan tabel UDO + mapping kategori/judul/hide. `data`: Code/Name dan seluruh UDF melalui UdfExpander. | Menu dengan jumlah baris 0 disembunyikan dan tidak masuk review; nilai UDF yang seluruhnya blank bisa disaring pada tabel data. @ST_PARAM memakai nilai U_Value untuk menentukan kosong. |
@@ -124,4 +130,11 @@ Skenario browser awal dan 60 screenshot disimpan sebagai riwayat. Untuk pengujia
 
 - `ea3f5f2`: audit dan bukti implementasi awal.
 
-Commit baru koreksi flag publik, fixture terkunci, tes dan pembaruan laporan dilaporkan ke koordinator setelah validasi.
+- `e8c5f94`: flag branch publik dan tes sesi Setup terkunci.
+- `9d693d5`: WBI tanpa Training, judul Retail.
+- `18bd4b3`: kegiatan inventory per lokasi dan PIC STEM terkunci.
+- `fb52de2`: PIC dari sumber user SAP sesuai konfigurasi company.
+- `7f79802`: satu bagan inventory, upload Toko 24:00 dan teks netral.
+- `dbaccf5`: jarak kartu bagan desktop dan bukti screenshot ujung bagan.
+
+SHA commit profil Addon dan pembaruan laporan disampaikan bersama hasil akhir ke koordinator.

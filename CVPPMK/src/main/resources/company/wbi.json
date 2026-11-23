@@ -2,6 +2,94 @@
   "pic": {
     "source": "sap",
     "group": "WBI",
-    "excludedCodes": ["Workflow", "AlertSvc", "B1i", "STEM01", "STEM02", "STEM03", "Support", "EDsUser", "INTERFACE", "manager", "BMW-PAM", "BMW-PG", "WBI-PARE", "WBI-GRH"]
+    "excludedCodes": [
+      "Workflow",
+      "AlertSvc",
+      "B1i",
+      "STEM01",
+      "STEM02",
+      "STEM03",
+      "Support",
+      "EDsUser",
+      "INTERFACE",
+      "manager",
+      "BMW-PAM",
+      "BMW-PG",
+      "WBI-PARE",
+      "WBI-GRH"
+    ]
+  },
+  "addons": {
+    "mapping": "addon-mapping-wbi.json",
+    "catalogs": [
+      {
+        "id": "stem",
+        "name": "STEM Base",
+        "base": "stem",
+        "tables": [
+          "ST_PARAM",
+          "ST_SHIFT",
+          "ST_RTYPE",
+          "STEM_MREWORK",
+          "STEM_MPREWORK",
+          "STEM_SERIESRWK",
+          "STEM_STDSPEC",
+          "STEM_SPECCRITERIA",
+          "STEM_PRDSPEC",
+          "STEM_REJECT",
+          "STEM_SERIESMAP",
+          "STEM_ACCGIGRMAP",
+          "STEM_BOMMAP",
+          "STEM_BOMCOS",
+          "STEM_TIBRANCHH",
+          "STEM_FPCONFIG",
+          "STEM_FACILITYREF",
+          "STEM_SERIESJE",
+          "STEM_MODULEIFLOCS",
+          "STEM_WHSASGNIFLOCSH"
+        ]
+      },
+      {
+        "id": "retail",
+        "name": "Retail & iReapBiz",
+        "tables": [
+          "ST_PLCATEGORY",
+          "ST_PLCONFIG",
+          "ST_PRICEH",
+          "ST_VOUCHERTYPE",
+          "ST_CCCONFIG",
+          "ST_CC",
+          "ST_IREAPCOMP",
+          "ST_COMPMASTER",
+          "ST_COMPMAPH",
+          "ST_UDRTH",
+          "ST_ROUTEPDH",
+          "ST_PARAMQC",
+          "ST_OPERQC",
+          "ST_INSTYPE",
+          "ST_INSTYPEMAP",
+          "ST_INSTQC",
+          "ST_UDWC",
+          "ST_WCGROUP",
+          "ST_WCWHS_MAP",
+          "ST_MOP",
+          "ST_WHSCONNECT"
+        ]
+      },
+      {
+        "id": "webportal",
+        "name": "WebPortal SAP",
+        "tables": [
+          "STEM_PETTYCASHCAT",
+          "STEM_PETTYCASHREQ",
+          "STEM_MODULEWEB",
+          "STEM_MODULEWEBP",
+          "STEM_REPORTWEB",
+          "STEM_REASON",
+          "STEM_ORPURPOSE",
+          "STEM_RULETRANSFER"
+        ]
+      }
+    ]
   }
 }

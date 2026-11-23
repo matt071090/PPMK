@@ -52,6 +52,7 @@ public class AddonController {
     private final SetupAccessController access;
     private final Path mappingFile;
     private final boolean editable;
+    private final CompanyProfile profile;
     private final ObjectMapper json = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     public AddonController(JdbcTemplate jdbc, UdfExpander udf, SectionController section, SetupAccessController access,
@@ -66,6 +67,7 @@ public class AddonController {
         this.mappingFile = editable ? files.legacyFile(dataDir, mappingFile)
                 : DataFiles.perBuild(files.dir(dataDir), "addon-mapping", "json", DataFiles.buildId(build.getIfAvailable()));
         this.editable = editable;
+        this.profile = new CompanyProfile(files);
     }
 
     /** Semua UDO/UDT di DB + mapping-nya: {objects: [...], categories: [...], stale: [kode mapping yang tidak ada di DB], editable}. */
@@ -74,7 +76,7 @@ public class AddonController {
     public Map<String, Object> objects() throws IOException {
         Map<String, Object> mapping = mapping();
         Map<String, Map<String, Object>> maps = (Map<String, Map<String, Object>>) mapping.getOrDefault("objects", Collections.emptyMap());
-        List<Map<String, Object>> list = objectList(maps);
+        List<Map<String, Object>> list = objectList(mapping);
         Set<String> cats = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         for (Object c : (List<Object>) mapping.getOrDefault("categories", Collections.emptyList())) if (c != null && !c.toString().trim().isEmpty()) cats.add(c.toString().trim());
         Set<String> codes = new HashSet<>();
@@ -96,9 +98,9 @@ public class AddonController {
     @GetMapping("/data/{code:[A-Za-z0-9_]+}")
     @SuppressWarnings("unchecked")
     public Map<String, Object> data(@PathVariable String code) throws IOException {
-        Map<String, Map<String, Object>> maps = (Map<String, Map<String, Object>>) mapping().getOrDefault("objects", Collections.emptyMap());
+        Map<String, Object> mapping = mapping();
         Map<String, Object> obj = null;
-        for (Map<String, Object> o : objectList(maps)) if (code.equals(o.get("code"))) obj = o;
+        for (Map<String, Object> o : objectList(mapping)) if (code.equals(o.get("code"))) obj = o;
         if (obj == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Objek add-on " + code + " tidak ada di DB company ini.");
         Map<String, Object> results = new LinkedHashMap<>();
         for (Map<String, Object> t : (List<Map<String, Object>>) obj.get("tables")) {
@@ -167,7 +169,7 @@ public class AddonController {
     }
 
     // UDO (header + child dari UDO1) + UDT No Object yang tidak dipakai UDO mana pun, digabung dengan mapping
-    private List<Map<String, Object>> objectList(Map<String, Map<String, Object>> maps) {
+    private List<Map<String, Object>> objectList(Map<String, Object> mapping) {
         Map<String, String[]> outb = new HashMap<>();   // nama tabel -> [Descr, ObjectType]
         jdbc.query("SELECT \"TableName\", \"Descr\", TO_NVARCHAR(\"ObjectType\") FROM OUTB", rs -> {
             outb.put(rs.getString(1), new String[]{rs.getString(2), rs.getString(3)});
@@ -184,12 +186,12 @@ public class AddonController {
             tables.add(head);
             tables.addAll(children.getOrDefault(code, Collections.emptyList()));
             used.addAll(tables);
-            list.add(object(code, rs.getString(2), "3".equals(type) ? "d" : "m", tables, outb, maps.get(code)));
+            list.add(object(code, rs.getString(2), "3".equals(type) ? "d" : "m", tables, outb, AddonMapping.object(mapping,code,tables)));
         });
         for (Map.Entry<String, String[]> t : outb.entrySet()) {
             String type = t.getValue()[1];
             if (used.contains(t.getKey()) || !("0".equals(type) || "5".equals(type))) continue;
-            list.add(object(t.getKey(), t.getValue()[0], "t", Collections.singletonList(t.getKey()), outb, maps.get(t.getKey())));
+            list.add(object(t.getKey(), t.getValue()[0], "t", Collections.singletonList(t.getKey()), outb, AddonMapping.object(mapping,t.getKey(),Collections.singletonList(t.getKey()))));
         }
         // One metadata query for all objects. Missing statistics stay unknown, never an invented zero.
         try {
@@ -247,10 +249,13 @@ public class AddonController {
     // file mapping (debug: folder project, war: folder data per build); belum ada = isi awal yang dibundel saat build
     @SuppressWarnings("unchecked")
     private Map<String, Object> mapping() throws IOException {
-        if (Files.exists(mappingFile)) return json.readValue(mappingFile.toFile(), Map.class);
-        ClassPathResource bundled = new ClassPathResource("addon-mapping.json");
-        if (bundled.exists()) try (InputStream in = bundled.getInputStream()) { return json.readValue(in, Map.class); }
-        return Collections.emptyMap();
+        Map<String,Object> current=Collections.emptyMap();
+        if (Files.exists(mappingFile)) current=json.readValue(mappingFile.toFile(), Map.class);
+        else {
+            ClassPathResource bundled = new ClassPathResource("addon-mapping.json");
+            if (bundled.exists()) try (InputStream in = bundled.getInputStream()) { current=json.readValue(in, Map.class); }
+        }
+        return AddonMapping.normalize(current,json.convertValue(profile.addonMapping(),Map.class));
     }
 
     // pesan validasi dikirim ke browser sebagai {message} (default Spring Boot menyembunyikan pesan error)

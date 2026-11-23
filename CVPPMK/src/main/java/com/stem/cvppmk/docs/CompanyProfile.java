@@ -25,7 +25,18 @@ final class CompanyProfile {
     Set<String> excludedUsers() {
         Set<String> out=new HashSet<>();for(JsonNode code:config.path("pic").path("excludedCodes"))out.add(code.asText().toUpperCase(Locale.ROOT));return out;
     }
+    JsonNode addonMapping() {
+        String resource=config.path("addons").path("mapping").asText("");
+        if(resource.isEmpty())return new ObjectMapper().createObjectNode();
+        if(!resource.matches("addon-mapping-[a-z0-9-]+\\.json"))throw new IllegalStateException("Konfigurasi add-on tidak valid.");
+        try(InputStream in=getClass().getResourceAsStream("/"+resource)) {
+            if(in==null)throw new IllegalStateException("Mapping add-on tidak tersedia.");
+            return new ObjectMapper().readTree(in);
+        }catch(java.io.IOException e){throw new IllegalStateException("Mapping add-on tidak valid.",e);}
+    }
     void metadata(Map<String,Object> out) {
+        out.put("addonCatalogs",config.path("addons").path("catalogs").isArray()?config.path("addons").path("catalogs"):Collections.emptyList());
+        out.put("addonRules",addonMapping().path("rules").isArray()?addonMapping().path("rules"):Collections.emptyList());
         out.put("picGroup",group);out.put("picSource",source);out.put("picUsersFile",usersFile);
         out.put("picExcludedCodes",config.path("pic").path("excludedCodes").isArray()?config.path("pic").path("excludedCodes"):Collections.emptyList());
     }

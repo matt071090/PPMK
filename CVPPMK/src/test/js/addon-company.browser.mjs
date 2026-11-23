@@ -1,0 +1,26 @@
+import assert from'node:assert/strict';import {mkdir,writeFile}from'node:fs/promises';import {pathToFileURL}from'node:url';import {createHash}from'node:crypto';
+const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
+const out=new URL('../../../docs/qa-wbi-addon/',import.meta.url);await mkdir(out,{recursive:true});
+const result={checks:[],screenshots:[],errors:[]};
+const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+const context=await browser.newContext({viewport:{width:1440,height:1000}});await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
+const page=await context.newPage();page.on('pageerror',e=>result.errors.push(e.message));
+const open=async(port,route='ringkasan')=>{await page.goto(`http://127.0.0.1:${port}/index.html#/${route}`);await page.locator('#nav [data-id="addon-st-param"]').waitFor({state:'attached'});await page.waitForTimeout(250);await page.locator('#nav details').evaluateAll(els=>els.forEach(el=>el.open=true));};
+const shot=async(name)=>{await page.waitForTimeout(450);await page.locator('.nav-group[data-no="7"]').evaluate(e=>{e.classList.remove('collapsed');e.querySelector(':scope > button').setAttribute('aria-expanded','true');e.querySelectorAll('.subcat > button').forEach(b=>{b.setAttribute('aria-expanded','true');b.nextElementSibling.hidden=false;});e.scrollIntoView({block:'start'});});await page.waitForTimeout(200);await page.screenshot({path:new URL(name,out).pathname});result.screenshots.push(name);};
+try{
+ await open(18639);const locked=await page.evaluate(async()=>({setup:(await fetch('api/setup/capabilities')).status,company:(await fetch('api/company')).status}));assert.deepEqual(locked,{setup:403,company:200});
+ const nav=await page.locator('#nav').textContent();assert.doesNotMatch(nav,/Farm Breeding|Plan Farm/);for(const c of ['Retail & iReapBiz','STEM Base','WebPortal SAP','Transaksi/Log','Lainnya'])assert.ok(nav.includes(c),c);
+ assert.equal(await page.locator('#nav [data-id="addon-stem-reportweb"]').count(),1);assert.equal(await page.locator('#nav [data-id="addon-stem-mplan"]').count(),0);
+ const count=await page.locator('#rv-count').innerText();await page.locator('#addon-show-empty').check();await page.locator('#nav [data-id="addon-stem-unused"]').waitFor({state:'attached'});assert.equal(await page.locator('#rv-count').innerText(),count);assert.equal(await page.locator('#nav [data-id="addon-stem-mplan"]').count(),0);
+ result.checks.push('Locked session: Setup 403, public company 200; five groups; Master Report Web under WebPortal; Farm absent even when empty toggle enabled; review count stable');
+ for(const route of ['udo','udt','udf']){await open(18639,route);assert.doesNotMatch(await page.locator('#article').innerText(),/Farm Breeding|Plan Farm|Jenis Farm|STATSETTERWHS/);if(route!=='udo')assert.match(await page.locator('#article').innerText(),/Retail & iReapBiz.*WebPortal SAP/s);}
+ await open(18639,'addon-st-param');await page.locator('#ad-ST_PARAM [data-show-empty]').check();const param=await page.locator('#ad-ST_PARAM').innerText();assert.doesNotMatch(param,/STATEGG|SAPUSERINT|ITBRACCI/);await page.locator('#ad-ST_PARAM input[type="search"]').fill('WHTRS');assert.match(await page.locator('#ad-ST_PARAM').innerText(),/WHTRS/);
+ result.checks.push('Bab 5.2/5.3 exclude Farm records and expected catalog; filled Farm parameter hidden alongside branch keys; shared WHTRS retained');
+ for(const [device,width]of [['desktop',1440],['mobile',390]]){await page.setViewportSize({width,height:1000});await open(18641,'addon-stem-reportweb');assert.match(await page.locator('#article').innerText(),/Farm Breeding/);if(width===390)await page.locator('#menu-btn').click();await shot(`wbi-before-${device}.png`);}
+ const snapshots=[];
+ for(const [label,port]of [['before',18636],['after',18640]]){await open(port);await page.locator('#addon-show-empty').uncheck();await page.waitForTimeout(200);const html=await page.locator('#nav').innerHTML();snapshots.push(html);await writeFile(new URL(`cv-sidebar-${label}.html`,out),html);for(const [device,width]of [['desktop',1440],['mobile',390]]){await page.setViewportSize({width,height:1000});await open(port);if(width===390)await page.locator('#menu-btn').click();await shot(`cv-${label}-${device}.png`);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}}
+ assert.equal(snapshots[0],snapshots[1]);result.cvSidebarSha256=createHash('sha256').update(snapshots[0]).digest('hex');result.checks.push('CV sidebar HTML before/after byte-identical; Farm Breeding/STEM Addon order and review counts preserved');
+ for(const [device,width]of [['desktop',1440],['mobile',390]]){await page.setViewportSize({width,height:1000});await open(18639,'addon-stem-reportweb');if(width===390)await page.locator('#menu-btn').click();await shot(`wbi-addon-${device}.png`);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+ assert.deepEqual(result.errors,[]);
+}finally{await writeFile(new URL('browser-evidence.json',out),JSON.stringify(result,null,2)+'\n');await browser.close();}
+console.log(JSON.stringify(result));
