@@ -2,6 +2,7 @@
 // dropdown & kolom UDF diambil dari SAP saat itu lewat api/section/template-ref.
 import { $, $$, esc, section, onMount, company } from "../ui.js";
 import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
+import { branchTemplate } from './setup-branch.js';
 
 let refCache = null;   // data dropdown dipakai ulang selama halaman tidak di-refresh
 
@@ -25,7 +26,11 @@ export const PAGES = {
         $$("[data-tpl]").forEach(b => b.onclick = async () => {
           const t = TEMPLATES[+b.dataset.tpl], label = b.innerHTML;
           b.disabled = true; b.textContent = "Menyiapkan…";
-          try { downloadTemplate(t, await loadRef(), company.name); }
+          try {
+            const response = await fetch('api/setup/capabilities'), cap = await response.json();
+            if (!response.ok || !cap.uploadAllowed || typeof cap.branchEnabled !== 'boolean') throw new Error(cap.message || 'Mode branch tujuan belum dapat dipastikan.');
+            await downloadTemplate(branchTemplate(t, cap.branchEnabled), await loadRef(), company.name);
+          }
           catch (e) { alert(`Gagal membuat template: ${e.message}`); }
           finally { b.disabled = false; b.innerHTML = label; }
         });

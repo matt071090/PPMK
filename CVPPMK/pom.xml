@@ -21,9 +21,17 @@
 
     <properties>
         <java.version>1.8</java.version>
+        <war.name>cvppmk</war.name>
+        <deployment.profile>default</deployment.profile>
+        <local.config.file>application.properties</local.config.file>
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -58,10 +66,16 @@
     </dependencies>
 
     <build>
-        <finalName>cvppmk</finalName>
+        <finalName>${war.name}</finalName>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
+                <excludes><exclude>application.properties</exclude></excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes><include>application.properties</include></includes>
             </resource>
             <!-- Dibundel ke war supaya cukup satu file di webapps:
                  ./application.properties (koneksi DB & SL, tidak di-commit) -> classpath:config/, prioritasnya di atas application.properties bawaan.
@@ -69,7 +83,7 @@
                  Data review tidak ikut dibundel: dicatat app di server, file log per build (lihat ReviewController). -->
             <resource>
                 <directory>${project.basedir}</directory>
-                <includes><include>application.properties</include></includes>
+                <includes><include>${local.config.file}</include></includes>
                 <targetPath>config</targetPath>
             </resource>
             <resource>
@@ -88,4 +102,15 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>wbi</id>
+            <properties>
+                <war.name>wbi</war.name>
+                <deployment.profile>wbi</deployment.profile>
+                <!-- Never bundle a developer's CV connection/password in the WBI WAR. -->
+                <local.config.file>_no_bundled_local_config_</local.config.file>
+            </properties>
+        </profile>
+    </profiles>
 </project>

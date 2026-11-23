@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schedule · CVPPMK</title>
+<link rel="stylesheet" href="css/app.css">
+<script>try { const t = localStorage.getItem("theme"); document.documentElement.dataset.theme = t === "dark" ? "dark" : "light"; } catch { document.documentElement.dataset.theme = "light"; }</script>
+<style>
+.schedule .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:18px 0; }
+.schedule .back-btn { margin-left:auto; }
+.schedule .control { font:inherit; color:var(--text); background:var(--surface); border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; min-height:44px; max-width:100%; }
+.schedule button.control { font-weight:600; }
+.schedule .primary { background:var(--accent-soft); color:var(--accent-strong); border-color:var(--accent); }
+.schedule button:disabled { opacity:.55; cursor:wait; }
+.schedule .stats { display:flex; flex-wrap:wrap; gap:16px; margin:20px 0; }
+.schedule .stats div { border-left:3px solid var(--border-strong); padding:4px 16px; }
+.schedule .stats strong { display:block; font-size:26px; line-height:1.2; }
+.schedule .stats .late { border-color:var(--danger); }
+.schedule .badge { display:inline-block; padding:2px 8px; border-radius:4px; background:var(--surface-2); white-space:nowrap; }
+.schedule .badge.telat { background:var(--danger-soft); color:var(--danger); }
+.schedule .badge.proses { background:var(--info-soft); color:var(--info); }
+.schedule .badge.selesai { background:var(--ok-soft); color:var(--ok); }
+.schedule .table-wrap { overflow:auto; }
+.schedule td small { display:block; color:var(--muted); }
+.schedule .editor { padding:18px; margin:16px 0; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-soft); }
+.schedule .fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+.schedule label { display:flex; flex-direction:column; gap:4px; }
+.schedule textarea { width:100%; min-height:90px; }
+.schedule #notice { white-space:pre-wrap; }
+ .schedule *, .schedule *::before, .schedule *::after { box-sizing:border-box; }
+.schedule .content, .schedule .article, .schedule #view, .schedule .actions > *, .schedule .fields > * { min-width:0; }
+.schedule .article { overflow-wrap:anywhere; }
+.schedule .fields { grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr)); }
+.schedule .brand-short { display:none; }
+.schedule .attention { padding:16px; border:1px solid var(--border); border-radius:var(--radius); }
+.schedule .attention h2 { margin-top:0; }
+.schedule .attention li { margin:8px 0; }
+.schedule .settings { table-layout:fixed; width:100%; }
+.schedule .settings th, .schedule .settings td { white-space:normal; overflow-wrap:anywhere; min-width:0; }
+.schedule #notice:empty { display:none; }
+@media(max-width:600px) {
+ .schedule .top { padding:0 16px; gap:8px; }
+ .schedule .brand { flex:1; min-width:0; }
+ .schedule .brand .brand-full, .schedule .brand small { display:none; }
+ .schedule .brand .brand-short { display:block; }
+ .schedule .top > button, .schedule .back-btn, .schedule .logo { flex-shrink:0; }
+ .schedule .back-btn { margin-left:0; }
+ .schedule .content { padding:0 16px 64px; }
+ .schedule .table-wrap { overflow:visible; }
+ .schedule .editor { padding:12px; }
+ .schedule .control { min-width:0; }
+
+ .schedule .settings thead { display:none; }
+ .schedule .settings, .schedule .settings tbody, .schedule .settings tr, .schedule .settings td { display:block; width:100%; }
+ .schedule .settings tr { border-bottom:2px solid var(--border-strong); }
+ .schedule .settings td { border:0; padding:6px 12px; overflow-wrap:anywhere; }
+ .schedule .settings td::before { content:attr(data-label); display:block; font-size:11px; color:var(--muted); }
+ .schedule #nav a { min-height:44px; align-items:center; }
+ .schedule .icon-btn { min-width:44px; min-height:44px; }
+}
+
+.schedule [hidden] { display:none !important; }
+.schedule .muted, .schedule .help, .schedule .saved-tools { color:var(--muted); }
+.schedule .saved-tools { margin:8px 0; gap:12px; }
+.schedule .help { font-size:13px; margin:8px 0 20px; }
+.schedule summary { cursor:pointer; min-height:40px; padding:8px 0; }
+.schedule .badge { border:1px solid var(--border-strong); font-weight:650; color:var(--text); background:var(--surface-2); border-radius:20px; }
+.schedule .badge.belum { color:var(--text-2); background:var(--surface-2); }
+.schedule .badge.control { min-height:40px; padding:6px; width:100%; }
+.schedule .secondary { background:transparent; font-weight:400; min-height:40px; }
+.schedule .pic-input { width:100%; min-height:40px; background:transparent; border-color:transparent; }
+.schedule .pic-input:hover, .schedule .pic-input:focus { border-color:var(--border-strong); }
+.schedule .pic-input::placeholder { color:var(--muted); opacity:1; }
+.schedule .draft-bar { position:sticky; top:calc(var(--top-h) + 8px); z-index:20; display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px; margin-top:20px; border:1px solid var(--accent); border-radius:var(--radius); background:var(--surface); box-shadow:var(--shadow-lg); }
+.schedule .draft-bar span { flex:1; min-width:120px; }
+.schedule progress { display:block; width:100%; height:6px; border:0; border-radius:4px; accent-color:var(--ok); background:var(--surface-2); }
+.schedule progress::-webkit-progress-bar { background:var(--surface-2); border-radius:4px; }
+.schedule progress::-webkit-progress-value { background:var(--ok); border-radius:4px; }
+.schedule progress::-moz-progress-bar { background:var(--ok); }
+.schedule .stage { margin:20px 0; border:1px solid var(--border); border-radius:var(--radius); padding:0 12px; }
+.schedule .stage summary span { margin-left:12px; color:var(--muted); font-size:13px; }
+.schedule .stage summary progress { margin-top:8px; }
+.schedule .stats > div:first-child { background:var(--accent-soft); border-color:var(--accent); border-radius:var(--radius); padding:16px 24px; color:var(--accent-strong); }
+.schedule .stats > div:first-child strong { font-size:48px; }
+.schedule .stock-flow { display:flex; gap:12px; list-style:none; padding:0; margin:20px 0; }
+.schedule .stock-flow li { flex:1; min-width:0; padding:12px; background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius); }
+.schedule .stock-flow li:not(:last-child)::after { content:' →'; color:var(--accent-strong); }
+.schedule .stock-flow small { display:block; margin:8px 0; }
+.schedule .rules { padding:12px 16px; background:var(--bg-soft); border-radius:var(--radius); margin:20px 0; }
+.schedule .rules h2 { margin-top:0; }
+.schedule .item-note { font-size:12px; color:var(--muted); }
+.schedule .item-note summary { min-height:40px; padding:8px 0; }
+.schedule .activity-table th:first-child { width:32%; }
+.schedule .activity-table th:nth-child(2) { width:25%; }
+.schedule .activity-table th:nth-child(3) { width:16%; }
+.schedule .activity-table th:nth-child(4) { width:17%; }
+.schedule .activity-table th:last-child { width:10%; }
+.schedule :focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+@media(max-width:600px) {
+ .schedule .stock-flow { flex-direction:column; }
+ .schedule .stock-flow li:not(:last-child)::after { content:' ↓'; }
+ .schedule .activity-table tr { display:grid; grid-template-columns:minmax(0,1fr) 112px; gap:2px 8px; padding:10px 0; }
+ .schedule .activity-table td { padding:0; width:auto; }
+ .schedule .activity-table td::before { display:none; }
+ .schedule .activity-table .item-title { grid-column:1; grid-row:1; align-self:center; }
+ .schedule .activity-table .item-status { grid-column:2; grid-row:1; align-self:start; }
+ .schedule .activity-table .item-date { grid-column:1; grid-row:2; font-size:12px; color:var(--muted); }
+ .schedule .activity-table .item-pic { grid-column:1; grid-row:3; }
+ .schedule .activity-table .item-action { grid-column:2; grid-row:2 / 4; justify-self:end; align-self:center; }
+ .schedule .item-note { margin:0; }
+ .schedule .stage summary span { display:block; margin-left:0; }
+ .schedule .draft-bar { top:calc(var(--top-h) + 4px); padding:8px; font-size:13px; }
+ .schedule .today-track span { width:auto; transform:none; margin-left:0 !important; }
+}
+
+/* Palette inherits app.css light/dark tokens, including automatic dark mode. */
+.schedule .timeline-shell {
+ --tl-0:var(--accent-strong); --tl-1:var(--warn); --tl-2:var(--info);
+ --tl-3:var(--ok); --tl-4:var(--danger);
+ position:relative; margin:28px 0; padding:16px 12px;
+ background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius);
+}
+.schedule .timeline { position:relative; display:grid; grid-template-columns:repeat(var(--count),minmax(0,1fr)); grid-template-rows:minmax(190px,1fr) 66px 24px 66px minmax(190px,1fr); list-style:none; padding:0; margin:0; }
+.schedule .timeline::before { content:''; position:absolute; top:50%; left:0; right:0; height:1px; background:var(--border-strong); }
+.schedule .timeline::after { content:''; position:absolute; top:calc(50% - 3px); left:0; width:6px; height:6px; border-radius:50%; background:var(--muted); box-shadow:none; }
+.schedule .timeline-shell::after { content:''; position:absolute; right:12px; top:calc(50% - 3px); width:6px; height:6px; background:var(--muted); border-radius:50%; }
+.schedule .timeline li { grid-column:var(--slot); grid-row:1/6; display:grid; grid-template-rows:subgrid; min-width:0; position:relative; padding:0; border:0; }
+.schedule .timeline-card { position:relative; grid-row:1; align-self:end; justify-self:center; width:150%; max-width:190px; min-width:0; min-height:40px; display:flex; flex-direction:column; align-items:flex-start; gap:7px; padding:12px; color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; font-size:13px; line-height:1.45; overflow-wrap:anywhere; text-decoration:none; }
+.schedule .timeline li:first-child .timeline-card { justify-self:start; }
+.schedule .timeline li:last-child .timeline-card { justify-self:end; }
+.schedule .timeline-card:hover { border-color:var(--tone); text-decoration:none; }
+.schedule .timeline-card b { font-size:14px; line-height:1.4; }
+.schedule .timeline-note { color:var(--text-2); font-size:12px; }
+.schedule .timeline .badge { white-space:normal; padding:1px 5px; font-size:12px; }
+.schedule .timeline-date { grid-row:4; align-self:start; justify-self:center; padding-top:8px; color:var(--tone); font-size:clamp(15px,1.5vw,22px); line-height:1.15; font-weight:700; text-align:center; width:100%; }
+.schedule .timeline-date small { display:block; font-size:12px; margin-top:6px; font-weight:400; }
+.schedule .timeline .below .timeline-card { grid-row:5; align-self:start; }
+.schedule .timeline .below .timeline-date { grid-row:2; align-self:end; padding:0 0 8px; }
+.schedule .timeline-stem { grid-row:2; width:1px; height:100%; background:var(--tone); justify-self:center; align-self:stretch; position:relative; }
+.schedule .timeline-stem::before { content:''; position:absolute; width:5px; height:5px; border-radius:50%; background:var(--tone); left:-2px; top:-2px; }
+.schedule .timeline .below .timeline-stem { grid-row:4; align-self:stretch; }
+.schedule .timeline .below .timeline-stem::before { top:auto; bottom:-2px; }
+.schedule .timeline-dot { position:absolute; z-index:2; top:calc(50% - 10px); left:calc(50% - 10px); width:20px; height:20px; border:2px solid var(--tone); border-radius:50%; background:var(--bg-soft); display:grid; place-items:center; font-size:13px; font-weight:700; color:var(--text); }
+.schedule .timeline-dot.selesai { background:var(--tone); color:var(--bg); }
+.schedule .timeline-dot.proses { background:linear-gradient(90deg,var(--tone) 50%,var(--bg-soft) 50%); }
+.schedule .timeline-dot.telat { border-color:var(--danger); color:var(--danger); background:var(--danger-soft); }
+.schedule .timeline .upcoming .timeline-dot { outline:3px solid var(--tone); outline-offset:4px; animation:timeline-pulse 2.4s ease-in-out infinite; }
+.schedule .next-label { color:var(--text); font-size:11px; font-weight:700; border-bottom:1px solid var(--tone); }
+.schedule .timeline-today { position:absolute; z-index:3; left:calc(12px + (100% - 24px) * var(--position)); top:calc(50% - 22px); height:44px; border-left:2px dashed var(--text-2); pointer-events:none; }
+.schedule .timeline-today span { position:absolute; top:46px; left:0; transform:translateX(-50%); white-space:nowrap; padding:2px 4px; font-size:10px; color:var(--text); background:var(--bg-soft); }
+.schedule .mobile-date { display:none; }
+.schedule .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+@keyframes timeline-pulse { 50% { outline-offset:7px; } }
+@media(prefers-reduced-motion:reduce) { .schedule .timeline .upcoming .timeline-dot { animation:none; } }
+@media(min-width:900px) and (max-width:1200px) {
+ .schedule .timeline-card { padding:9px; font-size:12px; }
+ .schedule .timeline-card b { font-size:13px; }
+ .schedule .timeline-note { font-size:11px; }
+}
+@media(max-width:899px) {
+ .schedule .timeline-shell { padding:18px 12px; }
+ .schedule .timeline { display:flex; flex-direction:column; gap:22px; }
+ .schedule .timeline::before { top:0; bottom:0; left:12px; right:auto; width:1px; height:auto; }
+ .schedule .timeline::after { top:0; left:10px; }
+ .schedule .timeline-shell::after { left:22px; right:auto; top:auto; bottom:16px; }
+ .schedule .timeline li { display:block; padding-left:42px; }
+ .schedule .timeline .timeline-card { width:100%; max-width:none; padding:14px; font-size:13px; }
+ .schedule .timeline-card b { font-size:15px; }
+ .schedule .timeline-note { font-size:12px; }
+ .schedule .timeline-dot { top:22px; left:3px; }
+ .schedule .timeline-stem { position:absolute; top:32px; left:23px; width:19px; height:1px; }
+ .schedule .timeline-stem::before { display:none; }
+ .schedule .timeline-date { display:none; }
+ .schedule .mobile-date { display:block; color:var(--tone); font-size:22px; font-weight:700; }
+ .schedule .mobile-date small { font-size:12px; font-weight:400; }
+ .schedule .timeline-today { left:15px; top:calc(18px + (100% - 36px) * var(--position)); width:20px; height:0; border-left:0; border-top:2px dashed var(--text-2); }
+ .schedule .timeline-today span { top:0; left:-1px; transform:rotate(-90deg); transform-origin:left top; }
+}
+
+.schedule .chat-line { margin: 0 0 12px; display: flex; justify-content: flex-end; }
+.schedule .item-action { white-space: nowrap; }
+.schedule .item-action .chat-badge { margin-left: 6px; }
+.schedule .review-src { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.schedule .review-link { color: var(--accent-strong); }
+.schedule .badge.auto { border-style: dashed; }
+
+.schedule .callout.warn { background:var(--warn-soft); border-left:4px solid var(--warn); padding:12px 14px; border-radius:6px; color:var(--text); }
+.schedule .unlock { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
+.schedule .unlock input { min-width:0; flex:1 1 220px; max-width:320px; min-height:40px; }
+.schedule #unlock-msg { color:var(--danger); font-size:13px; }
+/* Rapikan tabel Ringkasan per area */
+@media(min-width:601px) {
+ .schedule .area-table { table-layout:fixed; width:100%; border-collapse:separate; border-spacing:0; }
+ .schedule .area-table th { padding:11px 16px; font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); background:var(--surface-2); text-align:left; }
+ .schedule .area-table td { padding:14px 16px; vertical-align:top; line-height:1.55; border-top:1px solid var(--border); }
+ .schedule .area-table th:nth-child(1) { width:17%; } .schedule .area-table th:nth-child(2) { width:17%; } .schedule .area-table th:nth-child(3) { width:20%; }
+ .schedule .area-table th:nth-child(4) { width:23%; } .schedule .area-table th:nth-child(5) { width:10%; } .schedule .area-table th:nth-child(6) { width:13%; }
+ .schedule .area-table td:first-child { font-weight:650; color:var(--text); }
+ .schedule .area-table td[data-label="PIC"] { color:var(--muted); }
+ .schedule .area-table td small { display:block; margin-top:3px; color:var(--muted); font-size:12px; }
+ .schedule .area-table tbody tr:hover td { background:var(--accent-soft); }
+}
+/* Rapikan timeline (desktop): kartu sama tinggi, aksen warna di tepi atas, label Berikutnya jadi pil */
+@media(min-width:900px) {
+ .schedule .timeline-shell { padding:26px 18px 22px; }
+ .schedule .timeline { grid-template-rows:auto 60px 24px 60px auto; }
+ .schedule .timeline-card { align-self:stretch; width:150%; max-width:190px; min-height:120px; background:var(--surface); border-top:3px solid var(--tone); box-shadow:0 1px 2px rgba(16,24,32,.08); gap:6px; padding:11px 12px; }
+ .schedule .timeline-date { padding-top:14px; }
+ .schedule .timeline .below .timeline-date { padding:0 0 14px; }
+ .schedule .timeline-card b { font-size:14px; }
+ .schedule .timeline-note { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+ .schedule .timeline-card .badge { margin-top:auto; }
+ .schedule .timeline-date { font-weight:750; letter-spacing:-.01em; font-size:clamp(13px,1.3vw,18px); white-space:nowrap; }
+ .schedule .timeline-date small { display:block; margin-top:2px; opacity:.85; }
+ .schedule .next-label { border:0; padding:1px 9px; border-radius:999px; background:var(--accent-soft); color:var(--accent-strong); }
+}
+
+.schedule .pic-select { width:100%; min-height:40px; }
+.schedule .pic-select.muted { color:var(--muted); }
+.schedule .activity-table th:first-child { width:27%; }
+.schedule .activity-table th:nth-child(2) { width:22%; }
+.schedule .activity-table th:nth-child(3) { width:21%; }
+.schedule .activity-table th:nth-child(4) { width:17%; }
+.schedule .activity-table th:last-child { width:13%; }
+
+.schedule .pic-fixed { display:inline-flex; align-items:baseline; gap:6px; padding:7px 12px; border:1px dashed var(--border-strong); border-radius:8px; background:var(--surface-2); color:var(--text); font-weight:650; }
+.schedule .pic-fixed small { font-weight:400; font-size:11px; color:var(--muted); }
+.schedule .pic-fixed-row { display:flex; align-items:center; gap:10px; }
+
+/* Tombol chat disamakan dengan tombol Ubah (kotak sudut 6px, tinggi dan border sama) */
+.schedule .chat-badge { border-radius:6px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text); min-height:44px; min-width:44px; padding:8px 10px; font:inherit; font-weight:600; }
+.schedule .chat-badge.new { border-color:var(--accent); color:var(--accent-strong); }
+.schedule .chat-badge:hover { border-color:var(--accent); }
+.schedule .item-action .chat-badge { display:inline-flex; vertical-align:top; margin-left:6px; }
+@media(min-width:601px) {
+ .schedule .activity-table th:first-child { width:26%; }
+ .schedule .activity-table th:nth-child(2) { width:21%; }
+ .schedule .activity-table th:nth-child(3) { width:20%; }
+ .schedule .activity-table th:nth-child(4) { width:17%; }
+ .schedule .activity-table th:last-child { width:16%; }
+}
+
+/* Timeline dengan sedikit titik (<=6): kartu selalu di tengah titiknya, lebar dibatasi supaya tidak renggang */
+@media(min-width:900px) {
+ .schedule .timeline.wide { max-width:calc(var(--count) * 260px); margin:0 auto; }
+ .schedule .timeline.wide li:first-child .timeline-card, .schedule .timeline.wide li:last-child .timeline-card { justify-self:center; }
+ .schedule .timeline.wide .timeline-card { width:min(190px, calc(100% - 12px)); }
+ .schedule .timeline.wide::after { display:none; }
+ .schedule .timeline-shell:has(.timeline.wide)::after { display:none; }
+}
+
+/* ===== admin-ui-system: status kategori konsisten (badge tabel, pilihan status, timeline, ringkasan area, KPI) ===== */
+.schedule .badge.selesai { color:var(--ok); background:var(--ok-soft); border-color:color-mix(in srgb, var(--ok) 45%, transparent); }
+.schedule .badge.proses { color:var(--info); background:var(--info-soft); border-color:color-mix(in srgb, var(--info) 45%, transparent); }
+.schedule .badge.telat { color:var(--danger); background:var(--danger-soft); border-color:color-mix(in srgb, var(--danger) 45%, transparent); }
+.schedule .badge.belum { color:var(--text-2); background:var(--surface-2); border-color:var(--border-strong); }
+/* terkunci (mode lihat saja) jelas terlihat terkunci */
+.schedule select:disabled, .schedule input:disabled { background:var(--surface-2); color:var(--muted); cursor:default; opacity:1; box-shadow:none; }
+/* Hero + KPI bar Ringkasan */
+.schedule .hero { display:grid; grid-template-columns:minmax(200px, 260px) 1fr; gap:16px; margin:18px 0 26px; align-items:stretch; }
+.schedule .countdown { display:flex; flex-direction:column; justify-content:center; gap:2px; padding:18px 22px; border-radius:var(--radius); background:var(--accent-soft); border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); color:var(--accent-strong); }
+.schedule .countdown strong { font-size:52px; line-height:1; font-weight:800; font-variant-numeric:tabular-nums; }
+.schedule .countdown span { font-weight:650; }
+.schedule .countdown small { color:var(--text-2); margin-top:6px; }
+.schedule .kpi-side { display:flex; flex-direction:column; gap:12px; min-width:0; }
+.schedule .kpi-bar { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+.schedule .kpi { background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--border-strong); border-radius:var(--radius); padding:10px 14px; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.schedule .kpi strong { font-size:28px; line-height:1.1; font-variant-numeric:tabular-nums; color:var(--text); }
+.schedule .kpi span { font-size:13px; color:var(--text-2); font-weight:600; }
+.schedule .kpi.selesai { border-left-color:var(--ok); } .schedule .kpi.selesai span { color:var(--ok); }
+.schedule .kpi.proses { border-left-color:var(--info); } .schedule .kpi.proses span { color:var(--info); }
+.schedule .kpi.belum { border-left-color:var(--muted); }
+.schedule .kpi.telat { border-left-color:var(--danger); } .schedule .kpi.telat span { color:var(--danger); }
+.schedule .progress-line { display:flex; flex-direction:column; gap:6px; font-size:14px; color:var(--text-2); }
+.schedule .progress-line b { color:var(--text); }
+.schedule .progress-line progress { width:100%; height:10px; appearance:none; -webkit-appearance:none; border:0; border-radius:999px; background:var(--surface-2); overflow:hidden; }
+.schedule .progress-line progress::-webkit-progress-bar { background:var(--surface-2); border-radius:999px; }
+.schedule .progress-line progress::-webkit-progress-value { background:var(--ok); border-radius:999px; }
+.schedule .progress-line progress::-moz-progress-bar { background:var(--ok); border-radius:999px; }
+@media(max-width:760px) {
+ .schedule .hero { grid-template-columns:1fr; }
+ .schedule .kpi-bar { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+ .schedule .countdown strong { font-size:44px; }
+}
+
+/* ===== Header halaman ringkas: judul kiri, diskusi + simpan/muat ulang kanan; konten tidak melebar di layar besar ===== */
+.schedule .content > .article { max-width:none; }
+.schedule .page-head { display:flex; justify-content:space-between; align-items:flex-end; gap:12px 20px; flex-wrap:wrap; padding-bottom:14px; margin-bottom:18px; border-bottom:1px solid var(--border); }
+.schedule .page-head .crumbs { margin-bottom:4px; }
+.schedule .page-head h1 { margin:0; }
+.schedule .ph-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.schedule .saved-tools { display:flex; align-items:center; gap:10px; }
+.schedule .saved-tools[hidden] { display:none; }
+.schedule #revision { color:var(--muted); }
+.schedule #notice:empty { display:none; }
+.schedule #notice { margin:0 0 12px; color:var(--text-2); }
+.schedule .rules-note ul { margin:0; padding-left:18px; }
+.schedule .rules-note li + li { margin-top:4px; }
+.schedule .legend abbr { text-decoration:none; cursor:help; border-bottom:1px dotted var(--muted); }
+@media(max-width:600px) { .schedule .page-head { align-items:flex-start; } .schedule .ph-right { width:100%; } .schedule #chat-head-slot { display:none; } }
+.schedule .top #theme-btn { margin-left:auto; }
+
+/* Panduan cara pakai */
+.schedule .guide { margin:0 0 16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); }
+.schedule .guide > summary { cursor:pointer; padding:10px 14px; font-weight:600; color:var(--accent-strong); list-style:none; }
+.schedule .guide > summary::-webkit-details-marker { display:none; }
+.schedule .guide[open] > summary { border-bottom:1px solid var(--border); }
+.schedule .guide-body { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:4px 24px; padding:8px 16px 14px; }
+.schedule .guide h3 { margin:10px 0 4px; font-size:14px; }
+.schedule .guide ul { margin:0; padding-left:18px; font-size:13.5px; color:var(--text-2); }
+.schedule .guide li + li { margin-top:4px; }
+
+.schedule .guide > summary { display:flex; align-items:center; gap:8px; min-height:40px; }
+.schedule .guide .g-chev { display:inline-block; transition:transform .15s ease; color:var(--muted); }
+.schedule .guide[open] .g-chev { transform:rotate(90deg); }
+.schedule .guide .g-hint { margin-left:auto; font-size:12px; font-weight:500; color:var(--muted); }
+.schedule .guide:not([open]) .g-hint::before { content:"Tampilkan"; }
+.schedule .guide[open] .g-hint::before { content:"Sembunyikan"; }
+.schedule .guide > summary:hover .g-hint { color:var(--text); }
+@media (prefers-reduced-motion: reduce) { .schedule .guide .g-chev { transition:none; } }
+.schedule .pic-input { width:100%; min-height:40px; background:var(--surface); border:1px solid var(--border-strong); border-radius:6px; padding:8px 10px; }
+.schedule .pic-input:hover { border-color:var(--accent); }
+.schedule .pic-input:focus { border-color:var(--accent); outline:2px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset:0; }
+/* daftar saran PIC */
+.schedule .pic-pop { position:absolute; z-index:80; list-style:none; margin:0; padding:4px; max-height:260px; overflow-y:auto; background:var(--surface); color:var(--text); border:1px solid var(--border-strong); border-radius:8px; box-shadow:var(--shadow-lg); }
+.schedule .pic-pop[hidden] { display:none; }
+.schedule .pic-pop li { padding:7px 10px; border-radius:6px; font-size:14px; line-height:1.35; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.schedule .pic-pop li[data-v]:hover, .schedule .pic-pop li.on { background:var(--accent-soft); color:var(--accent-strong); }
+.schedule .pic-pop li.hint { cursor:default; font-size:12px; color:var(--muted); white-space:normal; padding:6px 10px 8px; border-bottom:1px solid var(--border); border-radius:0; margin-bottom:4px; }
+.schedule .pic-pop li.free { color:var(--accent-strong); white-space:normal; overflow-wrap:anywhere; }
+</style>
+<script src="js/modnav.js" defer></script>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="apple-touch-icon" href="img/favicon-180.png">
+</head>
+<body class="setup-app schedule">
+<header class="top">
+<button class="icon-btn menu-btn" id="menu-btn" aria-label="Buka menu" aria-expanded="false" aria-controls="nav">☰</button>
+<a class="brand" href="schedule.html"><span class="logo" id="schedule-company-logo">SAP</span><span><small>Schedule</small><span class="brand-full" id="schedule-company-name">Schedule</span><span class="brand-short">Schedule</span></span></a>
+
+<button class="icon-btn" id="theme-btn" aria-label="Ganti tema terang atau gelap">◐</button>
+</header>
+<div class="shell">
+<aside class="sidebar" aria-label="Menu Schedule"><nav id="nav"><div class="nav-group">
+<button type="button" id="nav-toggle" aria-expanded="true">Jadwal Go Live</button>
+<ul>
+<li><a href="#/ringkasan" data-tab="ringkasan">Ringkasan</a></li>
+<li><a href="#/master" data-tab="master">Master Data</a></li>
+<li><a href="#/training" data-tab="training">Training</a></li>
+<li><a href="#/stock" data-tab="stock">Stock Opname</a></li>
+<li><a href="#/balance" data-tab="balance">Beginning Balance</a></li>
+
+</ul></div></nav></aside>
+<main class="content"><article class="article">
+<header class="page-head">
+  <div class="ph-left"><nav class="crumbs" aria-label="Breadcrumb"><a href="home.html">Home</a><span>Schedule</span></nav>
+  <h1 id="page-title">Jadwal Go Live</h1></div>
+  <div class="ph-right"><span id="chat-head-slot"></span><a class="control secondary" href="api/schedule/export">Unduh JSON</a><div id="saved-tools" class="saved-tools"><small id="revision"></small><button class="control secondary" id="reload">Muat ulang</button></div></div>
+</header>
+<details class="guide" id="guide"><summary><span class="g-chev" aria-hidden="true">▸</span>ⓘ Cara pakai Schedule<span class="g-hint"></span></summary>
+<div class="guide-body">
+<section><h3>Siapa bisa mengubah</h3>
+<ul><li><b>Semua orang</b> (mode lihat): bisa mengisi <b>PIC</b> dan mengubah <b>status</b>, lalu Simpan. Diskusi bisa dipakai semua.</li>
+<li><b>Admin</b> (klik <b>Masuk admin</b> di menu kiri, masukkan password Setup): juga bisa mengubah tanggal, jam, dan catatan lewat tombol <b>Ubah</b>.</li></ul></section>
+<section><h3>Mengisi PIC</h3>
+<ul><li>Klik kolom <b>PIC</b> pada baris kegiatan: muncul daftar saran (STEM dan user PPMK). <b>Boleh pilih dari daftar, boleh juga ketik sendiri.</b></li>
+<li>Ketik sebagian nama atau kode untuk menyaring, misalnya <b>fat</b> menjadi <b>AP-STF1 (Fatma)</b>. Klik saran, atau pakai panah <b>↑ ↓</b> lalu <b>Enter</b>.</li>
+<li>Kalau nama tidak ada di daftar, ketik saja (misalnya <b>Tim Gudang Pare</b>): muncul pilihan <b>Pakai &ldquo;Tim Gudang Pare&rdquo;</b>. Klik pilihan itu atau langsung tekan <b>Enter</b>. <b>Esc</b> menutup daftar saran.</li>
+<li>Setelah PIC terisi, klik <b>Simpan</b> pada bilah perubahan.</li>
+<li>Kegiatan yang memang pekerjaan konsultan STEM (training, upload master data, upload saldo awal) otomatis <b>STEM</b> dan tidak bisa diubah.</li>
+<li>Setelah disimpan, penetapan atau penggantian PIC otomatis tercatat di <b>diskusi kegiatan</b> itu (siapa, kapan, dari siapa ke siapa).</li></ul></section>
+<section><h3>Mengubah status</h3>
+<ul><li>Pilih di kolom <b>Status</b>: belum, proses, atau selesai. <b>Telat</b> muncul sendiri bila tanggal akhir sudah lewat dan status belum selesai.</li>
+<li>Item master data yang punya halaman Review di Project Check List mengikuti Review: <b>Sesuai</b> = selesai, <b>Belum sesuai</b> = proses.</li></ul></section>
+<section><h3>Menyimpan</h3>
+<ul><li>Setiap perubahan masuk draf dan muncul bilah <b>"N perubahan belum disimpan"</b>. Klik <b>Simpan</b> supaya tersimpan untuk semua orang, atau <b>Batalkan</b>.</li>
+<li>Tombol <b>Ubah</b> (khusus admin) di tiap baris untuk tanggal, jam, dan catatan.</li></ul></section>
+<section><h3>Diskusi</h3>
+<ul><li>Klik ikon chat di baris kegiatan untuk diskusi per kegiatan, atau tombol <b>Diskusi</b> untuk topik umum. Isi nama sekali, nanti diingat browser.</li></ul></section>
+</div></details>
+<p id="notice" role="status" aria-live="polite">Memuat jadwal...</p>
+<div id="draft-bar" class="draft-bar" hidden><span id="draft-count" role="status"></span><button class="control primary" id="save" disabled>Simpan</button><button class="control" id="discard">Batalkan</button></div>
+<section id="view" aria-label="Isi jadwal"></section>
+<noscript>Aktifkan JavaScript untuk melihat jadwal.</noscript>
+</article></main>
+</div>
+<script type="module" src="js/pages/schedule.js"></script>
+</body></html>

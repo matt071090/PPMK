@@ -1,4 +1,11 @@
 @charset "UTF-8";
+/* Shared module navigation used by Home, Schedule and Tools. */
+.modnav { display:grid; gap:2px; padding-bottom:12px; margin-bottom:16px; border-bottom:1px solid var(--border); }
+.mod-link { display:flex; align-items:center; gap:10px; min-height:40px; padding:8px 10px; border-radius:8px; color:var(--text-2); font-weight:600; font-size:14px; line-height:1.3; }
+.mod-link:hover { background:var(--surface-2); color:var(--text); text-decoration:none; }
+.mod-link.active { background:var(--accent-soft); color:var(--accent-strong); }
+.mod-link svg { flex:none; }
+.mod-link.mod-admin { margin-top:4px; width:100%; border:0; background:none; font:inherit; font-size:13px; color:var(--muted); text-align:left; }
 :root {
   --bg: #ffffff; --bg-soft: #f7f9fa; --surface: #ffffff; --surface-2: #f1f4f5; --border: #e3e8ea; --border-strong: #cfd7da;
   --text: #1c2529; --text-2: #3d4b52; --muted: #6a7b83; --accent: #14a085; --accent-strong: #0e8670; --accent-soft: #e4f5f1;

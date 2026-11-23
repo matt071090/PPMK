@@ -1,0 +1,715 @@
+{
+  "version": 1,
+  "objects": [
+    {
+      "id": "Vendor",
+      "label": "Vendor",
+      "group": "MasterData",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OCRD",
+      "file": "01_vendor.sql"
+    },
+    {
+      "id": "Customer",
+      "label": "Customer",
+      "group": "MasterData",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OCRD",
+      "file": "02_customer.sql"
+    },
+    {
+      "id": "Item_Master",
+      "label": "Item Master",
+      "group": "MasterData",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OITM",
+      "file": "03_item_master.sql"
+    },
+    {
+      "id": "Sales_Blanket",
+      "label": "Sales Blanket",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OOAT",
+      "file": "04_sales_blanket.sql"
+    },
+    {
+      "id": "Sales_Order_SAP",
+      "label": "Sales Order SAP",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ORDR",
+      "file": "05_sales_order_sap.sql"
+    },
+    {
+      "id": "Sales_Quotation",
+      "label": "Sales Quotation",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OQUT",
+      "file": "06_sales_quotation.sql"
+    },
+    {
+      "id": "SO_Draft",
+      "label": "SO Draft",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ODRF",
+      "file": "07_so_draft.sql"
+    },
+    {
+      "id": "AP_INV_Approved",
+      "label": "AP INV Approved",
+      "group": "Approval",
+      "role": "Penyetuju",
+      "dateKind": "Tgl buat",
+      "approval": true,
+      "source": "OWDD, ODRF, WDD1, OPCH",
+      "file": "08_ap_inv_approved.sql"
+    },
+    {
+      "id": "AP_INV_Rejected",
+      "label": "AP INV Rejected",
+      "group": "Approval",
+      "role": "Penyetuju",
+      "dateKind": "Tgl buat",
+      "approval": true,
+      "source": "OWDD, ODRF, WDD1, OPCH",
+      "file": "09_ap_inv_rejected.sql"
+    },
+    {
+      "id": "AP_DP_Approved",
+      "label": "AP DP Approved",
+      "group": "Approval",
+      "role": "Penyetuju",
+      "dateKind": "Tgl buat",
+      "approval": true,
+      "source": "OWDD, ODRF, WDD1, ODPO",
+      "file": "10_ap_dp_approved.sql"
+    },
+    {
+      "id": "AP_DP_Rejected",
+      "label": "AP DP Rejected",
+      "group": "Approval",
+      "role": "Penyetuju",
+      "dateKind": "Tgl buat",
+      "approval": true,
+      "source": "OWDD, ODRF, WDD1, ODPO",
+      "file": "11_ap_dp_rejected.sql"
+    },
+    {
+      "id": "Outgoing_Payment_Approved",
+      "label": "Outgoing Payment Approved",
+      "group": "Approval",
+      "role": "Penyetuju",
+      "dateKind": "Tgl buat",
+      "approval": true,
+      "source": "OWDD, ODRF, WDD1, OVPM",
+      "file": "12_outgoing_payment_approved.sql"
+    },
+    {
+      "id": "Outgoing_Payment_Rejected",
+      "label": "Outgoing Payment Rejected",
+      "group": "Approval",
+      "role": "Penyetuju",
+      "dateKind": "Tgl buat",
+      "approval": true,
+      "source": "OWDD, ODRF, WDD1, OVPM",
+      "file": "13_outgoing_payment_rejected.sql"
+    },
+    {
+      "id": "GRPO_Approved",
+      "label": "GRPO Approved",
+      "group": "Approval",
+      "role": "Penyetuju",
+      "dateKind": "Tgl buat",
+      "approval": true,
+      "source": "OWDD, ODRF, WDD1, OPDN",
+      "file": "14_grpo_approved.sql"
+    },
+    {
+      "id": "GRPO_Rejected",
+      "label": "GRPO Rejected",
+      "group": "Approval",
+      "role": "Penyetuju",
+      "dateKind": "Tgl buat",
+      "approval": true,
+      "source": "OWDD, ODRF, WDD1, OPDN",
+      "file": "15_grpo_rejected.sql"
+    },
+    {
+      "id": "DO_Draft",
+      "label": "DO Draft",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ODRF",
+      "file": "16_do_draft.sql"
+    },
+    {
+      "id": "Delivery_Order",
+      "label": "Delivery Order",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ODLN",
+      "file": "17_delivery_order.sql"
+    },
+    {
+      "id": "Sales_Return",
+      "label": "Sales Return",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ORDN",
+      "file": "18_sales_return.sql"
+    },
+    {
+      "id": "AR_DP_Invoice",
+      "label": "AR DP Invoice",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ODPI",
+      "file": "19_ar_dp_invoice.sql"
+    },
+    {
+      "id": "AR_Invoice",
+      "label": "AR Invoice",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OINV",
+      "file": "20_ar_invoice.sql"
+    },
+    {
+      "id": "AR_CreditMemo",
+      "label": "AR CreditMemo",
+      "group": "Sales",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ORIN",
+      "file": "21_ar_creditmemo.sql"
+    },
+    {
+      "id": "Purchase_Request",
+      "label": "Purchase Request",
+      "group": "Purchasing",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OPRQ",
+      "file": "22_purchase_request.sql"
+    },
+    {
+      "id": "Purchase_Order",
+      "label": "Purchase Order",
+      "group": "Purchasing",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OPOR",
+      "file": "23_purchase_order.sql"
+    },
+    {
+      "id": "GR_PO_SAP",
+      "label": "GR PO SAP",
+      "group": "Purchasing",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OPDN",
+      "file": "24_gr_po_sap.sql"
+    },
+    {
+      "id": "GR_PO_IFLOCS",
+      "label": "GR PO IFLOCS",
+      "group": "Purchasing",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OPDN",
+      "file": "25_gr_po_iflocs.sql"
+    },
+    {
+      "id": "Purchase_Return",
+      "label": "Purchase Return",
+      "group": "Purchasing",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ORPD",
+      "file": "26_purchase_return.sql"
+    },
+    {
+      "id": "Closed_PO (tgl diubah)",
+      "label": "Closed PO",
+      "group": "Purchasing",
+      "role": "Pengubah",
+      "dateKind": "Tgl diubah",
+      "approval": false,
+      "source": "OPOR",
+      "file": "27_closed_po_tgl_diubah.sql"
+    },
+    {
+      "id": "AP_Invoice",
+      "label": "AP Invoice",
+      "group": "Purchasing",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OPCH",
+      "file": "28_ap_invoice.sql"
+    },
+    {
+      "id": "AP_CreditMemo",
+      "label": "AP CreditMemo",
+      "group": "Purchasing",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ORPC",
+      "file": "29_ap_creditmemo.sql"
+    },
+    {
+      "id": "Inventory_Transfer_Request",
+      "label": "Inventory Transfer Request",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OWTQ",
+      "file": "30_inventory_transfer_request.sql"
+    },
+    {
+      "id": "Inventory_Transfer_SAP",
+      "label": "Inventory Transfer SAP",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OWTR",
+      "file": "31_inventory_transfer_sap.sql"
+    },
+    {
+      "id": "Inventory_Transfer_IFLOCS",
+      "label": "Inventory Transfer IFLOCS",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OWTR",
+      "file": "32_inventory_transfer_iflocs.sql"
+    },
+    {
+      "id": "Production Order",
+      "label": "Production Order",
+      "group": "Production",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OWOR",
+      "file": "33_production_order.sql"
+    },
+    {
+      "id": "Close Production Order (tgl tutup)",
+      "label": "Close Production Order",
+      "group": "Production",
+      "role": "Penutup",
+      "dateKind": "Tgl tutup",
+      "approval": false,
+      "source": "OWOR",
+      "file": "34_close_production_order_tgl_tutup.sql"
+    },
+    {
+      "id": "Goods_Receipt",
+      "label": "Goods Receipt",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OIGN",
+      "file": "35_goods_receipt.sql"
+    },
+    {
+      "id": "Receipt_From_Production",
+      "label": "Receipt From Production",
+      "group": "Production",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OIGN",
+      "file": "36_receipt_from_production.sql"
+    },
+    {
+      "id": "Goods_Issue_SAP",
+      "label": "Goods Issue SAP",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OIGE",
+      "file": "37_goods_issue_sap.sql"
+    },
+    {
+      "id": "Goods_Issue_IFLOCS",
+      "label": "Goods Issue IFLOCS",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OIGE",
+      "file": "38_goods_issue_iflocs.sql"
+    },
+    {
+      "id": "Issue_For_Production",
+      "label": "Issue For Production",
+      "group": "Production",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OIGE",
+      "file": "39_issue_for_production.sql"
+    },
+    {
+      "id": "Incoming_Payment",
+      "label": "Incoming Payment",
+      "group": "Banking",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ORCT",
+      "file": "40_incoming_payment.sql"
+    },
+    {
+      "id": "Outgoing_Payment",
+      "label": "Outgoing Payment",
+      "group": "Banking",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OVPM",
+      "file": "41_outgoing_payment.sql"
+    },
+    {
+      "id": "Inventory_Counting",
+      "label": "Inventory Counting",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OINC",
+      "file": "42_inventory_counting.sql"
+    },
+    {
+      "id": "Inventory_Posting",
+      "label": "Inventory Posting",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OIQR",
+      "file": "43_inventory_posting.sql"
+    },
+    {
+      "id": "Journal_Entry",
+      "label": "Journal Entry",
+      "group": "Finance",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OJDT",
+      "file": "44_journal_entry.sql"
+    },
+    {
+      "id": "Journal Voucher (tgl jurnal)",
+      "label": "Journal Voucher",
+      "group": "Finance",
+      "role": "Pembuat",
+      "dateKind": "Tgl jurnal",
+      "approval": false,
+      "source": "OBTD",
+      "file": "45_journal_voucher_tgl_jurnal.sql"
+    },
+    {
+      "id": "Rework_Request",
+      "label": "Rework Request",
+      "group": "Production",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_MREWORK",
+      "file": "46_rework_request.sql"
+    },
+    {
+      "id": "Post_Rework",
+      "label": "Post Rework",
+      "group": "Production",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_MPREWORK",
+      "file": "47_post_rework.sql"
+    },
+    {
+      "id": "PickList",
+      "label": "PickList",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "OPKL",
+      "file": "48_picklist.sql"
+    },
+    {
+      "id": "AP_DP",
+      "label": "AP DP",
+      "group": "Purchasing",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ODPO",
+      "file": "49_ap_dp.sql"
+    },
+    {
+      "id": "ITR_Draft",
+      "label": "ITR Draft",
+      "group": "InventoryMovement",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "ODRF",
+      "file": "50_itr_draft.sql"
+    },
+    {
+      "id": "Loading_Instruction_DO",
+      "label": "Loading Instruction DO",
+      "group": "Timbangan",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_LIDOH",
+      "file": "51_loading_instruction_do.sql"
+    },
+    {
+      "id": "Loading_Weighing_DO",
+      "label": "Loading Weighing DO",
+      "group": "Timbangan",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_LWDOH",
+      "file": "52_loading_weighing_do.sql"
+    },
+    {
+      "id": "Unloading_Instruction_Return",
+      "label": "Unloading Instruction Return",
+      "group": "Timbangan",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_UIRTNH",
+      "file": "53_unloading_instruction_return.sql"
+    },
+    {
+      "id": "Unloading_Weighing_Return",
+      "label": "Unloading Weighing Return",
+      "group": "Timbangan",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_UWRTNH",
+      "file": "54_unloading_weighing_return.sql"
+    },
+    {
+      "id": "Unloading_Instruction_GRPO",
+      "label": "Unloading Instruction GRPO",
+      "group": "Timbangan",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_UIGRH",
+      "file": "55_unloading_instruction_grpo.sql"
+    },
+    {
+      "id": "Unloading_Weighing_GRPO",
+      "label": "Unloading Weighing GRPO",
+      "group": "Timbangan",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_UWGRH",
+      "file": "56_unloading_weighing_grpo.sql"
+    },
+    {
+      "id": "Loading_Instruction_Goods_Return",
+      "label": "Loading Instruction Goods Return",
+      "group": "Timbangan",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_LIGRTNH",
+      "file": "57_loading_instruction_goods_return.sql"
+    },
+    {
+      "id": "Loading_Weighing_Goods_Return",
+      "label": "Loading Weighing Goods Return",
+      "group": "Timbangan",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_LWGRTNH",
+      "file": "58_loading_weighing_goods_return.sql"
+    },
+    {
+      "id": "Quality_Plan",
+      "label": "Quality Plan",
+      "group": "QC",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@ST_PLANQCH",
+      "file": "59_quality_plan.sql"
+    },
+    {
+      "id": "Quality_Inspection",
+      "label": "Quality Inspection",
+      "group": "QC",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@ST_QCINSPH",
+      "file": "60_quality_inspection.sql"
+    },
+    {
+      "id": "Shopfloor",
+      "label": "Shopfloor",
+      "group": "Shopfloor",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_PRDSPECH",
+      "file": "61_shopfloor.sql"
+    },
+    {
+      "id": "Plan Document",
+      "label": "Plan Document",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_MPLAN",
+      "file": "62_plan_document.sql"
+    },
+    {
+      "id": "Statistic Document_IFLOCS",
+      "label": "Statistic Document IFLOCS",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_MSTATISTIC",
+      "file": "63_statistic_document_iflocs.sql"
+    },
+    {
+      "id": "Statistic Document_SAP",
+      "label": "Statistic Document SAP",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_MSTATISTIC",
+      "file": "64_statistic_document_sap.sql"
+    },
+    {
+      "id": "iFlocs Warehouse Assignment",
+      "label": "iFlocs Warehouse Assignment",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_WHSASGNIFLOCSH",
+      "file": "65_iflocs_warehouse_assignment.sql"
+    },
+    {
+      "id": "Survey",
+      "label": "Survey",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_MSURVEY",
+      "file": "66_survey.sql"
+    },
+    {
+      "id": "iFlocs Authorization",
+      "label": "iFlocs Authorization",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_AUTHIFLOCSH",
+      "file": "67_iflocs_authorization.sql"
+    },
+    {
+      "id": "Standard",
+      "label": "Standard",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_MSTD",
+      "file": "68_standard.sql"
+    },
+    {
+      "id": "Standard Analysis",
+      "label": "Standard Analysis",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_MSTDANALYSIS",
+      "file": "69_standard_analysis.sql"
+    },
+    {
+      "id": "Audit",
+      "label": "Audit",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_MAUDIT",
+      "file": "70_audit.sql"
+    },
+    {
+      "id": "HARVEST_IFLOCS",
+      "label": "HARVEST IFLOCS",
+      "group": "Farm",
+      "role": "Pembuat",
+      "dateKind": "Tgl buat",
+      "approval": false,
+      "source": "@STEM_HARVEST",
+      "file": "71_harvest_iflocs.sql"
+    }
+  ]
+}

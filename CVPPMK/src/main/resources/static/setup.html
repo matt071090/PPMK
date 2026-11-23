@@ -6,6 +6,9 @@
 <title>Setup &amp; Cut Off</title>
 <link rel="stylesheet" href="css/app.css">
 <script>try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch { }</script>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="apple-touch-icon" href="img/favicon-180.png">
 </head>
 <body class="setup-app">
 <header class="top">
@@ -18,6 +21,7 @@
     <svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><path d="M11.5 5L6.5 10l5 5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <span>Dokumentasi</span>
   </a>
+  <span id="setup-chat-slot"></span>
   <button class="icon-btn" id="theme-btn" type="button" aria-label="Ganti tema terang/gelap">
     <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
   </button>
@@ -25,7 +29,7 @@
 
 <div class="shell">
   <aside class="sidebar" aria-label="Langkah setup"><nav id="nav"></nav></aside>
-  <main class="content"><article class="article" id="article"></article></main>
+  <main class="content"><p id="setup-capability" role="status"></p><article class="article" id="article"></article></main>
 </div>
 
 <script type="module">

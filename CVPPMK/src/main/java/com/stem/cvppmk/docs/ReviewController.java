@@ -46,10 +46,10 @@ public class ReviewController {
     public ReviewController(@Value("${docs.data.dir:}") String dataDir,
                             @Value("${docs.remarks.file:remarks.json}") String remarksFile,
                             @Value("${docs.edit.enabled:true}") boolean editable,
-                            ObjectProvider<BuildProperties> build) throws IOException {
+                            ObjectProvider<BuildProperties> build, DataFiles files) throws IOException {
         // review dikosongkan setiap build: log milik build lain dihapus (lihat DataFiles)
-        this.logFile = DataFiles.perBuild(DataFiles.dir(dataDir), "review-log", "csv", DataFiles.buildId(build.getIfAvailable()));
-        this.remarksFile = Paths.get(remarksFile).toAbsolutePath();
+        this.logFile = DataFiles.perBuild(files.dir(dataDir), "review-log", "csv", DataFiles.buildId(build.getIfAvailable()));
+        this.remarksFile = files.legacyFile(dataDir, remarksFile);
         this.editable = editable;
 
         if (Files.exists(logFile)) {

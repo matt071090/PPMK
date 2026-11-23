@@ -58,13 +58,13 @@ public class AddonController {
                            @Value("${docs.addon.mapping:addon-mapping.json}") String mappingFile,
                            @Value("${docs.data.dir:}") String dataDir,
                            @Value("${docs.edit.enabled:true}") boolean editable,
-                           ObjectProvider<BuildProperties> build) throws IOException {
+                           ObjectProvider<BuildProperties> build, DataFiles files) throws IOException {
         this.jdbc = jdbc;
         this.udf = udf;
         this.section = section;
         this.access = access;
-        this.mappingFile = editable ? Paths.get(mappingFile).toAbsolutePath()
-                : DataFiles.perBuild(DataFiles.dir(dataDir), "addon-mapping", "json", DataFiles.buildId(build.getIfAvailable()));
+        this.mappingFile = editable ? files.legacyFile(dataDir, mappingFile)
+                : DataFiles.perBuild(files.dir(dataDir), "addon-mapping", "json", DataFiles.buildId(build.getIfAvailable()));
         this.editable = editable;
     }
 

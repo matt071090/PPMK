@@ -1,0 +1,6 @@
+{
+  "name": "cvppmk-local-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test src/test/js/*.test.mjs", "preview": "node src/test/js/preview-server.mjs" }
+}

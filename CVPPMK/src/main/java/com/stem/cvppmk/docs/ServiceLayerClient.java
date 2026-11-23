@@ -62,6 +62,9 @@ public class ServiceLayerClient {
         return !baseUrl.isEmpty() && !companyDb.isEmpty() && !username.isEmpty();
     }
 
+    /** Target actually used for SL Login, so Setup can guard read/write company identity. */
+    public String companyDatabase() { return companyDb; }
+
     /** POST tanpa body, untuk action seperti CompanyService_GetAdminInfo. */
     public JsonNode post(String path) throws IOException {
         return call("POST", path, null, true);

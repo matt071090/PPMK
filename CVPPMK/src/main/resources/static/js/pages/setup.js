@@ -13,10 +13,13 @@ import { TEMPLATES, refLists, downloadTemplate } from "../templates.js";
 import { uploadInChunks, progressUi, resultsTable } from "./upload-progress.js";
 import { hanaPage } from "./hana.js";
 import { mappingPage, uncategorized } from "./addon-mapping.js";
+import { branchStep, branchTemplate, branchErrors, stripBranchFields, isBranchField } from "./setup-branch.js";
+import { createChat } from "./schedule-chat.js";
+import { companyKey } from '../company.js';
 
 const store = {
-  get: k => { try { return localStorage.getItem(k); } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem(k, v); } catch { } }
+  get: k => { try { return localStorage.getItem(companyKey(k)); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(companyKey(k), v); } catch { } }
 };
 const getJson = async (url, opts) => {
   const r = await fetch(url, opts), d = await r.json().catch(() => ({}));
@@ -35,7 +38,7 @@ const TIERS = {
   G: ["Addon Farm Breeding", "Parameter dan master Farm Breeding Addon. Dikerjakan setelah DBCreator Farm Breeding (yang berjalan sesudah DBCreator STEM) dan setelah tahap Addon STEM."]
 };
 const label = f => f.startsWith("_") ? f.slice(1) : f;
-const tplOf = step => step.template && TEMPLATES.find(t => `T${t.no}` === step.template);
+const tplOf = step => branchTemplate(step.template && TEMPLATES.find(t => `T${t.no}` === step.template), step.branchEnabled);
 
 // ---------- sumber database (dipilih sekali, dipakai semua langkah) ----------
 let sourcesP = null;
@@ -58,7 +61,11 @@ const dataUrl = (id, src) => `api/setup/${id}${src ? `?src=${encodeURIComponent(
 
 // ---------- data referensi tujuan (dicache selama halaman terbuka; dihapus saat Muat ulang) ----------
 const tgtCache = new Map();
-const targetRows = id => tgtCache.get(id) || (tgtCache.set(id, getJson(dataUrl(id, "")).then(d => rowsOf(d.target))
+const targetRows = id => tgtCache.get(id) || (tgtCache.set(id, getJson(dataUrl(id, "")).then(d => {
+  if (d.target?.unavailable) throw Object.assign(new Error(d.target.message), { unavailable: true });
+  if (d.target?.error) throw new Error(d.target.error);
+  return rowsOf(d.target);
+})
   .catch(e => { tgtCache.delete(id); throw e; })), tgtCache.get(id));
 
 const norm = v => isEmpty(v) ? "" : String(v).trim();
@@ -86,6 +93,7 @@ const REF_STEPS = {
 const excelDate = n => new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 864e5).toISOString().slice(0, 10);
 // hasil: { sheet, rows: [{...field, _row, _errors}] } atau throw kalau file bukan template langkah ini
 export async function excelRows(step, tpl, sheets) {
+  tpl = branchTemplate(tpl, step.branchEnabled);
   const main = tpl.sheets[0];
   const sh = sheets.find(s => s.name === main.name) || sheets.find(s => !s.hidden);
   const fields = (sh && sh.rows[1] || []).map(norm);
@@ -106,6 +114,9 @@ export async function excelRows(step, tpl, sheets) {
       if (!name) return;
       const def = defs[name] || {}, raw = cells[x];
       let v = typeof raw === "number" ? raw : norm(raw);
+      if (step.branchEnabled === false && isBranchField(name)) {
+        branchErrors({ [name]: v }).forEach(err); return;
+      }
       if (v === "") { if (def.req) err(`${def.label || name} wajib diisi`); return; }
       if (def.kind === "date" && typeof v === "number") v = excelDate(v);
       v = String(v);
@@ -151,6 +162,7 @@ function same(a, b, numeric) {
 // data: { target: {columns, rows}, source?: {columns, rows}, sourceRows?: [obj], targetAccounts? }
 // hasil: { fields, rows: [{status: new|diff|same|error|target, src, tgt, diffs: Set, errors: []}] }
 export function compare(step, data, lookups = {}) {
+  step = branchStep(step, step.branchEnabled);
   const target = rowsOf(data.target), tgtCols = new Set((data.target && data.target.columns) || []);
   const source = data.sourceRows || (data.source ? rowsOf(data.source) : null);
   const cols = data.sourceRows ? [...tgtCols, ...new Set(data.sourceRows.flatMap(Object.keys))].filter((c, i, a) => a.indexOf(c) === i)
@@ -177,10 +189,12 @@ export function compare(step, data, lookups = {}) {
   const seen = new Set(), rows = [];
   for (const s of source) {
     const k = key(s), t = tgtBy.get(k), errors = [...(s._errors || [])];
+    if (step.branchEnabled === null) errors.push("Mode branch company tujuan belum dapat dipastikan. Upload diblokir.");
+    if (step.branchEnabled === false) errors.push(...branchErrors(s));
     if (seen.has(k)) errors.push(`Duplikat di sumber: ${step.match.map(f => s[f]).join(" / ")}`);
     seen.add(k);
     // field yang dibandingkan hanya yang juga ada di query tujuan; field tambahan dari template ikut dikirim saat baris baru
-    const diffs = new Set(t ? fields.filter(f => tgtCols.has(f) && !info.has(f) && f in s && !same(s[f], t[f], numeric.has(f))) : []);
+    const diffs = new Set(t ? fields.filter(f => (step.branchEnabled !== false || !isBranchField(f)) && tgtCols.has(f) && !info.has(f) && f in s && !same(s[f], t[f], numeric.has(f))) : []);
     const touched = f => !isEmpty(norm(s[f])) && (!t || diffs.has(f));
     for (const f of step.required || []) if (isEmpty(norm(s[f]))) errors.push(`${label(f)} wajib diisi`);
     if (P && touched(P.field) && !tgtLevel.has(norm(s[P.field])) && !srcCodes.has(norm(s[P.field])))
@@ -211,6 +225,9 @@ const uploadable = r => r.status === "new" || r.status === "diff";
 // body upload: baris baru = semua field terisi, baris beda = hanya field yang berubah (+ step.alwaysSend).
 // Kolom "_..." tidak dikirim; field lookup diisi kode tujuan dari nama referensinya.
 export function payload(step, r, lookups) {
+  step = branchStep(step, step.branchEnabled);
+  if (step.branchEnabled === null) throw new Error("Mode branch company tujuan belum dapat dipastikan. Upload diblokir.");
+  if (step.branchEnabled === false) { const errors = branchErrors(r.src); if (errors.length) throw new Error(errors.join('; ')); }
   const numeric = new Set(step.numeric || []);
   const val = (f, v) => numeric.has(f) ? +v : v;
   const fs = (r.status === "new" ? Object.keys(r.src) : [...new Set([...r.diffs, ...(step.alwaysSend || [])])])
@@ -255,11 +272,12 @@ export function payload(step, r, lookups) {
     }
     if (Object.keys(child).length) data[c.collection] = [child];
   }
-  return r.status === "new" ? { action: "create", data } : { action: "update", key: r.tgt._key, data };
+  const clean = step.branchEnabled === false ? stripBranchFields(data) : data;
+  return r.status === "new" ? { action: "create", data: clean } : { action: "update", key: r.tgt._key, data: clean };
 }
 
 // ---------- halaman satu langkah ----------
-const canUpload = s => s.upload !== false && !!s.entity;
+const canUpload = s => s.branchEnabled !== null && s.upload !== false && !!s.entity;
 function stepHead(step) {
   const tpl = tplOf(step);
   return `${step.note ? `<p class="sx-note-box">${esc(step.note)}</p>` : ""}
@@ -375,6 +393,7 @@ async function showNow(step, el) {
   el.innerHTML = `<p class="sx-req">Memuat…</p>`;
   try {
     const t = (await getJson(dataUrl(step.id, ""))).target || {};
+    if (t.unavailable) { el.innerHTML = `<p class="sx-note-box">${esc(t.message)}</p>`; return; }
     if (t.error) {
       el.innerHTML = `<div class="error">Tidak bisa membaca DB tujuan: ${esc(t.error)}<br>Kalau tabelnya belum ada, jalankan DBCreator addon di DB tujuan dulu.</div>`;
       return;
@@ -441,6 +460,7 @@ async function mountStep(step, box) {
     try { [data, lookups] = await Promise.all([getJson(dataUrl(step.id, src)), loadLookups(step)]); }
     catch (e) { body.innerHTML = `<div class="error">Gagal membaca data: ${esc(e.message)}</div>`; return; }
     const errs = [["tujuan", data.target], ["sumber", data.source]].filter(([, r]) => r && r.error);
+    if (data.target.unavailable) { body.innerHTML = `<p class="sx-note-box">${esc(data.target.message)}</p>`; return; }
     if (errs.length) { body.innerHTML = `<div class="error">${errs.map(([w, r]) => `Query di ${w} gagal: ${esc(r.error)}`).join("<br>")}</div>`; return; }
     $("[data-sx-info]", dbBody).textContent = `${data.source.rows.length} baris dibaca dari ${srcName(src, list)}, ${data.generatedAt.replace("T", " ")}`;
     drawStep(step, body, compare(step, data, lookups), { hasSrc: true, way, target: list.target, tpl, lookups, box });
@@ -492,6 +512,7 @@ async function mountStep(step, box) {
   let data, lookups;
   try { [data, lookups] = await Promise.all([getJson(dataUrl(step.id, "")), loadLookups(step)]); }
   catch (e) { body.innerHTML = `<div class="error">Gagal membaca data tujuan: ${esc(e.message)}</div>`; return; }
+  if (data.target.unavailable) { body.innerHTML = `<p class="sx-note-box">${esc(data.target.message)}</p>`; return; }
   if (data.target.error) { body.innerHTML = `<div class="error">Query di tujuan gagal: ${esc(data.target.error)}</div>`; return; }
   drawStep(step, body, compare(step, { ...data, sourceRows: st.rows }, lookups), { hasSrc: true, way, target: list.target, tpl, lookups, box,
     fileErrors: st.rows.filter(r => r._errors.length).length });
@@ -708,7 +729,7 @@ async function mountOverview(steps, box) {
     for (let s; (s = queue.shift());) {
       const c = $(`tr[data-step="${s.id}"] [data-c="tgt"]`, box);
       try { const rows = await targetRows(s.id); c.textContent = rows.length.toLocaleString("id-ID"); }
-      catch (e) { c.innerHTML = `<span class="badge danger" title="${esc(e.message)}">gagal</span>`; }
+      catch (e) { c.innerHTML = `<span class="badge ${e.unavailable ? '' : 'danger'}" title="${esc(e.message)}">${e.unavailable ? 'tidak tersedia' : 'gagal'}</span>`; }
     }
   };
   await Promise.all([work(), work(), work(), work()]);
@@ -742,7 +763,7 @@ function lockScreen(art, configured) {
 // ---------- aplikasi setup.html: sidebar per tahap + routing #/ (ringkasan) dan #/<langkah> ----------
 export async function startSetupApp() {
   const art = $("#article"), nav = $("#nav");
-  showCompanyName();
+  await showCompanyName();
   $("#theme-btn").onclick = () => {
     const el = document.documentElement, dark = el.dataset.theme ? el.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     el.dataset.theme = dark ? "light" : "dark"; store.set("theme", el.dataset.theme);
@@ -757,12 +778,22 @@ export async function startSetupApp() {
       fetch("api/setup-access/logout", { method: "POST" }).finally(() => { location.href = "index.html"; });
     };
     if (!access.unlocked) return lockScreen(art, access.configured);
-    steps = (await getJson("api/setup/steps")).filter(s => s.kind !== "ref");   // langkah referensi tidak ditampilkan
+    const capability = await getJson("api/setup/capabilities");
+    const enabled = capability.uploadAllowed && typeof capability.branchEnabled === 'boolean' ? capability.branchEnabled : null;
+    steps = (await getJson("api/setup/steps")).filter(s => s.kind !== "ref").map(s => branchStep(s, enabled));
+    const status = document.getElementById('setup-capability');
+    status.textContent = enabled === null ? capability.message || 'Mode branch tujuan belum dapat dipastikan. Upload diblokir.'
+      : enabled ? 'Company tujuan memakai branch.' : 'Company tujuan tidak memakai branch. Kolom branch harus kosong.';
+    status.className = enabled === null ? 'error' : 'sx-req';
+    if (enabled === false) TIERS.A[1] = 'Dicek manual di SAP sebelum data apa pun di-upload. Company tujuan tidak memakai branch.';
   } catch (e) {
     art.innerHTML = `<h1>Setup &amp; Cut Off</h1><div class="error">Gagal memuat langkah setup: ${esc(e.message)}</div>`;
     return;
   }
   steps.forEach((s, i) => s.order = i + 1);   // nomor urut = urutan di steps.json
+  const threads = [{ id: 'setup:umum', label: 'Setup: umum' }, ...steps.map(s => ({ id: `setup:${s.id}`, label: s.title }))];
+  const chat = createChat({ api: 'api/setup/chat', threads, title: 'Diskusi Setup master', seenKey: 'setup-chat-seen',
+    titleOf: id => threads.find(t => t.id === id)?.label || id });
   const pages = { "": { title: "Urutan Setup", def: overviewPage(steps) }, "addon-mapping": { title: "Mapping Add-on", def: mappingPage() } };
   steps.forEach(s => pages[s.id] = { title: s.title, no: String(s.order), chapter: `${s.tier} · ${TIERS[s.tier][0]}`, def: stepPage(s) });
   pages.hana = { title: "Backup & Restore HANA", chapter: "Utilitas", def: hanaPage() };   // tak ada di sidebar: menu ada di Tools (hana.html); rute ini hanya untuk buka kunci password Setup (hana.js)
@@ -791,6 +822,8 @@ export async function startSetupApp() {
         ${page.def.doc ? `<span><b>Dokumentasi:</b> <a href="index.html#/${esc(page.def.doc)}">lihat konfigurasi saat ini →</a></span>` : ""}</div>
       ${page.def.render()}`;
     if (page.def.mount) page.def.mount(art);
+    const topic = steps.some(s => s.id === id) ? `setup:${id}` : 'setup:umum';
+    $('#setup-chat-slot').replaceChildren(chat.badge(topic, page.title, true));
     flushMounts();
     window.scrollTo(0, 0);
   };

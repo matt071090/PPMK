@@ -7,3 +7,8 @@ target/
 # log review & remarks (dibuat app saat jalan, dikosongkan tiap build)
 /review-data/
 /remarks.json
+/application-*-local.properties
+/.env
+/.env.*
+/secrets/
+/data/wbi/

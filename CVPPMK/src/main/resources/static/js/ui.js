@@ -33,9 +33,10 @@ export function autoCols(r) {
 }
 // Header: nama company dari DB (OADM.CompnyName), juga dipakai di nama file export; kalau gagal tetap "No company".
 // Logo = huruf depan 2 kata pertama, tanpa bentuk badan usaha (CV. Putra Prima ... -> PP).
-export const company = { name: "No company" };
+import { company, loadCompany } from './company.js';
+export { company };
 export function showCompanyName() {
-  fetch("api/section/company-name").then(r => r.ok ? r.json() : null).then(d => {
+  return loadCompany().then(c => c.name !== 'No company' ? { name: c.name } : fetch("api/section/company-name").then(r => r.ok ? r.json() : null)).then(d => {
     if (!d || !d.name) return;
     company.name = d.name;
     $("#company-name").textContent = d.name;

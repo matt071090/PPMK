@@ -48,13 +48,15 @@ public class HanaBackupController {
     private final SetupAccessController access;
     private final boolean enabled, restoreEnabled, localOnly;
     private final String appHost, appSchema;
+    private final DataFiles files;
 
     public HanaBackupController(HanaBackupService svc, SetupAccessController access,
                                 @Value("${hana.enabled:true}") boolean enabled,
                                 @Value("${hana.restore.enabled:true}") boolean restoreEnabled,
                                 @Value("${hana.local-only:false}") boolean localOnly,
-                                @Value("${spring.datasource.url:}") String dsUrl) {
+                                @Value("${spring.datasource.url:}") String dsUrl, DataFiles files) {
         this.svc = svc;
+        this.files = files;
         this.access = access;
         this.enabled = enabled;
         this.restoreEnabled = restoreEnabled;
@@ -197,7 +199,7 @@ public class HanaBackupController {
         long size = svc.fileSize(c, file);
         String name = file.substring(file.lastIndexOf('/') + 1);
         res.setContentType("application/gzip");
-        res.setHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
+        res.setHeader("Content-Disposition", "attachment; filename=\"" + files.filename(name) + "\"");
         res.setHeader("Content-Length", String.valueOf(size));
         res.setHeader("Cache-Control", "no-store");
         svc.download(c, file, res.getOutputStream());

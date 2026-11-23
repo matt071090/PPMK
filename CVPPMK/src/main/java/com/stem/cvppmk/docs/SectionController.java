@@ -33,19 +33,21 @@ public class SectionController {
     private final JdbcTemplate jdbc;
     private final UdfExpander udf;
     private final boolean editable;
+    private final SetupAccessController setupAccess;
     private final PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
 
-    public SectionController(JdbcTemplate jdbc, UdfExpander udf, @Value("${docs.edit.enabled:true}") boolean editable) {
+    public SectionController(JdbcTemplate jdbc, UdfExpander udf, @Value("${docs.edit.enabled:true}") boolean editable, SetupAccessController setupAccess) {
         this.jdbc = jdbc;
         this.udf = udf;
         this.editable = editable;
+        this.setupAccess = setupAccess;
     }
 
     @GetMapping("/{name:[a-z0-9_-]+}")
-    public Map<String, Object> section(@PathVariable String name) throws IOException {
+    public Map<String, Object> section(@PathVariable String name, javax.servlet.http.HttpServletRequest request) throws IOException {
         // data template upload hanya untuk mode dev (sama seperti Mode edit); di war read-only ditolak
         if (!editable && DEV_ONLY.contains(name))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bagian '" + name + "' hanya tersedia di mode dev");
+            setupAccess.require(request);
         Resource[] files;
         try {
             files = resolver.getResources("classpath:sql/" + name + "/*.sql");

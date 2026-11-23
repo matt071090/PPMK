@@ -135,6 +135,27 @@ public class SetupController {
         return jdbc.queryForObject("SELECT CURRENT_SCHEMA FROM DUMMY", String.class);
     }
 
+    private boolean branchMode() {
+        String target = targetSchema();
+        if (target == null || !target.equals(sl.companyDatabase()))
+            throw new IllegalStateException("Company DB baca dan Service Layer tujuan tidak sama. Upload diblokir.");
+        return SetupBranchPolicy.parseMode(jdbc.queryForObject("SELECT \"MltpBrnchs\" FROM OADM", String.class));
+    }
+
+    @GetMapping("/capabilities")
+    public Map<String, Object> capabilities() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        try {
+            out.put("branchEnabled", branchMode());
+            out.put("uploadAllowed", true);
+        } catch (Exception e) {
+            out.put("branchEnabled", null);
+            out.put("uploadAllowed", false);
+            out.put("message", "Mode branch company tujuan belum dapat dipastikan. Cek koneksi, OADM.MltpBrnchs, dan kesamaan DB baca/Service Layer. Upload diblokir.");
+        }
+        return out;
+    }
+
     /**
      * Company SAP B1 di server yang sama yang boleh jadi sumber: yang dideklarasikan di setup.source-dbs (urutan dipertahankan),
      * atau kalau kosong, yang cocok dengan setup.same-server.schema-filter. Hanya schema yang benar-benar company DB (punya OADM),
@@ -221,10 +242,12 @@ public class SetupController {
         String sql = stepSql(id);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("generatedAt", LocalDateTime.now().withNano(0).toString());
-        out.put("target", runTarget(sql));
+        Map<String, Object> target = runTarget(id, sql, "G".equals(step.path("tier").asText()));
+        out.put("target", target);
+        if (Boolean.TRUE.equals(target.get("unavailable"))) return out;
         if (src != null && !src.isEmpty()) {
             try (Connection con = openSource(src)) {
-                out.put("source", run(con, sql));
+                out.put("source", run(con, compatibleSql(con, id, sql)));
             } catch (SQLException e) {
                 log.warn("[setup:{}] sumber {} gagal: {}", id, src, e.getMessage());
                 out.put("source", Collections.singletonMap("error", e.getMessage()));
@@ -236,12 +259,89 @@ public class SetupController {
         return out;
     }
 
-    private Map<String, Object> runTarget(String sql) {
+    private Map<String, Object> runTarget(String id, String sql, boolean optionalAddon) {
         try {
-            return jdbc.execute((ConnectionCallback<Map<String, Object>>) con -> run(con, sql));
+            return jdbc.execute((ConnectionCallback<Map<String, Object>>) con -> {
+                if (optionalAddon && !addonTablesExist(con, sql)) {
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("unavailable", true);
+                    result.put("message", "Tidak tersedia di company ini: tabel Farm Breeding belum terpasang.");
+                    result.put("columns", Collections.emptyList()); result.put("rows", Collections.emptyList());
+                    return result;
+                }
+                return run(con, compatibleSql(con, id, sql));
+            });
         } catch (DataAccessException e) {
             return Collections.singletonMap("error", e.getMostSpecificCause().getMessage());
         }
+    }
+
+    static boolean addonTablesExist(Connection con, String sql) throws SQLException {
+        java.util.regex.Matcher tables = Pattern.compile("\"(@[A-Za-z0-9_]+)\"").matcher(sql);
+        Set<String> checked = new HashSet<>();
+        while (tables.find()) {
+            if (!checked.add(tables.group(1))) continue;
+            try (java.sql.PreparedStatement st = con.prepareStatement("SELECT COUNT(*) FROM SYS.TABLES WHERE SCHEMA_NAME = CURRENT_SCHEMA AND TABLE_NAME = ?")) {
+                st.setString(1, tables.group(1));
+                try (ResultSet rs = st.executeQuery()) { if (!rs.next() || rs.getInt(1) == 0) return false; }
+            }
+        }
+        return true;
+    }
+
+    // U_BRANCH is optional across addon versions, in either source or target.
+    static String compatibleSql(Connection con, String id, String sql) throws SQLException {
+        if (!"st-shift".equals(id)) return sql;
+        try (Statement st = con.createStatement(); ResultSet rs = st.executeQuery(
+                "SELECT COUNT(*) FROM SYS.TABLE_COLUMNS WHERE SCHEMA_NAME = CURRENT_SCHEMA AND TABLE_NAME = '@ST_SHIFT' AND COLUMN_NAME = 'U_BRANCH'")) {
+            if (!rs.next()) throw new SQLException("Tidak dapat memeriksa UDF Shift");
+            return rs.getInt(1) > 0 ? sql : sql.replace("\"U_BRANCH\"", "CAST(NULL AS NVARCHAR(254)) AS \"U_BRANCH\"");
+        }
+    }
+
+    private ObjectNode validatedData(JsonNode step, JsonNode row, boolean branches) {
+        if (!row.path("data").isObject()) throw new IllegalArgumentException("Data upload harus berupa objek JSON");
+        ObjectNode data = ((ObjectNode) row.path("data")).deepCopy();
+        if (!branches) SetupBranchPolicy.withoutBranches(data);
+        boolean create = "create".equals(row.path("action").asText());
+        for (JsonNode required : step.path("required")) {
+            String field = required.asText();
+            if (SetupBranchPolicy.branchField(field) && !branches) continue;
+            // Lookup aliases are not Service Layer fields. Validate their mapped branch field below.
+            if (field.startsWith("_")) continue;
+            if ((create || data.has(field)) && SetupBranchPolicy.empty(data.get(field)))
+                throw new IllegalArgumentException(field + " wajib diisi");
+        }
+        if (branches) {
+            for (JsonNode lookup : step.path("lookups")) {
+                if (!"branches".equals(lookup.path("step").asText())) continue;
+                String field = lookup.path("field").asText();
+                boolean required = false;
+                for (JsonNode r : step.path("required")) if (r.asText().equals(lookup.path("from").asText())) required = true;
+                if (required && (create || data.has(field)) && SetupBranchPolicy.empty(data.get(field)))
+                    throw new IllegalArgumentException("Branch wajib diisi");
+            }
+            validateBranchFields(data, "st-shift".equals(step.path("id").asText()));
+        }
+        return data;
+    }
+
+    private void validateBranchFields(JsonNode node, boolean shift) {
+        if (node.isArray()) { for (JsonNode child : node) validateBranchFields(child, shift); return; }
+        if (!node.isObject()) return;
+        node.fields().forEachRemaining(entry -> {
+            JsonNode value = entry.getValue();
+            if (value.isContainerNode()) { validateBranchFields(value, shift); return; }
+            String field = entry.getKey().toLowerCase(Locale.ROOT);
+            boolean companyBranch = field.contains("bpl") || field.contains("businessplace") || field.equals("defaultbranch") || field.equals("_branch");
+            // U_BRANCH in branch companies keeps the existing addon behavior (a raw source value).
+            if (!companyBranch || SetupBranchPolicy.empty(value)) return;
+            String branch = value.asText().trim();
+            // Shift historically carries a name or an ID; retain both forms, but validate against the target.
+            List<String> ids = jdbc.queryForList("SELECT \"BPLId\" FROM OBPL WHERE TO_NVARCHAR(\"BPLId\") = ?", String.class, branch);
+            if (ids.isEmpty() && shift) ids = jdbc.queryForList("SELECT \"BPLId\" FROM OBPL WHERE UPPER(\"BPLName\") = ?", String.class, branch.toUpperCase(Locale.ROOT));
+            if (ids.isEmpty()) throw new IllegalArgumentException("Branch tidak dikenal di company tujuan");
+        });
     }
 
     private static Map<String, Object> run(Connection con, String sql) throws SQLException {
@@ -279,24 +379,33 @@ public class SetupController {
         boolean keyString = step.path("keyString").asBoolean(false);
         // langkah lewat aksi service (mis. SeriesService_AddSeries) dan bukan entity: body dibungkus, key ikut di dalam body
         JsonNode svc = step.path("action");
+        if ("G".equals(step.path("tier").asText())) {
+            String query = stepSql(id);
+            Boolean installed = jdbc.execute((ConnectionCallback<Boolean>) con -> addonTablesExist(con, query));
+            if (!Boolean.TRUE.equals(installed)) throw new ResponseStatusException(HttpStatus.CONFLICT, "Tidak tersedia di company ini: tabel Farm Breeding belum terpasang.");
+        }
+        final boolean branches;
+        try { branches = branchMode(); }
+        catch (Exception e) { throw new ResponseStatusException(HttpStatus.CONFLICT, "Mode branch company tujuan belum dapat dipastikan atau DB baca/Service Layer berbeda. Upload diblokir."); }
+        if (!body.path("rows").isArray()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "rows harus berupa array");
         List<Map<String, Object>> results = new ArrayList<>();
         for (JsonNode r : body.path("rows")) {
             Map<String, Object> res = new LinkedHashMap<>();
             String action = r.path("action").asText();
             try {
+                ObjectNode data = validatedData(step, r, branches);
                 if (svc.isObject() && ("create".equals(action) || "update".equals(action))) {
-                    ObjectNode data = r.path("data").isObject() ? ((ObjectNode) r.path("data")).deepCopy() : json.createObjectNode();
                     if ("update".equals(action)) data.put(step.path("keyField").asText(), r.path("key").asLong());
                     JsonNode out = sl.write("POST", svc.path(action).asText(), json.createObjectNode().set(svc.path("wrap").asText(), data));
                     if ("create".equals(action)) res.put("key", out.path(step.path("keyField").asText()).asText(null));
                 } else if ("create".equals(action)) {
-                    JsonNode created = sl.write("POST", entity, r.path("data"));
+                    JsonNode created = sl.write("POST", entity, data);
                     res.put("key", created.path(step.path("keyField").asText()).asText(null));
                 } else if ("update".equals(action)) {
                     String key = r.path("key").asText();
                     // key teks (mis. kode akun 101070501) selalu dikutip walaupun isinya angka
                     if (keyString || !key.matches("-?\\d+")) key = "'" + key.replace("'", "''") + "'";
-                    sl.write("PATCH", entity + "(" + key + ")", r.path("data"));
+                    sl.write("PATCH", entity + "(" + key + ")", data);
                 } else {
                     throw new IllegalArgumentException("Aksi '" + action + "' tidak dikenal");
                 }

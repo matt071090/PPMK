@@ -111,10 +111,12 @@ public class HanaBackupService {
 
     public HanaBackupService(@Value("${hana.remote-dir:/opt/cvppmk-hana}") String remoteDir,
                              @Value("${hana.backup-dir:/hana/backup}") String backupDir,
-                             @Value("${hana.data-dir:}") String dataDir) {
+                             @Value("${hana.data-dir:}") String dataDir,
+                             @Value("${docs.data.dir:}") String docsDir, DataFiles files) throws IOException {
         this.remoteDir = remoteDir.replaceAll("/+$", "");
         this.backupDir = backupDir.replaceAll("/+$", "");
-        this.dataDir = Paths.get(dataDir.trim().isEmpty() ? System.getProperty("user.home") + "/cvppmk-data" : dataDir.trim());
+        this.dataDir = files.company().isEmpty() ? Paths.get(dataDir.trim().isEmpty() ? System.getProperty("user.home") + "/cvppmk-data" : dataDir.trim())
+                : files.dir(docsDir).resolve("hana");
     }
 
     // ---------- sesi ----------

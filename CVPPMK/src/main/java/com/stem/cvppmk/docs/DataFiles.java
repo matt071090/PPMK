@@ -3,6 +3,9 @@ package com.stem.cvppmk.docs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.info.BuildProperties;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,16 +20,34 @@ import java.util.stream.Stream;
  * - File per build: nama file memuat waktu build (META-INF/build-info.properties), file build lain dihapus saat start,
  *   jadi build baru mulai dari kosong / isi awal.
  */
+@Component
 final class DataFiles {
     private static final Logger log = LoggerFactory.getLogger(DataFiles.class);
 
-    private DataFiles() { }
+    private final String company;
+    DataFiles(@Value("${docs.company:}") String company, @Value("${docs.data.dir:}") String root, Environment env) {
+        if (!company.isEmpty() && !company.matches("[a-z0-9]+(?:-[a-z0-9]+)*") || company.length() > 60)
+            throw new IllegalArgumentException("docs.company hanya boleh huruf kecil, angka, dan tanda - (maks 60), tanpa pemisah path.");
+        if (java.util.Arrays.asList(env.getActiveProfiles()).contains("wbi") && (!"wbi".equals(company) || root.trim().isEmpty()))
+            throw new IllegalArgumentException("Profil WBI wajib docs.company=wbi dan docs.data.dir terisi agar data company terpisah.");
+        this.company = company;
+    }
+    String company() { return company; }
+    String filename(String name) {
+        if (company.isEmpty()) return name;
+        int dot = name.lastIndexOf('.');
+        return dot > 0 ? name.substring(0, dot) + "-" + company + name.substring(dot) : name + "-" + company;
+    }
+    Path legacyFile(String root, String configured) throws IOException {
+        return company.isEmpty() ? Paths.get(configured).toAbsolutePath() : dir(root).resolve(Paths.get(configured).getFileName());
+    }
 
-    static Path dir(String configured) throws IOException {
+    Path dir(String configured) throws IOException {
         Path dir = configured.isEmpty()
                 ? (System.getProperty("catalina.base") != null ? Paths.get(System.getProperty("catalina.base"), "data", "cvppmk") : Paths.get("review-data"))
                 : Paths.get(configured);
         dir = dir.toAbsolutePath();
+        if (!company.isEmpty()) dir = dir.resolve(company);
         Files.createDirectories(dir);
         return dir;
     }

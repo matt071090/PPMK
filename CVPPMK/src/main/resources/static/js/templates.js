@@ -386,7 +386,7 @@ export function buildTemplate(t, L, prefix) {
   };
   const sheets = t.sheets.map(sh => {
     const fields = [...sh.fields];
-    if (sh.udf) L.udf.filter(u => u.TableID === sh.udf).forEach(u => {
+    if (sh.udf) L.udf.filter(u => u.TableID === sh.udf && (t.branchEnabled !== false || !/branch|bpl|businessplace/i.test(u.AliasID))).forEach(u => {
       const vv = L.udfv[`${u.TableID}|${u.FieldID}`] || [];
       fields.push(F(u.Descr, "U_" + u.AliasID, { req: u.NotNull === "Y", kind: { N: "num", B: "num", D: "date" }[u.TypeID],
         udfValues: vv.map(([v]) => v), note: `UDF ${UDF_TYPES[u.TypeID] || "teks"}, maks ${u.EditSize} karakter.` + (vv.length ? " Pilih dari valid values (lihat sheet UDF)." : "") }));
@@ -443,4 +443,4 @@ export function buildTemplate(t, L, prefix) {
   return { blob: xlsxBlob(out), filename: `${prefix} - ${t.no} - ${t.title}.xlsx` };
 }
 
-export const downloadTemplate = (t, L, prefix) => { const { blob, filename } = buildTemplate(t, L, prefix); download(blob, filename); };
+export const downloadTemplate = (t, L, prefix) => { const { blob, filename } = buildTemplate(t, L, prefix); return download(blob, filename); };

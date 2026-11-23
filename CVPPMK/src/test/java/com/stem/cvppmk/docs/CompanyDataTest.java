@@ -1,0 +1,127 @@
+package com.stem.cvppmk.docs;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.mock.env.MockEnvironment;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import java.nio.file.*;
+import java.util.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+class CompanyDataTest {
+    @TempDir Path root;
+    final ObjectMapper mapper = new ObjectMapper();
+    DataFiles company(String code) { return new DataFiles(code,root.toString(),new MockEnvironment()); }
+
+    @ParameterizedTest @ValueSource(strings={"../wbi","WBI","wbi/test","wbi\\test","wbi..","-wbi","wbi-","wbi test","wbi:test"})
+    void unsafeCompanyCodesAreRejected(String code) { assertThrows(IllegalArgumentException.class,()->company(code)); }
+
+    @Test void legacyCvPathsAndNamesStayExactlyTheSame() throws Exception {
+        DataFiles cv=company("");
+        assertEquals(root.toAbsolutePath(),cv.dir(root.toString()));
+        assertEquals(Paths.get("remarks.json").toAbsolutePath(),cv.legacyFile(root.toString(),"remarks.json"));
+        assertEquals("schedule.json",cv.filename("schedule.json"));
+        assertEquals("count-document.csv",cv.filename("count-document.csv"));
+    }
+    @Test void namespacedFilesAndExportsStayInsideCompanyRoot() throws Exception {
+        DataFiles wbi=company("wbi");
+        assertEquals(root.resolve("wbi"),wbi.dir(root.toString()));
+        assertEquals(root.resolve("wbi/remarks.json"),wbi.legacyFile(root.toString(),"remarks.json"));
+        assertEquals("schedule-wbi.json",wbi.filename("schedule.json"));
+        assertEquals("count-document-wbi.csv",wbi.filename("count-document.csv"));
+    }
+    @Test void wbiProfileRequiresNamespaceAndDataRoot() {
+        MockEnvironment env=new MockEnvironment(); env.setActiveProfiles("wbi");
+        assertThrows(IllegalArgumentException.class,()->new DataFiles("",root.toString(),env));
+        assertThrows(IllegalArgumentException.class,()->new DataFiles("cv",root.toString(),env));
+        assertThrows(IllegalArgumentException.class,()->new DataFiles("wbi","",env));
+        assertDoesNotThrow(()->new DataFiles("wbi",root.toString(),env));
+    }
+    @Test void wbiSeedHasIdenticalDatesButNoPicOrProgress() throws Exception {
+        ScheduleStore.Document cv=new ScheduleStore(company("").dir(root.toString())).get();
+        ScheduleStore.Document wbi=new ScheduleStore(company("wbi").dir(root.toString()),"schedule/default-wbi.json").get();
+        assertEquals(cv.data.path("project").path("goLiveDate"),wbi.data.path("project").path("goLiveDate"));
+        assertEquals(cv.data.path("items").size(),wbi.data.path("items").size());
+        for(int i=0;i<cv.data.path("items").size();i++) {
+            JsonNode a=cv.data.path("items").get(i),b=wbi.data.path("items").get(i);
+            assertEquals(a.path("id"),b.path("id"));
+            a.fieldNames().forEachRemaining(k->{ if(k.endsWith("Date")||k.endsWith("Time")) assertEquals(a.get(k),b.get(k)); });
+            assertEquals("",b.path("pic").asText()); assertEquals("belum",b.path("status").asText());
+        }
+    }
+    @Test void schedulesShareBaseDirWithoutOverwritingEachOtherAndKeepAtomicWrites() throws Exception {
+        ScheduleStore cv=new ScheduleStore(root),wbi=new ScheduleStore(root.resolve("wbi"),"schedule/default-wbi.json");
+        ScheduleStore.Document a=cv.get(),b=wbi.get();
+        ObjectNode next=((ObjectNode)a.data).deepCopy(); ((ObjectNode)next.path("items").get(0)).put("pic","Tim CV");
+        cv.put(a.rev,next);
+        assertEquals("",wbi.get().data.path("items").get(0).path("pic").asText());
+        ObjectNode wb=((ObjectNode)b.data).deepCopy(); ((ObjectNode)wb.path("items").get(0)).put("pic","Tim WBI");
+        wbi.put(b.rev,wb);
+        assertEquals("Tim CV",cv.get().data.path("items").get(0).path("pic").asText());
+        assertEquals(409,assertThrows(ScheduleStore.ScheduleException.class,()->wbi.put(b.rev,wb)).status);
+        assertEquals(1,wbi.get().rev);
+        try(java.util.stream.Stream<Path> paths=Files.walk(root)) { assertFalse(paths.anyMatch(p->p.toString().endsWith(".tmp"))); }
+    }
+    @Test void existingScheduleIsNeverReseededOnNewBuild() throws Exception {
+        ScheduleStore store=new ScheduleStore(root,"schedule/default-wbi.json"); ScheduleStore.Document d=store.get();
+        ((ObjectNode)d.data.path("items").get(0)).put("pic","User WBI"); store.put(d.rev,d.data);
+        assertEquals("User WBI",new ScheduleStore(root,"schedule/default.json").get().data.path("items").get(0).path("pic").asText());
+    }
+    @Test void corruptScheduleIsPreserved() throws Exception {
+        new ScheduleStore(root).get(); Path file=root.resolve("schedule/schedule.json"); Files.write(file,"broken".getBytes("UTF-8"));
+        assertThrows(ScheduleStore.ScheduleException.class,()->new ScheduleStore(root).get());
+        assertEquals("broken",new String(Files.readAllBytes(file),"UTF-8"));
+    }
+    @Test void countdocChecksCustomAndPivotsUseCentralNamespace() throws Exception {
+        DataFiles cv=company(""),wbi=company("wbi");
+        CountDocCheckStore cvc=new CountDocCheckStore(root.toString(),cv),wc=new CountDocCheckStore(root.toString(),wbi);
+        cvc.put("q1",0,"cocok","CV"); wc.put("q1",0,"selisih","WBI");
+        assertEquals("CV",cvc.all().get("q1").note); assertEquals("WBI",wc.all().get("q1").note);
+        CountDocCustomStore cvq=new CountDocCustomStore(root.toString(),cv),wq=new CountDocCustomStore(root.toString(),wbi);
+        cvq.create("Query CV","","SELECT 1 AS Counted FROM DUMMY","");
+        wq.create("Query WBI","","SELECT 1 AS Counted FROM DUMMY","");
+        assertEquals("Query CV",cvq.all().get(0).name); assertEquals("Query WBI",wq.all().get(0).name);
+        CountDocPivotStore cvp=new CountDocPivotStore(root.toString(),cv),wp=new CountDocPivotStore(root.toString(),wbi);
+        CountDocPivotStore.Input cp=new CountDocPivotStore.Input(); cp.name="Pivot CV";cp.scope="team";cp.spec=cvp.presets().get(0).spec;
+        CountDocPivotStore.Input bp=new CountDocPivotStore.Input(); bp.name="Pivot WBI";bp.scope="team";bp.spec=wp.presets().get(0).spec;
+        cvp.create("QA",cp);wp.create("QA",bp);
+        assertEquals("Pivot CV",cvp.list("team",null,"QA").get(0).get("name"));assertEquals("Pivot WBI",wp.list("team",null,"QA").get(0).get("name"));
+        for(String p:Arrays.asList("countdoc/queries/custom","countdoc/pivots","countdoc/trash")) {
+            assertTrue(Files.isDirectory(root.resolve(p))); assertTrue(Files.isDirectory(root.resolve("wbi").resolve(p)));
+        }
+    }
+    @Test void chatSharesImplementationButSeparatesModuleAndCompanyData() throws Exception {
+        ScheduleChatController cv=new ScheduleChatController(root.toString(),company(""));
+        ScheduleChatController wbi=new ScheduleChatController(root.toString(),company("wbi"));
+        SetupChatController setup=new SetupChatController(root.toString(),new SetupAccessController(true,""),company("wbi"));
+        cv.append("umum","CV","Catatan CV",null); wbi.append("umum","WBI","Catatan WBI",null); setup.append("setup:umum","WBI","Setup WBI",null);
+        assertTrue(Files.exists(root.resolve("schedule/chat.jsonl"))); assertTrue(Files.exists(root.resolve("wbi/schedule/chat.jsonl"))); assertTrue(Files.exists(root.resolve("wbi/setup/chat.jsonl")));
+        assertFalse(new String(Files.readAllBytes(root.resolve("wbi/setup/chat.jsonl")),"UTF-8").contains("Catatan CV"));
+    }
+    @Test void setupChatRequiresSetupSessionAndScheduleChatRetainsAccessContract() throws Exception {
+        SetupChatController setup=new SetupChatController(root.toString(),new SetupAccessController(false,""),company("wbi"));
+        MockMvc mvc=MockMvcBuilders.standaloneSetup(setup).build();
+        mvc.perform(get("/api/setup/chat/summary")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/setup/chat").contentType("application/json").content("{\"thread\":\"setup:umum\",\"editor\":\"QA\",\"text\":\"Tes\"}")).andExpect(status().isForbidden());
+        assertFalse(Files.exists(root.resolve("wbi/setup/chat.jsonl")));
+    }
+    @Test void setupChatEscapedTextIsSavedLiterallyAndReturnsJson() throws Exception {
+        SetupChatController setup=new SetupChatController(root.toString(),new SetupAccessController(true,""),company("wbi"));
+        MockMvc mvc=MockMvcBuilders.standaloneSetup(setup).build();
+        mvc.perform(post("/api/setup/chat").contentType("application/json").content("{\"thread\":\"setup:warehouses\",\"editor\":\"QA\",\"text\":\"<script>tes</script>\"}")).andExpect(status().isOk());
+        mvc.perform(get("/api/setup/chat").param("thread","setup:warehouses")).andExpect(status().isOk()).andExpect(jsonPath("$.messages[0].text").value("<script>tes</script>"));
+    }
+    @Test void scheduleExportIncludesCompanyCode() throws Exception {
+        DataFiles files=company("wbi");
+        ScheduleController ctrl=new ScheduleController(new ScheduleStore(root,"schedule/default-wbi.json"),new SetupAccessController(true,""),new ScheduleChatController(root.toString(),files),files);
+        assertEquals("attachment; filename=\"schedule-wbi.json\"",ctrl.export().getHeaders().getFirst("Content-Disposition"));
+    }
+}

@@ -2,6 +2,7 @@
 // sheets: [{ name, rows: [[cell, ...], ...] }]. Baris pertama = header (tebal, dibekukan, ada filter).
 // cell: string -> teks, number -> angka.
 
+import { loadCompany, companyFilename } from './company.js';
 const enc = new TextEncoder();
 const CRC = (() => {
   const t = new Uint32Array(256);
@@ -150,7 +151,9 @@ ${sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" Co
   return zip(files, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 }
 
-export function download(blob, filename) {
+export async function download(blob, filename) {
+  try { await loadCompany(); } catch (e) { alert(e.message); return; }
+  filename = companyFilename(filename);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = filename.replace(/[\\/:*?"<>|]+/g, " ").trim();
