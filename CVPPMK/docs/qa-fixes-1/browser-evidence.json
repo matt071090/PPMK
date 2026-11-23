@@ -1,0 +1,642 @@
+{
+  "checks": [
+    "UDT: 25 visible of 60 filled / 172 total",
+    "Paging next, search from page 2 resets and finds row 59",
+    "Page size 50; empty toggle persists after reload, restores 172 rows",
+    "Downloaded XLSX has 99 filtered data rows + header while only 25 rows are visible",
+    "Nonbranch STEM catalog hides 11 branch keys even with empty toggle on, retains WHTRS",
+    "Generic ST_PARAM also hides branch keys",
+    "Summary hides Branch KPI; showing empty Addon menu does not change review denominator",
+    "Child search finds last parent across pages; Excel sheets contain entire matching header and child set",
+    "Non-admin WBI saves free PIC + status; untouched STEM items remain blank; dates/note editor inaccessible",
+    "Legacy empty company / branch fixture retains fixed STEM PIC and branch keys",
+    "Branch fixture retains Warehouse Branch KPI and BP branch warning",
+    "Access lookup failure keeps dates/notes locked",
+    "All 13 routes render at 1440 and 390px without page overflow or JavaScript exceptions"
+  ],
+  "pages": [
+    {
+      "phase": "before",
+      "path": "index.html#/udo",
+      "device": "desktop",
+      "screenshot": "screenshots/before-udo-desktop.png",
+      "title": "5.1 User-Defined Object (UDO) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/udt",
+      "device": "desktop",
+      "screenshot": "screenshots/before-udt-desktop.png",
+      "title": "5.2 User-Defined Table (UDT) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/udf",
+      "device": "desktop",
+      "screenshot": "screenshots/before-udf-desktop.png",
+      "title": "5.3 User-Defined Field (UDF) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/saved-queries",
+      "device": "desktop",
+      "screenshot": "screenshots/before-saved-queries-desktop.png",
+      "title": "5.4 Saved Query · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/addon-st-param",
+      "device": "desktop",
+      "screenshot": "screenshots/before-addon-st-param-desktop.png",
+      "title": "Parameter STEM · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/addon-st-udrth",
+      "device": "desktop",
+      "screenshot": "screenshots/before-addon-st-udrth-desktop.png",
+      "title": "Route produksi · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/ringkasan",
+      "device": "desktop",
+      "screenshot": "screenshots/before-ringkasan-desktop.png",
+      "title": "Ringkasan & Temuan · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/warehouses",
+      "device": "desktop",
+      "screenshot": "screenshots/before-warehouses-desktop.png",
+      "title": "3.3 Warehouse · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n3.1\nItem Group\nBelu",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/business-partners",
+      "device": "desktop",
+      "screenshot": "screenshots/before-business-partners-desktop.png",
+      "title": "3.4 Business Partner · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n3.1\nItem Group\nBelu",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/users",
+      "device": "desktop",
+      "screenshot": "screenshots/before-users-desktop.png",
+      "title": "1.5 User · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n1.1\nCompany Details\nBelum direview\n1.2\nGener",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/coa",
+      "device": "desktop",
+      "screenshot": "screenshots/before-coa-desktop.png",
+      "title": "2.1 Chart of Accounts · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n1.1\nCompany Details\nBelum direview\n1.2\nGener",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "home.html",
+      "device": "desktop",
+      "screenshot": "screenshots/before-home-desktop.png",
+      "title": "Home · PT Warung Begok Indonesia",
+      "body": "WBI\nProject Check List SAP B1\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nHome\n\nRingkasan proyek SAP B1 menuju Go Live.\n\n39\nhari menuju Go Live\nGo Live: Jumat, 1 Januari 2027\nBERIKUTNYA\nKick Off\n1 Des 20",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "schedule.html#/master",
+      "device": "desktop",
+      "screenshot": "screenshots/before-master-desktop.png",
+      "title": "Master Data · Schedule PT Warung Begok Indonesia",
+      "body": "WBI\nSchedule\nPT Warung Begok Indonesia\n◐\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nJadwal Go Live\nRingkasan\nMaster Data\nTraining\nStock Opname\nBeginning Balance\nHome\nSchedule\nMaster Data\nDiskusi\nUnduh JSON\nDisimpan terakhir: 23 ",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/udo",
+      "device": "mobile",
+      "screenshot": "screenshots/before-udo-mobile.png",
+      "title": "5.1 User-Defined Object (UDO) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5\nAdd-on & Kustomisasi STEM\n5.1\nUser-Defined Object",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/udt",
+      "device": "mobile",
+      "screenshot": "screenshots/before-udt-mobile.png",
+      "title": "5.2 User-Defined Table (UDT) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5\nAdd-on & Kustomisasi STEM\n5.1\nUser-Defined Object",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/udf",
+      "device": "mobile",
+      "screenshot": "screenshots/before-udf-mobile.png",
+      "title": "5.3 User-Defined Field (UDF) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5\nAdd-on & Kustomisasi STEM\n5.1\nUser-Defined Object",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/saved-queries",
+      "device": "mobile",
+      "screenshot": "screenshots/before-saved-queries-mobile.png",
+      "title": "5.4 Saved Query · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5\nAdd-on & Kustomisasi STEM\n5.1\nUser-Defined Object",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/addon-st-param",
+      "device": "mobile",
+      "screenshot": "screenshots/before-addon-st-param-mobile.png",
+      "title": "Parameter STEM · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5\nAdd-on & Kustomisasi STEM\n5.1\nUser-Defined Object",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/addon-st-udrth",
+      "device": "mobile",
+      "screenshot": "screenshots/before-addon-st-udrth-mobile.png",
+      "title": "Route produksi · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5\nAdd-on & Kustomisasi STEM\n5.1\nUser-Defined Object",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/ringkasan",
+      "device": "mobile",
+      "screenshot": "screenshots/before-ringkasan-mobile.png",
+      "title": "Ringkasan & Temuan · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dokumen\n5\nAdd-on & Kustomisasi STEM\n5.1\nUser-Defined Object",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/warehouses",
+      "device": "mobile",
+      "screenshot": "screenshots/before-warehouses-mobile.png",
+      "title": "3.3 Warehouse · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n3.1\nItem Group\nBelum direview\n3.2\nItem\nBelum direview\n3.3\nWarehouse\nB",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/business-partners",
+      "device": "mobile",
+      "screenshot": "screenshots/before-business-partners-mobile.png",
+      "title": "3.4 Business Partner · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n3.1\nItem Group\nBelum direview\n3.2\nItem\nBelum direview\n3.3\nWarehouse\nB",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/users",
+      "device": "mobile",
+      "screenshot": "screenshots/before-users-mobile.png",
+      "title": "1.5 User · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n1.1\nCompany Details\nBelum direview\n1.2\nGeneral Settings\nBelum direview\n1.3\nDocument Settings\nB",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "index.html#/coa",
+      "device": "mobile",
+      "screenshot": "screenshots/before-coa-mobile.png",
+      "title": "2.1 Chart of Accounts · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/40\nRingkasan & Temuan\n1\nGeneral Parameter\n1.1\nCompany Details\nBelum direview\n1.2\nGeneral Settings\nBelum direview\n1.3\nDocument Settings\nB",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "home.html",
+      "device": "mobile",
+      "screenshot": "screenshots/before-home-mobile.png",
+      "title": "Home · PT Warung Begok Indonesia",
+      "body": "WBI\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nHome\n\nRingkasan proyek SAP B1 menuju Go Live.\n\n39\nhari menuju Go Live\nGo Live: Jumat, 1 Januari 2027\nBERIKUTNYA\nKick Off\n1 Des 2026, dalam 8 hari\n0 dari 37",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "path": "schedule.html#/master",
+      "device": "mobile",
+      "screenshot": "screenshots/before-master-mobile.png",
+      "title": "Master Data · Schedule PT Warung Begok Indonesia",
+      "body": "☰\nWBI\nSchedule\n◐\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nJadwal Go Live\nRingkasan\nMaster Data\nTraining\nStock Opname\nBeginning Balance\nHome\nSchedule\nMaster Data\nUnduh JSON\nDisimpan terakhir: 23 Nov 2026 19:00\nMuat ulang\n▸\nⓘ Ca",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/udo",
+      "device": "desktop",
+      "screenshot": "screenshots/after-udo-desktop.png",
+      "title": "5.1 User-Defined Object (UDO) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/udt",
+      "device": "desktop",
+      "screenshot": "screenshots/after-udt-desktop.png",
+      "title": "5.2 User-Defined Table (UDT) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/udf",
+      "device": "desktop",
+      "screenshot": "screenshots/after-udf-desktop.png",
+      "title": "5.3 User-Defined Field (UDF) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/saved-queries",
+      "device": "desktop",
+      "screenshot": "screenshots/after-saved-queries-desktop.png",
+      "title": "5.4 Saved Query · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/addon-st-param",
+      "device": "desktop",
+      "screenshot": "screenshots/after-addon-st-param-desktop.png",
+      "title": "Parameter STEM · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/addon-st-udrth",
+      "device": "desktop",
+      "screenshot": "screenshots/after-addon-st-udrth-desktop.png",
+      "title": "Route produksi · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/ringkasan",
+      "device": "desktop",
+      "screenshot": "screenshots/after-ringkasan-desktop.png",
+      "title": "Ringkasan & Temuan · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/warehouses",
+      "device": "desktop",
+      "screenshot": "screenshots/after-warehouses-desktop.png",
+      "title": "3.3 Warehouse · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/business-partners",
+      "device": "desktop",
+      "screenshot": "screenshots/after-business-partners-desktop.png",
+      "title": "3.4 Business Partner · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/users",
+      "device": "desktop",
+      "screenshot": "screenshots/after-users-desktop.png",
+      "title": "1.5 User · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/coa",
+      "device": "desktop",
+      "screenshot": "screenshots/after-coa-desktop.png",
+      "title": "2.1 Chart of Accounts · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nProject Check List SAP B1\nPT Warung Begok Indonesia\nCari pengaturan…\nCtrl K\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGenera",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "home.html",
+      "device": "desktop",
+      "screenshot": "screenshots/after-home-desktop.png",
+      "title": "Home · PT Warung Begok Indonesia",
+      "body": "WBI\nProject Check List SAP B1\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nHome\n\nRingkasan proyek SAP B1 menuju Go Live.\n\n39\nhari menuju Go Live\nGo Live: Jumat, 1 Januari 2027\nBERIKUTNYA\nKick Off\n1 Des 20",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "schedule.html#/master",
+      "device": "desktop",
+      "screenshot": "screenshots/after-master-desktop.png",
+      "title": "Master Data · Schedule PT Warung Begok Indonesia",
+      "body": "WBI\nSchedule\nPT Warung Begok Indonesia\n◐\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nJadwal Go Live\nRingkasan\nMaster Data\nTraining\nStock Opname\nBeginning Balance\nHome\nSchedule\nMaster Data\nDiskusi\nUnduh JSON\nDisimpan terakhir: 23 ",
+      "error": "",
+      "width": 1440,
+      "viewport": 1440
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/udo",
+      "device": "mobile",
+      "screenshot": "screenshots/after-udo-mobile.png",
+      "title": "5.1 User-Defined Object (UDO) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dok",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/udt",
+      "device": "mobile",
+      "screenshot": "screenshots/after-udt-mobile.png",
+      "title": "5.2 User-Defined Table (UDT) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dok",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/udf",
+      "device": "mobile",
+      "screenshot": "screenshots/after-udf-mobile.png",
+      "title": "5.3 User-Defined Field (UDF) · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dok",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/saved-queries",
+      "device": "mobile",
+      "screenshot": "screenshots/after-saved-queries-mobile.png",
+      "title": "5.4 Saved Query · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dok",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/addon-st-param",
+      "device": "mobile",
+      "screenshot": "screenshots/after-addon-st-param-mobile.png",
+      "title": "Parameter STEM · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dok",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/addon-st-udrth",
+      "device": "mobile",
+      "screenshot": "screenshots/after-addon-st-udrth-mobile.png",
+      "title": "Route produksi · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dok",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/ringkasan",
+      "device": "mobile",
+      "screenshot": "screenshots/after-ringkasan-mobile.png",
+      "title": "Ringkasan & Temuan · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n4\nKontrol Dok",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/warehouses",
+      "device": "mobile",
+      "screenshot": "screenshots/after-warehouses-mobile.png",
+      "title": "3.3 Warehouse · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n3.1\nItem Grou",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/business-partners",
+      "device": "mobile",
+      "screenshot": "screenshots/after-business-partners-mobile.png",
+      "title": "3.4 Business Partner · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n2\nKeuangan\n3\nMaster Data\n3.1\nItem Grou",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/users",
+      "device": "mobile",
+      "screenshot": "screenshots/after-users-mobile.png",
+      "title": "1.5 User · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n1.1\nCompany Details\nBelum direview\n1.2",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "index.html#/coa",
+      "device": "mobile",
+      "screenshot": "screenshots/after-coa-mobile.png",
+      "title": "2.1 Chart of Accounts · Project Check List · PT Warung Begok Indonesia",
+      "body": "WB\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nMenu sudah sesuai\n0/38\nTampilkan yang kosong\n1 menu Addon kosong disembunyikan\nRingkasan & Temuan\n1\nGeneral Parameter\n1.1\nCompany Details\nBelum direview\n1.2",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "home.html",
+      "device": "mobile",
+      "screenshot": "screenshots/after-home-mobile.png",
+      "title": "Home · PT Warung Begok Indonesia",
+      "body": "WBI\nPT Warung Begok Indonesia\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nHome\n\nRingkasan proyek SAP B1 menuju Go Live.\n\n39\nhari menuju Go Live\nGo Live: Jumat, 1 Januari 2027\nBERIKUTNYA\nKick Off\n1 Des 2026, dalam 8 hari\n0 dari 37",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "after",
+      "path": "schedule.html#/master",
+      "device": "mobile",
+      "screenshot": "screenshots/after-master-mobile.png",
+      "title": "Master Data · Schedule PT Warung Begok Indonesia",
+      "body": "☰\nWBI\nSchedule\n◐\nHome\nSchedule\nProject Check List\nSetup & Cut Off\nTools\nJadwal Go Live\nRingkasan\nMaster Data\nTraining\nStock Opname\nBeginning Balance\nHome\nSchedule\nMaster Data\nUnduh JSON\nDisimpan terakhir: 23 Nov 2026 19:00\nMuat ulang\n▸\nⓘ Ca",
+      "error": "",
+      "width": 390,
+      "viewport": 390
+    },
+    {
+      "phase": "before",
+      "device": "desktop",
+      "screenshot": "screenshots/before-udt-pager-desktop.png",
+      "focus": "UDT page controls"
+    },
+    {
+      "phase": "before",
+      "device": "desktop",
+      "screenshot": "screenshots/before-stem-params-desktop.png",
+      "focus": "STEM parameter section"
+    },
+    {
+      "phase": "after",
+      "device": "desktop",
+      "screenshot": "screenshots/after-udt-pager-desktop.png",
+      "focus": "UDT page controls"
+    },
+    {
+      "phase": "after",
+      "device": "desktop",
+      "screenshot": "screenshots/after-stem-params-desktop.png",
+      "focus": "STEM parameter section"
+    },
+    {
+      "phase": "before",
+      "device": "mobile",
+      "screenshot": "screenshots/before-udt-pager-mobile.png",
+      "focus": "UDT page controls"
+    },
+    {
+      "phase": "before",
+      "device": "mobile",
+      "screenshot": "screenshots/before-stem-params-mobile.png",
+      "focus": "STEM parameter section"
+    },
+    {
+      "phase": "after",
+      "device": "mobile",
+      "screenshot": "screenshots/after-udt-pager-mobile.png",
+      "focus": "UDT page controls"
+    },
+    {
+      "phase": "after",
+      "device": "mobile",
+      "screenshot": "screenshots/after-stem-params-mobile.png",
+      "focus": "STEM parameter section"
+    }
+  ],
+  "errors": [],
+  "baselineCommit": "57b76b5",
+  "implementationCommit": "e39816c"
+}

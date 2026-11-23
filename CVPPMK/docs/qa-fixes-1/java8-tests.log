@@ -1,0 +1,591 @@
+[INFO] Scanning for projects...
+[INFO] Loaded 24592 auto-discovered prefixes for remote repository central (prefixes-central.txt)
+[INFO]
+[INFO] ------------------------< com.stem:cvppmk-docs >------------------------
+[INFO] Building cvppmk-docs 0.1.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ war ]---------------------------------
+[INFO]
+[INFO] --- spring-boot:2.7.18:build-info (default) @ cvppmk-docs ---
+[INFO]
+[INFO] --- resources:3.2.0:resources (default-resources) @ cvppmk-docs ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] Copying 321 resources
+[INFO] Copying 1 resource
+[INFO] Copying 0 resource to config
+[INFO] Copying 1 resource
+[INFO]
+[INFO] --- compiler:3.10.1:compile (default-compile) @ cvppmk-docs ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO]
+[INFO] --- resources:3.2.0:testResources (default-testResources) @ cvppmk-docs ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] skip non existing resourceDirectory /Users/fakhridhiya_/orca/workspaces/ppmk-wbi/loach/CVPPMK/src/test/resources
+[INFO]
+[INFO] --- compiler:3.10.1:testCompile (default-testCompile) @ cvppmk-docs ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 6 source files to /Users/fakhridhiya_/orca/workspaces/ppmk-wbi/loach/CVPPMK/target/test-classes
+[INFO] /Users/fakhridhiya_/orca/workspaces/ppmk-wbi/loach/CVPPMK/src/test/java/com/stem/cvppmk/docs/SetupControllerTest.java: Some input files use unchecked or unsafe operations.
+[INFO] /Users/fakhridhiya_/orca/workspaces/ppmk-wbi/loach/CVPPMK/src/test/java/com/stem/cvppmk/docs/SetupControllerTest.java: Recompile with -Xlint:unchecked for details.
+[INFO]
+[INFO] --- surefire:2.22.2:test (default-test) @ cvppmk-docs ---
+[INFO]
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running com.stem.cvppmk.docs.CompanyDataTest
+15:49:08.500 [main] DEBUG org.springframework.mock.env.MockEnvironment - Activating profiles [wbi]
+15:49:09.174 [main] DEBUG _org.springframework.web.servlet.HandlerMapping.Mappings -
+	c.s.c.d.SetupChatController:
+	{POST [/api/setup/chat], consumes [application/json]}: post(Map,long)
+	{GET [/api/setup/chat/latest]}: latest(int)
+	{GET [/api/setup/chat/summary]}: summary()
+	{GET [/api/setup/chat]}: list(String,long)
+15:49:09.225 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - 4 mappings in org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+15:49:09.478 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+15:49:09.532 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 0 @ExceptionHandler, 1 ResponseBodyAdvice
+15:49:09.567 [main] INFO org.springframework.mock.web.MockServletContext - Initializing Spring TestDispatcherServlet ''
+15:49:09.567 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Initializing Servlet ''
+15:49:09.571 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected AcceptHeaderLocaleResolver
+15:49:09.571 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected FixedThemeResolver
+15:49:09.572 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@6ee660fb
+15:49:09.572 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.support.SessionFlashMapManager@305a0c5f
+15:49:09.572 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+15:49:09.572 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Completed initialization in 5 ms
+15:49:09.626 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - GET "/api/setup/chat/summary", parameters={}
+15:49:09.634 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.SetupChatController#summary()
+15:49:09.685 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.SetupChatController#error(ResponseStatusException)
+15:49:09.700 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:09.701 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Setup terkunci. Masukkan password Setup dulu.}]
+15:49:09.710 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [org.springframework.web.server.ResponseStatusException: 403 FORBIDDEN "Setup terkunci. Masukkan password Setup dulu."]
+15:49:09.710 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:09.715 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - POST "/api/setup/chat", parameters={}
+15:49:09.715 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.SetupChatController#post(Map, long)
+15:49:09.717 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.SetupChatController#error(ResponseStatusException)
+15:49:09.717 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:09.717 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Setup terkunci. Masukkan password Setup dulu.}]
+15:49:09.718 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [org.springframework.web.server.ResponseStatusException: 403 FORBIDDEN "Setup terkunci. Masukkan password Setup dulu."]
+15:49:09.718 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:10.385 [main] DEBUG _org.springframework.web.servlet.HandlerMapping.Mappings -
+	c.s.c.d.SetupChatController:
+	{POST [/api/setup/chat], consumes [application/json]}: post(Map,long)
+	{GET [/api/setup/chat/latest]}: latest(int)
+	{GET [/api/setup/chat/summary]}: summary()
+	{GET [/api/setup/chat]}: list(String,long)
+15:49:10.395 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - 4 mappings in org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+15:49:10.400 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+15:49:10.405 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 0 @ExceptionHandler, 1 ResponseBodyAdvice
+15:49:10.405 [main] INFO org.springframework.mock.web.MockServletContext - Initializing Spring TestDispatcherServlet ''
+15:49:10.405 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Initializing Servlet ''
+15:49:10.405 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected AcceptHeaderLocaleResolver
+15:49:10.405 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected FixedThemeResolver
+15:49:10.406 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@3829ac1
+15:49:10.406 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.support.SessionFlashMapManager@4baf352a
+15:49:10.406 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+15:49:10.406 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Completed initialization in 1 ms
+15:49:10.407 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - POST "/api/setup/chat", parameters={}
+15:49:10.407 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.SetupChatController#post(Map, long)
+15:49:10.435 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor - Read "application/json" to [{thread=setup:warehouses, editor=QA, text=<script>tes</script>}]
+15:49:10.471 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:10.471 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{id=1, at=2026-11-23T08:49:10.457Z, thread=setup:warehouses, editor=QA, text=<script>tes</script>}]
+15:49:10.474 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 200 OK
+15:49:10.474 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - GET "/api/setup/chat", parameters={masked}
+15:49:10.475 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.SetupChatController#list(String, long)
+15:49:10.484 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:10.484 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{messages=[{id=1, at=2026-11-23T08:49:10.457Z, thread=setup:warehouses, editor=QA, text=<script>tes< (truncated)...]
+15:49:10.486 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 200 OK
+15:49:10.537 [main] DEBUG com.jayway.jsonpath.internal.path.CompiledPath - Evaluating path: $['messages'][0]['text']
+[INFO] Tests run: 21, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.38 s - in com.stem.cvppmk.docs.CompanyDataTest
+[INFO] Running com.stem.cvppmk.docs.SetupControllerTest
+15:49:12.438 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.504 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.514 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.533 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.555 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.572 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 0 gagal
+15:49:12.589 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 0 gagal
+15:49:12.610 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.621 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.636 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 0 gagal
+15:49:12.649 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 0 gagal
+15:49:12.656 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.668 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.686 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.694 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.708 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.723 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:12.739 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:12.746 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:12.754 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:12.771 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:12.788 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 0 gagal
+15:49:12.847 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 0 gagal
+15:49:12.874 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:12.902 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:12.920 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 0 gagal
+15:49:12.936 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 0 gagal
+15:49:12.943 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:12.972 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:12.990 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:13.000 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:13.018 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:13.032 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:asset-classes] upload 1 baris ke AssetClasses, 1 gagal
+15:49:13.051 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 0 gagal
+15:49:13.058 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 0 gagal
+15:49:13.086 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:13.094 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:13.104 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 0 gagal
+15:49:13.114 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 0 gagal
+15:49:13.125 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:13.134 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:13.148 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 0 gagal
+15:49:13.155 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 0 gagal
+15:49:13.162 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:13.165 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:13.170 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:13.185 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:13.215 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:13.223 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:document-numbering] upload 1 baris ke SeriesService, 1 gagal
+15:49:14.169 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 1 gagal
+15:49:14.178 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:warehouses] upload 1 baris ke Warehouses, 0 gagal
+15:49:14.391 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:14.400 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:14.403 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:14.416 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:business-partners] upload 1 baris ke BusinessPartners, 0 gagal
+[INFO] Tests run: 64, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.814 s - in com.stem.cvppmk.docs.SetupControllerTest
+[INFO] Running com.stem.cvppmk.docs.CountDocQueryTests
+lulus=54 gagal=0
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.045 s - in com.stem.cvppmk.docs.CountDocQueryTests
+[INFO] Running com.stem.cvppmk.docs.CountDocCustomTests
+15:49:16.700 [main] INFO countdoc.access - 2026-11-23T15:49:16 ip=127.0.0.1 custom=create id=custom-c5f0c0b5ddaa nameLen=5 sqlLen=37
+15:49:16.754 [main] INFO countdoc.access - 2026-11-23T15:49:16 ip=127.0.0.1 custom=update id=custom-c5f0c0b5ddaa rev=2 sqlLen=19
+15:49:16.773 [main] WARN com.stem.cvppmk.docs.CountDocQueryController - query buatan custom-c5f0c0b5ddaa tersimpan tetapi tidak lolos validasi: Hanya SELECT atau WITH ... SELECT yang diizinkan. (baris 1, kolom 1)
+15:49:16.783 [main] INFO countdoc.access - 2026-11-23T15:49:16 ip=127.0.0.1 custom=delete id=custom-c5f0c0b5ddaa
+15:49:16.813 [main] INFO countdoc.access - 2026-11-23T15:49:16 ip=127.0.0.1 custom=import id=- imported=1 skipped=0 failed=1
+15:49:16.814 [main] INFO countdoc.access - 2026-11-23T15:49:16 ip=127.0.0.1 custom=import id=- imported=1 skipped=0 failed=0
+lulus=228 gagal=0
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.291 s - in com.stem.cvppmk.docs.CountDocCustomTests
+[INFO] Running com.stem.cvppmk.docs.SetupRetailTest
+15:49:16.871 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.883 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.887 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.888 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.890 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:16.910 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-plcategory] upload 1 baris ke ST_PLCATEGORY, 1 gagal
+15:49:16.913 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.913 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.915 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.915 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.917 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:16.917 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-plcategory] upload 1 baris ke ST_PLCATEGORY, 1 gagal
+15:49:16.917 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.918 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.919 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.922 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.924 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:16.925 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-ruletransfer] upload 1 baris ke U_STEM_RULETRANSFER, 1 gagal
+15:49:16.926 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.927 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.928 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:16.928 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-instype] upload 1 baris ke ST_INSTYPE, 1 gagal
+15:49:16.928 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.932 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.933 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.933 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.935 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:16.937 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-udroute] upload 1 baris ke ST_UDROUTE, 1 gagal
+15:49:16.937 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.939 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.940 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:16.940 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-udroute] upload 1 baris ke ST_UDROUTE, 1 gagal
+15:49:16.948 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:16.968 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.041 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.045 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-ruletransfer] upload 1 baris ke U_STEM_RULETRANSFER, 1 gagal
+15:49:17.046 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.046 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.047 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.049 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-ruletransfer] upload 1 baris ke U_STEM_RULETRANSFER, 1 gagal
+15:49:17.049 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.049 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.050 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.050 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-ruletransfer] upload 1 baris ke U_STEM_RULETRANSFER, 1 gagal
+15:49:17.050 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.050 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.051 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.052 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-ruletransfer] upload 1 baris ke U_STEM_RULETRANSFER, 1 gagal
+15:49:17.183 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.185 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.187 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.187 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.190 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.209 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.212 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.215 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.215 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.216 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.225 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.227 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.230 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.230 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.244 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.245 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.246 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.246 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.247 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.247 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-plcategory] upload 1 baris ke ST_PLCATEGORY, 0 gagal
+15:49:17.251 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.252 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.253 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.253 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.254 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.254 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-plconfig] upload 1 baris ke ST_PLCONFIG, 0 gagal
+15:49:17.264 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.265 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.265 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.266 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.266 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.267 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-udroute] upload 1 baris ke ST_UDROUTE, 0 gagal
+15:49:17.273 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.273 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.274 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.274 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.275 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.276 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-operqc] upload 1 baris ke ST_OPERQC, 0 gagal
+15:49:17.282 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.286 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.287 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.287 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.287 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.290 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-instype] upload 1 baris ke ST_INSTYPE, 0 gagal
+15:49:17.293 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.294 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.294 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.294 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.295 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.295 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-instypemap] upload 1 baris ke U_ST_INSTYPEMAP, 0 gagal
+15:49:17.299 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.299 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.301 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.301 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.302 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.303 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-paramqc] upload 1 baris ke ST_PARAMQC, 0 gagal
+15:49:17.307 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.308 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.308 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.308 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.309 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.309 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-pettycashcat] upload 1 baris ke STEM_PETTYCASHCAT, 0 gagal
+15:49:17.312 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.313 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.313 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.313 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.314 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.314 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-ruletransfer] upload 1 baris ke U_STEM_RULETRANSFER, 0 gagal
+15:49:17.320 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.320 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.321 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.321 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.324 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.327 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-orpurpose] upload 1 baris ke STEM_ORPURPOSE, 0 gagal
+15:49:17.334 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.335 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.335 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.335 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.336 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.336 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-reason] upload 1 baris ke STEM_REASON, 0 gagal
+15:49:17.342 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.343 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.366 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.369 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.370 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.370 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-plcategory] upload 1 baris ke ST_PLCATEGORY, 0 gagal
+15:49:17.370 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.373 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.376 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.382 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.384 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.384 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-plconfig] upload 1 baris ke ST_PLCONFIG, 0 gagal
+15:49:17.384 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.385 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.401 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.405 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.407 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.409 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-udroute] upload 1 baris ke ST_UDROUTE, 0 gagal
+15:49:17.409 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.410 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.414 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.414 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.415 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.415 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-operqc] upload 1 baris ke ST_OPERQC, 0 gagal
+15:49:17.415 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.415 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.419 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.423 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.427 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.428 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-instype] upload 1 baris ke ST_INSTYPE, 0 gagal
+15:49:17.429 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.430 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.441 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.441 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.442 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.442 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-instypemap] upload 1 baris ke U_ST_INSTYPEMAP, 0 gagal
+15:49:17.442 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.443 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.445 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.445 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.446 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.446 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:st-paramqc] upload 1 baris ke ST_PARAMQC, 0 gagal
+15:49:17.446 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.447 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.451 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.451 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.451 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.452 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-pettycashcat] upload 1 baris ke STEM_PETTYCASHCAT, 0 gagal
+15:49:17.452 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.452 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.456 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.457 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.458 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.458 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-ruletransfer] upload 1 baris ke U_STEM_RULETRANSFER, 0 gagal
+15:49:17.459 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.459 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.464 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.464 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.465 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.465 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-orpurpose] upload 1 baris ke STEM_ORPURPOSE, 0 gagal
+15:49:17.466 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.466 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.470 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.472 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.473 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.473 [main] INFO com.stem.cvppmk.docs.SetupController - [setup:stem-reason] upload 1 baris ke STEM_REASON, 0 gagal
+15:49:17.474 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.474 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.482 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.483 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.483 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.483 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.485 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.486 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.487 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.487 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.487 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.488 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.488 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.488 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.488 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.489 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.490 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.491 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.491 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.492 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+15:49:17.493 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.farm-breeding.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.494 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.retail.enabled' in PropertySource 'mockProperties' with value of type String
+15:49:17.494 [main] DEBUG org.springframework.core.env.PropertySourcesPropertyResolver - Found key 'setup.source.allow-target' in PropertySource 'mockProperties' with value of type String
+[INFO] Tests run: 31, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.652 s - in com.stem.cvppmk.docs.SetupRetailTest
+[INFO] Running com.stem.cvppmk.docs.SchedulePermissionsTest
+15:49:17.588 [main] DEBUG _org.springframework.web.servlet.HandlerMapping.Mappings -
+	c.s.c.d.ScheduleController:
+	{GET [/api/schedule/export]}: export()
+	{GET [/api/schedule]}: get()
+	{PUT [/api/schedule], consumes [application/json]}: put(HttpServletRequest)
+	{GET [/api/schedule/access]}: access(HttpServletRequest)
+15:49:17.590 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - 4 mappings in org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+15:49:17.594 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+15:49:17.596 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 0 @ExceptionHandler, 1 ResponseBodyAdvice
+15:49:17.596 [main] INFO org.springframework.mock.web.MockServletContext - Initializing Spring TestDispatcherServlet ''
+15:49:17.596 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Initializing Servlet ''
+15:49:17.596 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected AcceptHeaderLocaleResolver
+15:49:17.596 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected FixedThemeResolver
+15:49:17.596 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@57f8951a
+15:49:17.596 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.support.SessionFlashMapManager@6c17c0f8
+15:49:17.596 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+15:49:17.596 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Completed initialization in 0 ms
+15:49:17.629 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.630 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.659 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.665 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.666 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.669 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.669 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.679 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.679 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.690 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.692 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.692 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.694 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.694 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.701 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.702 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.710 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.711 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.711 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.713 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.713 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.718 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.719 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.723 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.724 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.724 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.725 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.725 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.728 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.729 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.733 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.733 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.733 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.734 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.735 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.738 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.738 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.742 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.743 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.744 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.744 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.744 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.772 [main] DEBUG _org.springframework.web.servlet.HandlerMapping.Mappings -
+	c.s.c.d.ScheduleController:
+	{GET [/api/schedule/export]}: export()
+	{GET [/api/schedule]}: get()
+	{PUT [/api/schedule], consumes [application/json]}: put(HttpServletRequest)
+	{GET [/api/schedule/access]}: access(HttpServletRequest)
+15:49:17.774 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - 4 mappings in org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+15:49:17.782 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+15:49:17.786 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 0 @ExceptionHandler, 1 ResponseBodyAdvice
+15:49:17.786 [main] INFO org.springframework.mock.web.MockServletContext - Initializing Spring TestDispatcherServlet ''
+15:49:17.786 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Initializing Servlet ''
+15:49:17.786 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected AcceptHeaderLocaleResolver
+15:49:17.786 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected FixedThemeResolver
+15:49:17.786 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@364b1061
+15:49:17.786 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.support.SessionFlashMapManager@50fdf44f
+15:49:17.786 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+15:49:17.786 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Completed initialization in 0 ms
+15:49:17.799 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.800 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.805 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.807 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.807 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.808 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.808 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.814 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.814 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.819 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.820 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.820 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.821 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.821 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.825 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.825 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.829 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.830 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.830 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.830 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.830 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.833 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.833 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.835 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.835 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.837 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.839 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.839 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.842 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.842 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.846 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.847 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.847 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.847 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.847 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.852 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.852 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.854 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.855 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.857 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masu (truncated)...]
+15:49:17.858 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).]
+15:49:17.858 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 403 FORBIDDEN
+15:49:17.908 [main] DEBUG _org.springframework.web.servlet.HandlerMapping.Mappings -
+	c.s.c.d.ScheduleController:
+	{GET [/api/schedule/export]}: export()
+	{GET [/api/schedule]}: get()
+	{PUT [/api/schedule], consumes [application/json]}: put(HttpServletRequest)
+	{GET [/api/schedule/access]}: access(HttpServletRequest)
+15:49:17.910 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - 4 mappings in org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+15:49:17.915 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+15:49:17.919 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 0 @ExceptionHandler, 1 ResponseBodyAdvice
+15:49:17.919 [main] INFO org.springframework.mock.web.MockServletContext - Initializing Spring TestDispatcherServlet ''
+15:49:17.919 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Initializing Servlet ''
+15:49:17.919 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected AcceptHeaderLocaleResolver
+15:49:17.919 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected FixedThemeResolver
+15:49:17.919 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@a54acec
+15:49:17.919 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.support.SessionFlashMapManager@19da993b
+15:49:17.919 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+15:49:17.919 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Completed initialization in 0 ms
+15:49:17.920 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - GET "/api/schedule/access", parameters={}
+15:49:17.920 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#access(HttpServletRequest)
+15:49:17.925 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.925 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{editable=false}]
+15:49:17.927 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 200 OK
+15:49:17.928 [main] DEBUG com.jayway.jsonpath.internal.path.CompiledPath - Evaluating path: $['editable']
+15:49:17.940 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.940 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.954 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.955 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [com.stem.cvppmk.docs.ScheduleStore$Document@41f3aaf1]
+15:49:17.960 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 200 OK
+15:49:17.961 [main] DEBUG com.jayway.jsonpath.internal.path.CompiledPath - Evaluating path: $['rev']
+15:49:17.965 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:17.965 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:17.973 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:17.974 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:17.977 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Jadwal sudah diubah pengguna lain. Salin perubahan lalu muat ulang., current=com.stem.cvppm (truncated)...]
+15:49:17.979 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Jadwal sudah diubah pengguna lain. Salin perubahan lalu muat ulang.]
+15:49:17.979 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 409 CONFLICT
+15:49:18.006 [main] DEBUG _org.springframework.web.servlet.HandlerMapping.Mappings -
+	c.s.c.d.ScheduleController:
+	{GET [/api/schedule/export]}: export()
+	{GET [/api/schedule]}: get()
+	{PUT [/api/schedule], consumes [application/json]}: put(HttpServletRequest)
+	{GET [/api/schedule/access]}: access(HttpServletRequest)
+15:49:18.007 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - 4 mappings in org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+15:49:18.012 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter - ControllerAdvice beans: 0 @ModelAttribute, 0 @InitBinder, 1 RequestBodyAdvice, 1 ResponseBodyAdvice
+15:49:18.015 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - ControllerAdvice beans: 0 @ExceptionHandler, 1 ResponseBodyAdvice
+15:49:18.015 [main] INFO org.springframework.mock.web.MockServletContext - Initializing Spring TestDispatcherServlet ''
+15:49:18.015 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Initializing Servlet ''
+15:49:18.015 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected AcceptHeaderLocaleResolver
+15:49:18.015 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected FixedThemeResolver
+15:49:18.015 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.view.DefaultRequestToViewNameTranslator@87d9a01
+15:49:18.015 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Detected org.springframework.web.servlet.support.SessionFlashMapManager@7e5b621b
+15:49:18.015 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - enableLoggingRequestDetails='false': request parameters and headers will be masked to prevent unsafe logging of potentially sensitive data
+15:49:18.015 [main] INFO org.springframework.test.web.servlet.TestDispatcherServlet - Completed initialization in 0 ms
+15:49:18.016 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - GET "/api/schedule/access", parameters={}
+15:49:18.016 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#access(HttpServletRequest)
+15:49:18.017 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:18.017 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{editable=false}]
+15:49:18.018 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 200 OK
+15:49:18.019 [main] DEBUG com.jayway.jsonpath.internal.path.CompiledPath - Evaluating path: $['editable']
+15:49:18.025 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:18.026 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:18.039 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:18.039 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [com.stem.cvppmk.docs.ScheduleStore$Document@e5c2463]
+15:49:18.040 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 200 OK
+15:49:18.041 [main] DEBUG com.jayway.jsonpath.internal.path.CompiledPath - Evaluating path: $['rev']
+15:49:18.044 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - PUT "/api/schedule", parameters={}
+15:49:18.045 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping - Mapped to com.stem.cvppmk.docs.ScheduleController#put(HttpServletRequest)
+15:49:18.055 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Using @ExceptionHandler com.stem.cvppmk.docs.ScheduleController#error(ScheduleException)
+15:49:18.056 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Using 'application/json', given [*/*] and supported [application/json, application/*+json]
+15:49:18.056 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.HttpEntityMethodProcessor - Writing [{message=Jadwal sudah diubah pengguna lain. Salin perubahan lalu muat ulang., current=com.stem.cvppm (truncated)...]
+15:49:18.057 [main] DEBUG org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver - Resolved [com.stem.cvppmk.docs.ScheduleStore$ScheduleException: Jadwal sudah diubah pengguna lain. Salin perubahan lalu muat ulang.]
+15:49:18.057 [main] DEBUG org.springframework.test.web.servlet.TestDispatcherServlet - Completed 409 CONFLICT
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.549 s - in com.stem.cvppmk.docs.SchedulePermissionsTest
+[INFO]
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 123, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  26.417 s
+[INFO] Finished at: 2026-11-23T15:49:18+07:00
+[INFO] ------------------------------------------------------------------------
