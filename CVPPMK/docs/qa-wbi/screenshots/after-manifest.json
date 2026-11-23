@@ -1,0 +1,100 @@
+﻿[
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Home · PT Warung Begok Indonesia\",\"width\":1440}",
+                      "origin":  "http://127.0.0.1:18635/home.html"
+                  },
+        "file":  "after-home-desktop.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Home · PT Warung Begok Indonesia\",\"width\":390}",
+                      "origin":  "http://127.0.0.1:18635/home.html"
+                  },
+        "file":  "after-home-mobile.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"26 Warehouse · Setup \u0026 Cut Off\",\"width\":1440}",
+                      "origin":  "http://127.0.0.1:18635/setup.html#/warehouses"
+                  },
+        "file":  "after-setup-desktop.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"26 Warehouse · Setup \u0026 Cut Off\",\"width\":390}",
+                      "origin":  "http://127.0.0.1:18635/setup.html#/warehouses"
+                  },
+        "file":  "after-setup-mobile.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Ringkasan · Schedule PT Warung Begok Indonesia\",\"width\":1440}",
+                      "origin":  "http://127.0.0.1:18635/schedule.html"
+                  },
+        "file":  "after-schedule-desktop.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Ringkasan · Schedule PT Warung Begok Indonesia\",\"width\":390}",
+                      "origin":  "http://127.0.0.1:18635/schedule.html"
+                  },
+        "file":  "after-schedule-mobile.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Count Document · WBI\",\"width\":1440}",
+                      "origin":  "http://127.0.0.1:18635/countdoc.html"
+                  },
+        "file":  "after-countdoc-desktop.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Count Document · WBI\",\"width\":390}",
+                      "origin":  "http://127.0.0.1:18635/countdoc.html"
+                  },
+        "file":  "after-countdoc-mobile.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Crystal RPT Editor · WBI\",\"width\":1440}",
+                      "origin":  "http://127.0.0.1:18635/rpt.html"
+                  },
+        "file":  "after-rpt-desktop.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Crystal RPT Editor · WBI\",\"width\":390}",
+                      "origin":  "http://127.0.0.1:18635/rpt.html"
+                  },
+        "file":  "after-rpt-mobile.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Backup database · Tools CVPPMK\",\"width\":1440}",
+                      "origin":  "http://127.0.0.1:18635/hana.html"
+                  },
+        "file":  "after-hana-desktop.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Backup database · Tools CVPPMK\",\"width\":390}",
+                      "origin":  "http://127.0.0.1:18635/hana.html"
+                  },
+        "file":  "after-hana-mobile.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Ringkasan \u0026 Temuan · Project Check List\",\"width\":1440}",
+                      "origin":  "http://127.0.0.1:18635/index.html"
+                  },
+        "file":  "after-index-desktop.png"
+    },
+    {
+        "audit":  {
+                      "result":  "{\"company\":\"wbi\",\"errors\":0,\"overflow\":false,\"title\":\"Ringkasan \u0026 Temuan · Project Check List\",\"width\":390}",
+                      "origin":  "http://127.0.0.1:18635/index.html"
+                  },
+        "file":  "after-index-mobile.png"
+    }
+]
