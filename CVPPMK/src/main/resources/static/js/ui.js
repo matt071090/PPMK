@@ -39,9 +39,12 @@ export function showCompanyName() {
   return loadCompany().then(c => c.name !== 'No company' ? { name: c.name } : fetch("api/section/company-name").then(r => r.ok ? r.json() : null)).then(d => {
     if (!d || !d.name) return;
     company.name = d.name;
-    $("#company-name").textContent = d.name;
+    const nameNode = $("#company-name") || $(".brand > span:last-child > span:last-child");
+    if (nameNode) nameNode.textContent = d.name;
     const words = d.name.split(/\s+/).filter(w => !/^(CV|PT|UD|TBK)\.?$/i.test(w));
-    $("#company-logo").textContent = words.slice(0, 2).map(w => w[0]).join("").toUpperCase() || "NC";
+    const logoNode = $("#company-logo");
+    if (logoNode) logoNode.textContent = words.slice(0, 2).map(w => w[0]).join("").toUpperCase() || "NC";
+    if (company.code) document.title = document.title.replace(/CVPPMK/gi, company.code.toUpperCase());
   }).catch(() => { });
 }
 export const rowsOf = r => r && r.rows ? r.rows.map(row => Object.fromEntries(r.columns.map((c, i) => [c, row[i]]))) : [];
