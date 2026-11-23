@@ -25,6 +25,7 @@ public class ScheduleStore {
     private final ReentrantLock lock = new ReentrantLock();
     private final Path dir, file;
     private final String seed;
+    private volatile Set<String> fixedPics;
     public static class Document {
         public int rev;
         public String updatedAt;
@@ -52,6 +53,17 @@ public class ScheduleStore {
         dir = root.toAbsolutePath().normalize().resolve("schedule");
         file = dir.resolve("schedule.json");
         Files.createDirectories(dir);
+    }
+    /** Role markers come from the configured seed, independently of edits to a saved schedule. */
+    Set<String> fixedPicIds() throws IOException {
+        if (fixedPics != null) return fixedPics;
+        Set<String> ids = new LinkedHashSet<>();
+        try (InputStream in = ScheduleStore.class.getClassLoader().getResourceAsStream(seed)) {
+            if (in == null) throw new IOException("Seed tidak tersedia");
+            for (JsonNode it : mapper.readTree(bounded(in)).path("items"))
+                if ("STEM".equals(it.path("pic").asText())) ids.add(it.path("id").asText());
+        }
+        return fixedPics = Collections.unmodifiableSet(ids);
     }
     private static void require(boolean ok, String message) {
         if (!ok) throw new ScheduleException(400, message);

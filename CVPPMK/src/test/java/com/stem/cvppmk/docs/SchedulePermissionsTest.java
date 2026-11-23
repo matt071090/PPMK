@@ -60,6 +60,26 @@ class SchedulePermissionsTest {
         mvc.perform(put("/api/schedule").contentType("application/json").content(body(0,data))).andExpect(status().isForbidden());
         assertEquals(0,store.get().rev);
     }
+    @ParameterizedTest @ValueSource(strings={"", "wbi"})
+    void fixedStemPicCannotBeChangedByNonAdminButStatusCan(String code) throws Exception {
+        DataFiles f=files(code);ScheduleStore store=new ScheduleStore(f.dir(root.toString()),code.isEmpty()?"schedule/default.json":"schedule/default-wbi.json");
+        MockMvc mvc=controller(store,f);
+        ObjectNode data=(ObjectNode)store.get().data.deepCopy();
+        for(com.fasterxml.jackson.databind.JsonNode item:data.path("items")) if("upload-master".equals(item.path("id").asText()))((ObjectNode)item).put("pic","Bukan STEM");
+        mvc.perform(put("/api/schedule").contentType("application/json").content(body(0,data))).andExpect(status().isForbidden());
+        assertEquals(0,store.get().rev);
+        for(com.fasterxml.jackson.databind.JsonNode item:data.path("items")) if("upload-master".equals(item.path("id").asText()))((ObjectNode)item).put("pic","STEM").put("status","proses");
+        mvc.perform(put("/api/schedule").contentType("application/json").content(body(0,data))).andExpect(status().isOk());
+    }
+    @Test void wbiAdminCanOverrideFixedPicAndNonAdminKeepsThatValue() throws Exception {
+        DataFiles f=files("wbi");ScheduleStore store=new ScheduleStore(f.dir(root.toString()),"schedule/default-wbi.json");MockMvc mvc=controller(store,f);
+        org.springframework.mock.web.MockHttpSession session=new org.springframework.mock.web.MockHttpSession();session.setAttribute("cvppmk.setup.unlocked",true);
+        ObjectNode data=(ObjectNode)store.get().data.deepCopy();
+        for(com.fasterxml.jackson.databind.JsonNode item:data.path("items")) if("inventory-upload-toko".equals(item.path("id").asText()))((ObjectNode)item).put("pic","STEM pengganti");
+        mvc.perform(put("/api/schedule").session(session).contentType("application/json").content(body(0,data))).andExpect(status().isOk());
+        mvc.perform(put("/api/schedule").contentType("application/json").content(body(1,data))).andExpect(status().isOk());
+        assertEquals(data,store.get().data);
+    }
     @Test void addonCountsIncludeChildrenAndPreserveUnknown() {
         List<Map<String,Object>> ts=Arrays.asList(Collections.<String,Object>singletonMap("name","HEAD"),Collections.<String,Object>singletonMap("name","CHILD"));
         Map<String,Long> counts=new HashMap<>();counts.put("@HEAD",0L);

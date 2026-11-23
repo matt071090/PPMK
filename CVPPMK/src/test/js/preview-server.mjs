@@ -48,7 +48,7 @@ const server=http.createServer(async(req,res)=>{
     if(p==='/api/setup/capabilities')return reply(res,{branchEnabled,uploadAllowed:branchEnabled!==null});
     if(p==='/api/setup/steps')return reply(res,steps);
     if(p==='/api/setup/sources')return reply(res,{target:'WBI_DEMO',same:[{id:'same:WBI_DEMO',schema:'WBI_DEMO',company:company.name}],others:[],missing:[],declared:true});
-    if(p==='/api/schedule/access')return reply(res,{editable:unlocked});
+    if(p==='/api/schedule/access')return reply(res,{editable:unlocked,fixedPicIds:seed.items.filter(i=>i.pic==='STEM').map(i=>i.id)});
     if(p==='/api/schedule') {
       if(req.method==='PUT') {
         let raw='';for await(const chunk of req)raw+=chunk;
@@ -56,6 +56,7 @@ const server=http.createServer(async(req,res)=>{
         if(body.rev!==revision)return reply(res,{message:'Konflik revisi'},409);
         const strip=data=>({...data,items:data.items.map(({pic,status,...rest})=>rest)});
         if(!unlocked && JSON.stringify(strip(body.data))!==JSON.stringify(strip(schedule)))return reply(res,{message:'Tanggal dan catatan hanya admin'},403);
+        if(!unlocked && body.data.items.some(it=>seed.items.some(s=>s.id===it.id&&s.pic==='STEM') && it.pic!==schedule.items.find(s=>s.id===it.id)?.pic))return reply(res,{message:'PIC kegiatan STEM dikunci'},403);
         schedule=body.data;revision++;
       }
       return reply(res,{rev:revision,updatedAt:'2026-11-23T12:00:00Z',data:schedule});

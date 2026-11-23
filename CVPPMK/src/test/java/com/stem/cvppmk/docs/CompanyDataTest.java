@@ -50,14 +50,14 @@ class CompanyDataTest {
         ScheduleStore.Document wbi=new ScheduleStore(company("wbi").dir(root.toString()),"schedule/default-wbi.json").get();
         assertEquals(cv.data.path("project").path("goLiveDate"),wbi.data.path("project").path("goLiveDate"));
         assertEquals(37,cv.data.path("items").size());
-        assertEquals(35,wbi.data.path("items").size());
+        assertEquals(40,wbi.data.path("items").size());
         Map<String,JsonNode> cvItems=new HashMap<>();
         for(JsonNode a:cv.data.path("items")) cvItems.put(a.path("id").asText(),a);
         assertTrue(cvItems.containsKey("training"));assertTrue(cvItems.containsKey("training-1"));
         for(JsonNode b:wbi.data.path("items")) {
-            JsonNode a=cvItems.get(b.path("id").asText());assertNotNull(a);
-            a.fieldNames().forEachRemaining(k->{ if(k.endsWith("Date")||k.endsWith("Time")) assertEquals(a.get(k),b.get(k)); });
-            assertEquals("",b.path("pic").asText()); assertEquals("belum",b.path("status").asText());
+            JsonNode a=cvItems.get(b.path("id").asText());
+            if(a!=null) a.fieldNames().forEachRemaining(k->{ if(k.endsWith("Date")||k.endsWith("Time")) assertEquals(a.get(k),b.get(k)); });
+            assertEquals(wbiFixedIds().contains(b.path("id").asText())?"STEM":"",b.path("pic").asText()); assertEquals("belum",b.path("status").asText());
         }
     }
     @Test void wbiSeedHasNoTrainingOrFarmAndIncludesBothStockLocations() throws Exception {
@@ -67,12 +67,31 @@ class CompanyDataTest {
         Map<String,Integer> sections=new HashMap<>();
         for(JsonNode it:data.path("items")) {
             String section=it.path("section").asText();sections.put(section,sections.getOrDefault(section,0)+1);
-            if("opname".equals(it.path("id").asText())) assertTrue(it.path("note").asText().contains("Pabrik dan Toko"));
+            if("opname".equals(it.path("id").asText())) assertTrue(it.path("note").asText().contains("Produksi / Pabrik / Central Kitchen"));
             if("master-E0".equals(it.path("id").asText())) assertEquals("Add-On Master Data (STEM, Retail, iReapBiz)",it.path("title").asText());
         }
-        assertEquals(Integer.valueOf(14),sections.get("milestone"));assertEquals(Integer.valueOf(16),sections.get("master"));
-        assertEquals(Integer.valueOf(5),sections.get("balance"));assertEquals(3,sections.size());
-        assertTrue(data.path("rules").toString().contains("Pabrik dan Toko"));
+        assertEquals(Integer.valueOf(18),sections.get("milestone"));assertEquals(Integer.valueOf(16),sections.get("master"));
+        assertEquals(Integer.valueOf(6),sections.get("balance"));assertEquals(3,sections.size());
+        assertTrue(data.path("rules").toString().contains("Produksi / Pabrik / Central Kitchen"));
+    }
+    private Set<String> wbiFixedIds() { return new HashSet<>(Arrays.asList("upload-master","inventory","inventory-upload","inventory-toko","inventory-upload-toko","ap-ar","fa","gl")); }
+    @Test void wbiLocationsHaveSeparateTimesAndStemRoles() throws Exception {
+        ScheduleStore store=new ScheduleStore(company("wbi").dir(root.toString()),"schedule/default-wbi.json");
+        Map<String,JsonNode> items=new HashMap<>();for(JsonNode it:store.get().data.path("items"))items.put(it.path("id").asText(),it);
+        assertEquals(wbiFixedIds(),store.fixedPicIds());
+        assertEquals("19:00",items.get("balance-inv").path("handoverTime").asText());
+        assertEquals("19:00-20:00",items.get("balance-inv").path("uploadTime").asText());
+        assertEquals("22:00",items.get("balance-inv-toko").path("handoverTime").asText());
+        assertEquals("",items.get("balance-inv-toko").path("uploadTime").asText());
+        assertTrue(items.get("inventory-toko").path("note").asText().contains("31 Desember 2026 pukul 22:00"));
+        assertTrue(items.get("inventory-upload-toko").path("note").asText().startsWith("ASUMSI:"));
+        assertTrue(items.get("inventory-upload-toko").path("note").asText().contains("setelah 22:00"));
+        for(String id:Arrays.asList("opname","cutoff","inventory","inventory-upload")) {
+            assertEquals(items.get(id).path("startDate"),items.get(id+"-toko").path("startDate"));
+            assertEquals(items.get(id).path("endDate"),items.get(id+"-toko").path("endDate"));
+            assertTrue(items.get(id).path("title").asText().contains("Produksi / Pabrik / Central Kitchen"));
+            assertTrue(items.get(id+"-toko").path("title").asText().contains("Toko / Store"));
+        }
     }
     @Test void newWbiSeedDoesNotMigrateAnExistingScheduleWithTraining() throws Exception {
         Path legacy=root.resolve("existing-wbi");ScheduleStore original=new ScheduleStore(legacy,"schedule/default.json");

@@ -5,8 +5,9 @@
   },
   "rules": [
     "Setelah 21 Desember, master data baru/perubahan diinput sendiri oleh user. Tidak ada upload susulan STEM.",
-    "Inventory sudah diupload 31 Des malam, lalu Go Live 1 Januari 2027. A/P, A/R, Fixed Asset, dan G/L diupload setelah Go Live (7 s/d 14 Jan).",
-    "Stock Opname berlaku untuk Pabrik dan Toko. Tanpa penerimaan/pengiriman selama opname; pergerakan setelah cut off dikoordinasikan dengan STEM."
+    "Produksi / Pabrik / Central Kitchen: Stock Opname 29-31 Desember, cut off inventory 31 Desember; serah ke STEM 19:00 dan upload SAP 19:00-20:00. Tanpa penerimaan/pengiriman selama opname.",
+    "Toko / Store: Stock Opname 29-31 Desember, cut off inventory 31 Desember. Batas akhir serah ke STEM 31 Desember 2026 pukul 22:00. ASUMSI: upload SAP setelah serah ke STEM (setelah 22:00), tanpa jam selesai yang ditetapkan.",
+    "Go Live tetap 1 Januari 2027. A/P, A/R, Fixed Asset, dan G/L diupload setelah Go Live (7 s/d 14 Jan). Transaksi 31 Des diakui Januari 2027; pergerakan setelah cut off dikoordinasikan dengan STEM."
   ],
   "items": [
     {
@@ -49,7 +50,7 @@
       "startDate": "2026-12-19",
       "endDate": "2026-12-19",
       "status": "belum",
-      "pic": "",
+      "pic": "STEM",
       "note": "Sabtu, 10:00-12:00.",
       "cutover": true
     },
@@ -67,45 +68,89 @@
     {
       "id": "opname",
       "section": "milestone",
-      "title": "Stock Opname",
+      "title": "Stock Opname Produksi / Pabrik / Central Kitchen",
       "startDate": "2026-12-29",
       "endDate": "2026-12-31",
       "status": "belum",
       "pic": "",
-      "note": "Pabrik dan Toko. Hitung fisik oleh Tim WBI, tanpa penerimaan/pengiriman.",
+      "note": "Produksi / Pabrik / Central Kitchen. Hitung fisik oleh Tim WBI, tanpa penerimaan/pengiriman selama opname.",
       "cutover": true
     },
     {
       "id": "cutoff",
       "section": "milestone",
-      "title": "Cut off inventory",
+      "title": "Cut off inventory Produksi / Pabrik / Central Kitchen",
       "startDate": "2026-12-31",
       "endDate": "2026-12-31",
       "status": "belum",
       "pic": "",
-      "note": "",
+      "note": "Produksi / Pabrik / Central Kitchen. Cut off inventory 31 Desember 2026.",
       "cutover": false
     },
     {
       "id": "inventory",
       "section": "milestone",
-      "title": "Serah inventory ke STEM",
+      "title": "Serah inventory Produksi / Pabrik / Central Kitchen ke STEM",
       "startDate": "2026-12-31",
       "endDate": "2026-12-31",
       "status": "belum",
-      "pic": "",
-      "note": "Serah 19:00 oleh Tim WBI. Transaksi 31 Des diakui sebagai transaksi Januari 2027.",
+      "pic": "STEM",
+      "note": "Produksi / Pabrik / Central Kitchen. Serah ke STEM pukul 19:00 pada 31 Desember 2026.",
       "cutover": true
     },
     {
       "id": "inventory-upload",
       "section": "milestone",
-      "title": "Upload inventory ke SAP",
+      "title": "Upload inventory Produksi / Pabrik / Central Kitchen ke SAP",
+      "startDate": "2026-12-31",
+      "endDate": "2026-12-31",
+      "status": "belum",
+      "pic": "STEM",
+      "note": "Produksi / Pabrik / Central Kitchen. Upload SAP pukul 19:00-20:00 pada 31 Desember 2026; dicek Tim WBI.",
+      "cutover": true
+    },
+    {
+      "id": "opname-toko",
+      "section": "milestone",
+      "title": "Stock Opname Toko / Store",
+      "startDate": "2026-12-29",
+      "endDate": "2026-12-31",
+      "status": "belum",
+      "pic": "",
+      "note": "Toko / Store. Hitung fisik oleh Tim WBI pada 29-31 Desember, tanpa penerimaan/pengiriman selama opname.",
+      "cutover": true
+    },
+    {
+      "id": "cutoff-toko",
+      "section": "milestone",
+      "title": "Cut off inventory Toko / Store",
       "startDate": "2026-12-31",
       "endDate": "2026-12-31",
       "status": "belum",
       "pic": "",
-      "note": "Upload 19:00-20:00 oleh STEM; dicek Tim WBI.",
+      "note": "Toko / Store. Cut off inventory 31 Desember 2026; tidak menetapkan jam cut off baru.",
+      "cutover": false
+    },
+    {
+      "id": "inventory-toko",
+      "section": "milestone",
+      "title": "Serah inventory Toko / Store ke STEM",
+      "startDate": "2026-12-31",
+      "endDate": "2026-12-31",
+      "status": "belum",
+      "pic": "STEM",
+      "note": "Toko / Store. Batas akhir serah ke STEM. Paling lambat 31 Desember 2026 pukul 22:00.",
+      "cutover": true
+    },
+    {
+      "id": "inventory-upload-toko",
+      "section": "milestone",
+      "title": "Upload inventory Toko / Store ke SAP",
+      "startDate": "2026-12-31",
+      "endDate": "2026-12-31",
+      "status": "belum",
+      "pic": "STEM",
+      "note": "ASUMSI: Toko / Store, upload setelah serah ke STEM (setelah 22:00). Jam selesai belum ditentukan Fakhri; admin dapat mengedit jadwal.",
       "cutover": true
     },
     {
@@ -116,7 +161,7 @@
       "endDate": "2027-01-01",
       "status": "belum",
       "pic": "",
-      "note": "Inventory sudah diupload. Saldo A/P, A/R, Fixed Asset, dan G/L menyusul.",
+      "note": "Inventory Produksi / Pabrik / Central Kitchen dan Toko / Store mengikuti alur masing-masing lokasi. Jam selesai upload Toko / Store belum ditentukan. Saldo A/P, A/R, Fixed Asset, dan G/L menyusul.",
       "cutover": true
     },
     {
@@ -126,7 +171,7 @@
       "startDate": "2027-01-07",
       "endDate": "2027-01-07",
       "status": "belum",
-      "pic": "",
+      "pic": "STEM",
       "note": "",
       "cutover": true
     },
@@ -137,7 +182,7 @@
       "startDate": "2027-01-12",
       "endDate": "2027-01-12",
       "status": "belum",
-      "pic": "",
+      "pic": "STEM",
       "note": "",
       "cutover": true
     },
@@ -148,7 +193,7 @@
       "startDate": "2027-01-14",
       "endDate": "2027-01-14",
       "status": "belum",
-      "pic": "",
+      "pic": "STEM",
       "note": "",
       "cutover": true
     },
@@ -342,17 +387,32 @@
     {
       "id": "balance-inv",
       "section": "balance",
-      "title": "Inventory",
+      "title": "Inventory Produksi / Pabrik / Central Kitchen",
       "startDate": "2026-12-31",
       "endDate": "2026-12-31",
       "status": "belum",
       "pic": "",
-      "note": "Dicek Tim WBI. Transaksi 31 Des diakui sebagai transaksi Januari 2027; pergerakan setelah cut off dikoordinasikan dengan STEM.",
+      "note": "Produksi / Pabrik / Central Kitchen. Serah ke STEM 31 Desember pukul 19:00, upload SAP 19:00-20:00. Transaksi 31 Des diakui Januari 2027; pergerakan setelah cut off dikoordinasikan dengan STEM.",
       "cutoffDate": "2026-12-31",
       "handoverDate": "2026-12-31",
       "uploadDate": "2026-12-31",
       "handoverTime": "19:00",
       "uploadTime": "19:00-20:00"
+    },
+    {
+      "id": "balance-inv-toko",
+      "section": "balance",
+      "title": "Inventory Toko / Store",
+      "startDate": "2026-12-31",
+      "endDate": "2026-12-31",
+      "status": "belum",
+      "pic": "",
+      "note": "ASUMSI: Toko / Store, upload setelah serah ke STEM (setelah 22:00). Jam selesai belum ditentukan Fakhri; admin dapat mengedit jadwal.",
+      "cutoffDate": "2026-12-31",
+      "handoverDate": "2026-12-31",
+      "uploadDate": "2026-12-31",
+      "handoverTime": "22:00",
+      "uploadTime": ""
     },
     {
       "id": "balance-ap",

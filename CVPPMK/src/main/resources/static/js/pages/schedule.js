@@ -34,7 +34,7 @@ export function scheduleTabs(items) {
     stock:'Stock Opname', balance:'Beginning Balance' };
 }
 export function timelineMilestones(items) {
-  return ['kickoff','training','upload-master','verify','opname','inventory','golive','ap-ar','fa','gl','final']
+  return ['kickoff','training','upload-master','verify','opname','opname-toko','inventory','inventory-toko','golive','ap-ar','fa','gl','final']
     .map(id => items.find(it => it.id === id)).filter(Boolean);
 }
 // Teks ringkas untuk kartu garis waktu: kalimat yang memuat hari, tanggal, jam, atau tahun dibuang (tanggalnya sudah ada di sumbu).
@@ -44,13 +44,14 @@ const NOTE_TIME = /\b\d{1,2}[:.]\d{2}\b/;
 const NOTE_YEAR = /\b20\d{2}\b/;
 export function cardNote(note) {
   return String(note || '').split(/(?<=[.;])\s+/).map(s => s.trim())
-    .filter(s => s && !(NOTE_DAY.test(s) || NOTE_DATE.test(s) || NOTE_TIME.test(s) || NOTE_YEAR.test(s)))
+    .filter(s => s && (/^ASUMSI:/i.test(s) || !(NOTE_DAY.test(s) || NOTE_DATE.test(s) || NOTE_TIME.test(s) || NOTE_YEAR.test(s))))
     .map(s => s.replace(/;$/, '.').replace(/^./, c => c.toUpperCase())).join(' ');
 }
 // Pekerjaan konsultan STEM: PIC otomatis "STEM" dan tidak bisa diubah (ubah daftar ini bila pembagian kerja berubah).
 export const STEM_ITEMS = ['training', 'training-1', 'upload-master', 'inventory-upload', 'ap-ar', 'fa', 'gl'];
 export const isStemItem = id => STEM_ITEMS.includes(id);
-export const fixedCompanyPic = (id, code = company.code) => !code && isStemItem(id);
+let fixedPicIds = null;
+export const fixedCompanyPic = (id, code = company.code, ids = fixedPicIds) => ids ? ids.includes(id) : !code && isStemItem(id);
 export function rollupStatus(statuses) {
   if (!statuses.length) return null;
   return statuses.every(s => s === 'selesai') ? 'selesai' : statuses.some(s => s === 'selesai' || s === 'proses') ? 'proses' : 'belum';
@@ -60,8 +61,8 @@ export function withTrainingRollup(items) {
   const status = rollupStatus(days.map(it => it.status));
   return status ? items.map(it => it.id === 'training' ? Object.assign({}, it, { status, auto: true }) : it) : items;
 }
-export function withFixedPic(items, enabled = true) {
-  return items.map(it => enabled && isStemItem(it.id) ? Object.assign({}, it, { pic: 'STEM', picFixed: true }) : it);
+export function withFixedPic(items, enabled = true, ids = STEM_ITEMS, keepAssigned = false) {
+  return items.map(it => enabled && ids.includes(it.id) ? Object.assign({}, it, { pic: keepAssigned && it.pic ? it.pic : 'STEM', picFixed: true }) : it);
 }
 // PIC: "" | "STEM" | "PPMK:<USER_CODE>" (user dari daftar user SAP di menu User). Nilai lain (teks lama) ditampilkan apa adanya.
 export function activeUsers(rows) {
@@ -130,14 +131,36 @@ export function todayMarker(items, today = todayLocal()) {
   return {date:today, percent:span ? countdown(today,start)/span*100 : 0};
 }
 // Garis waktu Beginning Balance: cut off Inventory, serah+upload Inventory, cut off area lain, lalu serah->upload per area (A/P dan A/R digabung).
+export const isInventoryActivity = id => /^(opname|cutoff|inventory(?:-upload)?)(?:-[a-z0-9-]+)?$/.test(id);
+// Location labels come from seed titles; shared CV data has no suffix and retains its original labels.
+export function inventoryLocations(items) {
+  const get = id => items.find(it => it.id === id);
+  return items.filter(it => it.id === 'balance-inv' || it.id.startsWith('balance-inv-')).map(balance => {
+    const suffix = balance.id.slice('balance-inv'.length), label = balance.title.replace(/^Inventory\s*/, '');
+    const shortLabel = label.split(/\s*\/\s*/).slice(0,2).join('/');
+    return { balance, suffix, label, shortLabel, opname:get('opname'+suffix), cutoff:get('cutoff'+suffix), handover:get('inventory'+suffix), upload:get('inventory-upload'+suffix) };
+  });
+}
+export function shortInventoryTitle(title, items) {
+  return inventoryLocations(items).reduce((t, loc) => loc.label ? t.replace(loc.label, loc.shortLabel) : t, title);
+}
+export function inventoryFlow(loc) {
+  const b=loc.balance, label=loc.shortLabel ? ' '+loc.shortLabel : '', target='stock';
+  return [
+    {id:'st-opname'+loc.suffix,title:'Hitung fisik'+label,startDate:loc.opname.startDate,endDate:loc.opname.endDate,status:loc.opname.status,note:loc.label ? loc.opname.note : 'Oleh tim perusahaan, tanpa penerimaan/pengiriman.',target},
+    {id:'st-cutoff'+loc.suffix,title:'Cut off inventory'+label,startDate:b.cutoffDate,endDate:b.cutoffDate,status:loc.cutoff.status,note:'',target},
+    {id:'st-serah'+loc.suffix,title:'Serah ke STEM'+label,startDate:b.handoverDate,endDate:b.handoverDate,status:loc.handover.status,note:loc.label ? loc.handover.note : '',time:b.handoverTime,target},
+    {id:'st-upload'+loc.suffix,title:'Upload SAP'+label,startDate:b.uploadDate,endDate:b.uploadDate,status:(loc.upload||b).status,note:!b.uploadTime ? b.note : 'Dicek tim perusahaan.',time:b.uploadTime,target}
+  ];
+}
 export function balanceTimeline(items) {
   const get = id => items.find(it => it.id === id);
   const lo = (...v) => v.filter(Boolean).sort()[0], hi = (...v) => v.filter(Boolean).sort().slice(-1)[0];
-  const inv = get('balance-inv'), rest = ['balance-ap', 'balance-ar', 'balance-asset', 'balance-ledger'].map(get).filter(Boolean);
+  const rest = ['balance-ap', 'balance-ar', 'balance-asset', 'balance-ledger'].map(get).filter(Boolean);
   const out = [];
-  if (inv) {
-    out.push({ id: 'bb-inv-cutoff', title: 'Cut off Inventory', startDate: inv.cutoffDate, endDate: inv.cutoffDate, status: inv.status, note: '', target: 'balance' });
-    out.push({ id: 'bb-inv-upload', title: 'Serah & upload Inventory', startDate: inv.handoverDate, endDate: inv.uploadDate, status: inv.status, note: 'Serah ke STEM lalu upload SAP.', time: inv.uploadTime, target: 'balance' });
+  for (const {balance:inv, suffix, label} of inventoryLocations(items)) {
+    out.push({ id: 'bb-inv-cutoff'+suffix, title: 'Cut off Inventory'+(label?' '+label:''), startDate: inv.cutoffDate, endDate: inv.cutoffDate, status: inv.status, note: '', target: 'balance' });
+    out.push({ id: 'bb-inv-upload'+suffix, title: 'Serah & upload Inventory'+(label?' '+label:''), startDate: inv.handoverDate, endDate: inv.uploadDate, status: inv.status, note: inv.uploadTime ? 'Serah ke STEM lalu upload SAP.' : inv.note, time: inv.uploadTime, target: 'balance' });
   }
   if (rest.length) out.push({ id: 'bb-cutoff', title: 'Cut off A/P, A/R, Fixed Asset, G/L', startDate: lo(...rest.map(it => it.cutoffDate)), endDate: hi(...rest.map(it => it.cutoffDate)), status: areaStatus(rest), note: '', target: 'balance' });
   for (const [ids, title] of [[['balance-ap', 'balance-ar'], 'A/P dan A/R'], [['balance-asset'], 'Fixed Asset'], [['balance-ledger'], 'G/L']]) {
@@ -265,22 +288,22 @@ function mount() {
     document.querySelectorAll('[data-tab]').forEach(a => { a.closest('li').hidden = !Object.hasOwn(names, a.dataset.tab); a.classList.toggle('active',a.dataset.tab===tab); if(a.dataset.tab===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
     if (!doc) return;
     $('#revision').textContent = `Disimpan terakhir: ${savedAt(doc.updatedAt)}${dirty ? ' • Ada perubahan lokal' : ''}`;
-    const all = withTrainingRollup(withFixedPic(RV ? RV.withReview(doc.data.items, reviewPages) : doc.data.items, !company.code));
-    const belongs = it => it.section === tab || tab==='stock' && it.id==='balance-inv' || it.section === 'milestone' && (
+    const all = withTrainingRollup(withFixedPic(RV ? RV.withReview(doc.data.items, reviewPages) : doc.data.items, true, fixedPicIds || (company.code ? [] : STEM_ITEMS), !!company.code));
+    const belongs = it => it.section === tab || tab==='stock' && (it.id==='balance-inv'||it.id.startsWith('balance-inv-')) || it.section === 'milestone' && (
       tab === 'master' && ['prepare','deadline','upload-master','verify'].includes(it.id) ||
-      tab === 'stock' && ['opname','cutoff','inventory','inventory-upload'].includes(it.id) ||
+      tab === 'stock' && isInventoryActivity(it.id) ||
       tab === 'ringkasan' && (it.cutover || it.id === 'kickoff'));
     const items = all.filter(belongs).sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.endDate.localeCompare(b.endDate));
     const symbols = {selesai:'✓',proses:'◐',belum:'○',telat:'!'};
     const badge = status => `<span class="badge ${status}">${symbols[status]} ${esc(status)}</span>`;
     const dates = it => `${esc(format(it.startDate))}${it.endDate!==it.startDate ? ' s/d '+esc(format(it.endDate)):''}`;
-    const targetOf = it => ['opname','cutoff','inventory','inventory-upload'].includes(it.id)?'stock':it.id==='training'?'training':['prepare','deadline','upload-master','verify'].includes(it.id)?'master':'ringkasan';
+    const targetOf = it => isInventoryActivity(it.id)?'stock':it.id==='training'?'training':['prepare','deadline','upload-master','verify'].includes(it.id)?'master':'ringkasan';
     const entryOf = it => withSubmitRange({id:it.id,title:it.title,startDate:it.startDate,endDate:it.endDate,status:it.status,note:it.notes||it.note||'',target:targetOf(it)}, all);
     // Garis waktu bersama (Ringkasan dan Stock Opname). Entri: {id,title,startDate,endDate,status,note,target,time?}. Tanggal/jam di sumbu, bukan di kartu.
     const timelineHtml = (list, nextId, marker) => `<div class="timeline-shell"><ol class="timeline${list.length<=6?' wide':''}" style="--count:${list.length || 1}">${list.map((e,i)=>{
       const status=effectiveStatus(e.status,e.endDate), short=compactTimelineDate(e.startDate,e.endDate);
-      const note=cardNote(e.note || ''), summary=note.length>90 ? note.slice(0,87)+'…' : note, sub=esc(short.year)+(e.time?' · '+esc(e.time):'');
-      return `<li class="${i%2?'below':'above'} ${e.id===nextId?'upcoming':''}" style="--slot:${i+1};--tone:var(--tl-${i%5})"><span class="timeline-dot ${status}" aria-hidden="true">${status==='selesai'?'✓':status==='telat'?'!':''}</span><span class="timeline-stem" aria-hidden="true"></span><span class="timeline-date" aria-hidden="true">${esc(short.label)}<small>${sub}</small></span><a class="timeline-card" href="#/${e.target}" title="${esc(e.title+' · '+format(e.startDate)+(e.endDate!==e.startDate?' s/d '+format(e.endDate):'')+(e.time?' · '+e.time:'')+(note?' · '+note:''))}"><span class="mobile-date">${esc(short.label)} <small>${sub}</small></span><b>${esc(e.title)}</b>${summary?`<span class="timeline-note">${esc(summary)}</span>`:''}${badge(status)}${e.id===nextId?'<span class="next-label">Berikutnya</span>':''}<span class="sr-only">${dates(e)}</span></a></li>`;
+      const note=cardNote(e.note || ''), summary=note.length>90 && !/^ASUMSI:/i.test(note) ? note.slice(0,87)+'…' : note, title=shortInventoryTitle(e.title,all), sub=esc(short.year)+(e.time?' · '+esc(e.time):'');
+      return `<li class="${i%2?'below':'above'} ${e.id===nextId?'upcoming':''}" style="--slot:${i+1};--tone:var(--tl-${i%5})"><span class="timeline-dot ${status}" aria-hidden="true">${status==='selesai'?'✓':status==='telat'?'!':''}</span><span class="timeline-stem" aria-hidden="true"></span><span class="timeline-date" aria-hidden="true">${esc(short.label)}<small>${sub}</small></span><a class="timeline-card" href="#/${e.target}" title="${esc(e.title+' · '+format(e.startDate)+(e.endDate!==e.startDate?' s/d '+format(e.endDate):'')+(e.time?' · '+e.time:'')+(note?' · '+note:''))}"><span class="mobile-date">${esc(short.label)} <small>${sub}</small></span><b>${esc(title)}</b>${summary?`<span class="timeline-note">${esc(summary)}</span>`:''}${badge(status)}${e.id===nextId?'<span class="next-label">Berikutnya</span>':''}<span class="sr-only">${dates(e)}</span></a></li>`;
     }).join('')}</ol>${marker!==null&&marker!==undefined?`<span class="timeline-today" style="--position:${marker/100}" title="${esc(format(todayLocal()))}"><span>Hari ini</span></span>`:''}</div>`;
     const rules = doc.data.rules.filter((rule,i)=>tab==='ringkasan'||i===0&&tab==='master');
     const lockNote = editable ? '' : `<div class="callout warn lock-note"><b>Mode lihat.</b> PIC dan status bisa diubah lalu Simpan; tanggal dan catatan hanya admin. Diskusi bisa dipakai semua. ${lockConfigured ? `<form id="unlock-form" class="unlock"><label class="sr-only" for="unlock-pw">Password admin</label><input id="unlock-pw" class="control" type="password" autocomplete="current-password" placeholder="Password admin (sama dengan Setup)" maxlength="200"><button class="control secondary" type="submit">Buka kunci</button><span id="unlock-msg" role="alert"></span></form>` : ''}</div>`;
@@ -298,12 +321,16 @@ function mount() {
       const next=nextMilestone(all), timeline=timelineMilestones(all);
       if(next && !timeline.some(it=>it.id===next.id)) timeline.push(next);
       timeline.sort((a,b)=>a.startDate.localeCompare(b.startDate)||a.id.localeCompare(b.id));
-      const invUp=all.find(x=>x.id==='inventory-upload');
-      const entries=timeline.map(entryOf).map(e=>e.id==='inventory'&&invUp?{...e,title:'Serah & upload inventory',status:rollupStatus([e.status,invUp.status])}:e), marker=timelinePosition(entries);
+      const locations=inventoryLocations(all);
+      const entries=timeline.map(entryOf).map(e=>{
+        const loc=locations.find(l=>l.handover?.id===e.id);
+        if(!loc?.upload) return e;
+        return {...e,title:'Serah & upload '+(loc.label||'inventory'),status:rollupStatus([e.status,loc.upload.status]),time:loc.balance.uploadTime||loc.balance.handoverTime,note:loc.balance.uploadTime?e.note:loc.balance.note};
+      }), marker=timelinePosition(entries);
       if(next) html += `<p class="next">Berikutnya: <b>${esc(next.title)}</b> dalam ${countdown(next.startDate)} hari</p>`;
       html += `<h2>Garis waktu</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr> Pilih kartu untuk membuka tab kegiatan.</p>${timelineHtml(entries, next?.id, marker)}`;
       const attention = needsAttention(all);
-      html += ` ${attention.length ? `<section class="attention"><h2>Perlu dicek</h2>`+ `<ul>${attention.map(it=>`<li><a href="#/${it.section==='milestone' ? ['opname','cutoff','inventory','inventory-upload'].includes(it.id)?'stock':it.id==='training'?'training':['prepare','deadline','upload-master','verify'].includes(it.id)?'master':'ringkasan' : it.section}">${esc(it.title)}</a> · ${esc(format(it.endDate))} ${badge(effectiveStatus(it.status,it.endDate))}</li>`).join('')}</ul>`+'</section>' : '<p class="muted">Perlu dicek: tidak ada kegiatan mendesak.</p>'}`;
+      html += ` ${attention.length ? `<section class="attention"><h2>Perlu dicek</h2>`+ `<ul>${attention.map(it=>`<li><a href="#/${it.section==='milestone' ? isInventoryActivity(it.id)?'stock':it.id==='training'?'training':['prepare','deadline','upload-master','verify'].includes(it.id)?'master':'ringkasan' : it.section}">${esc(it.title)}</a> · ${esc(format(it.endDate))} ${badge(effectiveStatus(it.status,it.endDate))}</li>`).join('')}</ul>`+'</section>' : '<p class="muted">Perlu dicek: tidak ada kegiatan mendesak.</p>'}`;
       const get = id => all.find(it=>it.id===id);
       const cell = (label, value) => `<td data-label="${label}">${value}</td>`;
       const master = all.filter(it=>it.section==='master'||['prepare','deadline','upload-master','verify'].includes(it.id));
@@ -311,25 +338,24 @@ function mount() {
       const row = (title,cutoff,handover,upload,group) => `<tr>${cell('Area',esc(title))}${cell('Cut Off',cutoff)}${cell('Serah ke STEM',handover)}${cell('Upload SAP',upload)}${cell('PIC',esc([...new Set(group.map(it=>picLabel(it.pic,picUsers)).filter(Boolean))].join(', ')||'-'))}${cell('Status',badge(areaStatus(group)))}</tr>`;
       html += '<h2>Ringkasan per area</h2><div class="table-wrap"><table class="settings area-table"><thead><tr><th>Area</th><th>Cut Off</th><th>Serah ke STEM</th><th>Upload SAP</th><th>PIC</th><th>Status</th></tr></thead><tbody>';
       html += row('Master Data','-',dateOf('deadline'),dateOf('upload-master')+'<small>Verifikasi: '+dateOf('verify')+'</small>',master);
-      for (const ids of [['balance-inv'],['balance-ap','balance-ar'],['balance-asset'],['balance-ledger']]) {
+      for (const ids of [...inventoryLocations(all).map(l=>[l.balance.id]),['balance-ap','balance-ar'],['balance-asset'],['balance-ledger']]) {
         const group = ids.map(get).filter(Boolean); if(!group.length) continue;
         // Jika A/P dan A/R diedit berbeda, tampilkan kedua jadwal dengan label.
-        const values = (key,time) => group.map(it=>`${group.length>1?esc(it.title)+': ':''}${esc(format(it[key]))} ${time?esc(it[time]):''}`).join('<br>');
+        const values = (key,time) => group.map(it=>`${group.length>1?esc(it.title)+': ':''}${esc(format(it[key]))} ${time?esc(it[time] || (time==='uploadTime' && /^ASUMSI:/i.test(it.note) ? it.note : '')):''}`).join('<br>');
         html += row(group.length>1?'A/P dan A/R':group[0].title,values('cutoffDate'),values('handoverDate','handoverTime'),values('uploadDate','uploadTime'),group);
       }
       html += '</tbody></table></div><p>Status area menggabungkan checklist terkait; milestone dan checklist tetap disimpan terpisah.</p>';
       html += '<h2>Kegiatan cutover</h2><p class="muted">Urutan cutover dan milestone proyek. PIC dan status bisa diubah langsung di sini; kegiatan yang juga muncul di tab lain memakai data yang sama.</p>';
     }
     if (tab === 'stock') {
-      const get=id=>all.find(it=>it.id===id), inv=get('balance-inv');
-      const steps=inv?[
-        {id:'st-opname',title:'Hitung fisik',startDate:get('opname').startDate,endDate:get('opname').endDate,status:get('opname').status,note:company.code === 'wbi' ? get('opname').note : 'Oleh tim perusahaan, tanpa penerimaan/pengiriman.',target:'stock'},
-        {id:'st-cutoff',title:'Cut off inventory',startDate:inv.cutoffDate,endDate:inv.cutoffDate,status:get('cutoff').status,note:'',target:'stock'},
-        {id:'st-serah',title:'Serah ke STEM',startDate:inv.handoverDate,endDate:inv.handoverDate,status:get('inventory').status,note:'',time:inv.handoverTime,target:'stock'},
-        {id:'st-upload',title:'Upload SAP',startDate:inv.uploadDate,endDate:inv.uploadDate,status:(get('inventory-upload')||inv).status,note:'Dicek tim perusahaan.',time:inv.uploadTime,target:'stock'}
-      ]:[];
-      if(inv) html += `<h2>Alur inventory</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps, null, timelinePosition(steps))}
-      <section class="rules"><h2>Aturan</h2><ul><li>${esc(company.code === 'wbi' ? get('opname').note : 'Tanpa penerimaan/pengiriman selama opname.')}</li><li>Transaksi 31 Des diakui Januari 2027.</li><li>Pergerakan setelah cut off dikoordinasikan dengan STEM.</li></ul></section>`;
+      const locations=inventoryLocations(all);
+      html += '<div id="inventory-flows"><h2>Alur inventory</h2>';
+      for (const loc of locations) {
+        const steps=inventoryFlow(loc);
+        html += `${loc.label?`<h3>${esc(loc.label)}</h3>`:''}<p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps,null,timelinePosition(steps))}`;
+      }
+      const locationRules=doc.data.rules.filter(rule=>locations.some(loc=>loc.label && rule.startsWith(loc.label+':')));
+      html += `<section class="rules"><h2>Aturan</h2><ul>${locationRules.length?locationRules.map(rule=>`<li>${esc(rule)}</li>`).join(''):'<li>Tanpa penerimaan/pengiriman selama opname.</li><li>Transaksi 31 Des diakui Januari 2027.</li><li>Pergerakan setelah cut off dikoordinasikan dengan STEM.</li>'}</ul></section></div>`;
     }
     if (tab === 'balance') { const steps=balanceTimeline(all); html += `<h2>Alur saldo awal</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${steps.length?timelineHtml(steps, null, timelinePosition(steps)):''}<p>Status di sini mencatat kesiapan saldo awal per area, terpisah dari status milestone Ringkasan.</p>`; }
     html += '<div id="editor-slot"></div>';
@@ -343,8 +369,8 @@ function mount() {
       return `<div class="table-wrap"><table class="settings activity-table"><thead><tr><th>Kegiatan</th><th>Jadwal</th><th>PIC</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${rows.map(it=>{
         const status=effectiveStatus(it.status,it.endDate);
         const note=it.section==='master' && /^Batas akhir data dari user:/.test(it.note) ? '' : it.note;
-        const date=it.section==='balance' ? `Cut off ${esc(format(it.cutoffDate))} · Serah ${esc(format(it.handoverDate))} ${esc(it.handoverTime)} · Upload ${esc(format(it.uploadDate))} ${esc(it.uploadTime)}` : dates(it);
-        return `<tr><td class="item-title"><b>${esc(it.title)}</b>${note?`<details class="item-note" ${tab==='training'?'open':''}><summary>Catatan${tab==='training'?' materi & peserta':''}</summary>${esc(note)}</details>`:''}</td><td class="item-date">${date}</td><td class="item-pic">${it.picFixed ? `<span class="pic-fixed" title="Pekerjaan konsultan STEM: PIC otomatis dan tidak bisa diubah">STEM<small>otomatis</small></span>` : picSelectHtml(it.pic, `data-pic="${esc(it.id)}" aria-label="PIC ${esc(it.title)}"`)}</td><td class="item-status">${statusCell(it,status)}</td><td class="item-action"><button class="control secondary" data-edit="${esc(it.id)}" aria-label="Ubah ${esc(it.title)}">Ubah</button><span data-chat-slot="item:${esc(it.id)}"></span></td></tr>`;
+        const date=it.section==='balance' ? `Cut off ${esc(format(it.cutoffDate))} · Serah ${esc(format(it.handoverDate))} ${esc(it.handoverTime)} · Upload ${esc(format(it.uploadDate))} ${esc(it.uploadTime || (/^ASUMSI:/i.test(it.note) ? it.note : ''))}` : dates(it);
+        return `<tr><td class="item-title"><b>${esc(it.title)}</b>${note?`<details class="item-note" ${tab==='training'?'open':''}><summary>Catatan${tab==='training'?' materi & peserta':''}</summary>${esc(note)}</details>`:''}</td><td class="item-date">${date}</td><td class="item-pic">${it.picFixed ? `<span class="pic-fixed" title="PIC kegiatan STEM terkunci; perubahan melalui editor admin">${esc(picShown(it.pic))}${company.code ? ' 🔒<small>terkunci</small>' : '<small>otomatis</small>'}</span>` : picSelectHtml(it.pic, `data-pic="${esc(it.id)}" aria-label="PIC ${esc(it.title)}"`)}</td><td class="item-status">${statusCell(it,status)}</td><td class="item-action"><button class="control secondary" data-edit="${esc(it.id)}" aria-label="Ubah ${esc(it.title)}">Ubah</button><span data-chat-slot="item:${esc(it.id)}"></span></td></tr>`;
       }).join('')}</tbody></table></div>`;
     }
     if(tab==='master') {
@@ -370,6 +396,7 @@ function mount() {
       const a = await response.json();
       if (!response.ok || typeof a.editable !== 'boolean') throw new Error('Akses admin belum diketahui');
       editable = a.editable;
+      fixedPicIds = Array.isArray(a.fixedPicIds) ? a.fixedPicIds.filter(id => typeof id === 'string') : null;
       if (!editable) { const s = await (await fetch('api/setup-access', { cache: 'no-store' })).json().catch(() => ({})); lockConfigured = s.configured !== false; }
     } catch { editable = false; /* fail closed: PIC/status remain available; admin fields stay locked */ }
   }
@@ -393,7 +420,7 @@ function mount() {
     editorId = id;
     const field = (key,label,type='text') => `<label>${label}<input class="control" name="${key}" type="${type}" value="${esc(it[key])}" ${type==='date'?'required min="0001-01-01" max="9999-12-31"':'maxlength="200"'}></label>`;
     const dates = it.section==='balance' ? field('cutoffDate','Cut off','date')+field('handoverDate','Serah ke STEM','date')+field('uploadDate','Upload SAP','date')+field('handoverTime','Jam serah (HH:mm)')+field('uploadTime','Jam upload (HH:mm-HH:mm)') : field('startDate','Tanggal mulai','date')+field('endDate','Tanggal akhir','date');
-    $('#editor-slot').innerHTML = `<form class="editor"><h2>Ubah ${esc(it.title)}</h2><div class="fields">${dates}${fixedCompanyPic(it.id) ? `<div class="pic-fixed-row"><span>PIC</span><span class="pic-fixed">STEM<small>otomatis</small></span><input type="hidden" name="pic" value="STEM"></div>` : `<label>PIC${picSelectHtml(it.pic, `name="pic"`)}</label>`}<label>Status<select class="control" name="status">${['belum','proses','selesai'].map(s=>`<option ${s===it.status?'selected':''}>${s}</option>`).join('')}</select></label></div><label>Catatan<textarea class="control" name="note" maxlength="2000">${esc(it.note)}</textarea></label><div class="actions"><button class="control primary" type="submit">Terapkan ke draf</button><button class="control" type="button" id="cancel-edit">Batal</button></div><p>Setelah diterapkan, tekan Simpan perubahan untuk menyimpan ke server.</p><p id="edit-error" role="alert"></p></form>`;
+    $('#editor-slot').innerHTML = `<form class="editor"><h2>Ubah ${esc(it.title)}</h2><div class="fields">${dates}${fixedCompanyPic(it.id) && !company.code ? `<div class="pic-fixed-row"><span>PIC</span><span class="pic-fixed">STEM<small>otomatis</small></span><input type="hidden" name="pic" value="STEM"></div>` : `<label>PIC${picSelectHtml(it.pic, `name="pic"`)}</label>`}<label>Status<select class="control" name="status">${['belum','proses','selesai'].map(s=>`<option ${s===it.status?'selected':''}>${s}</option>`).join('')}</select></label></div><label>Catatan<textarea class="control" name="note" maxlength="2000">${esc(it.note)}</textarea></label><div class="actions"><button class="control primary" type="submit">Terapkan ke draf</button><button class="control" type="button" id="cancel-edit">Batal</button></div><p>Setelah diterapkan, tekan Simpan perubahan untuk menyimpan ke server.</p><p id="edit-error" role="alert"></p></form>`;
     $('#cancel-edit').onclick = () => { editorId=null; render(); };
     const form = $('#editor-slot form'); form.onsubmit = e => {
       e.preventDefault(); const patch = Object.fromEntries(new FormData(form));
@@ -441,7 +468,7 @@ function mount() {
       try{localStorage.setItem('editor',n);}catch{}
     }
     busy=true; controls(); message('Menyimpan jadwal...');
-    try { doc.data.items.forEach(it=>{ if(fixedCompanyPic(it.id)) it.pic='STEM'; }); doc=await request('PUT',{rev:doc.rev,data:doc.data});baseline=structuredClone(doc.data.items);dirty=false;render();message('Jadwal tersimpan.'); }
+    try { doc.data.items.forEach(it=>{ if(fixedCompanyPic(it.id)) { if(!company.code) it.pic='STEM'; else if(!editable) it.pic=baseline.find(x=>x.id===it.id)?.pic || 'STEM'; else if(!it.pic) it.pic='STEM'; } }); doc=await request('PUT',{rev:doc.rev,data:doc.data});baseline=structuredClone(doc.data.items);dirty=false;render();message('Jadwal tersimpan.'); }
     catch(e) { if(e.status===409) conflict=true;message(e.status===409?'Konflik revisi: draf tetap di layar. Salin perubahan Anda, lalu Muat ulang dan terapkan kembali.':`${e.message} Draf tetap tersedia; coba simpan lagi.`); }
     finally {busy=false;controls();}
   };

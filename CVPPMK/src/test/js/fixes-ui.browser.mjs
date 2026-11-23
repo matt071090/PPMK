@@ -70,13 +70,13 @@ try {
  assert.equal(await page.locator('input[type=date],textarea[name=note]').count(),0);
  const scheduleBefore=await page.evaluate(()=>fetch('/api/schedule').then(r=>r.json()));
  const chosenPic=`Tim WBI ${scheduleBefore.rev+1}`;
- await page.locator('[data-pic="upload-master"]').fill(chosenPic);await page.locator('[data-pic="upload-master"]').press('Tab');
+ await page.locator('[data-pic="master-A0"]').fill(chosenPic);await page.locator('[data-pic="master-A0"]').press('Tab');
  await page.locator('[data-status="upload-master"]').selectOption('proses');
  await page.locator('#save').click();await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Jadwal tersimpan'));
  const saved=await page.evaluate(()=>fetch('/api/schedule').then(r=>r.json()));
- assert.equal(saved.data.items.find(i=>i.id==='upload-master').pic,chosenPic);
+ assert.equal(saved.data.items.find(i=>i.id==='master-A0').pic,chosenPic);
  assert.equal(saved.data.items.some(i=>i.id==='training'),false);
- assert.equal(saved.data.items.find(i=>i.id==='fa').pic,'');
+ assert.equal(saved.data.items.find(i=>i.id==='fa').pic,'STEM');
  assert.equal(saved.data.items.find(i=>i.id==='upload-master').status,'proses');
  evidence.checks.push('Non-admin WBI saves free PIC + status; untouched STEM items remain blank; dates/note editor inaccessible');
  await open('schedule.html#/training',18637);await page.locator('.pic-fixed').first().waitFor();

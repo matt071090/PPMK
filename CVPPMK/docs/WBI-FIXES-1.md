@@ -2,6 +2,10 @@
 
 Branch `wbi/fixes-1`, dibuat dari `wbi/ui-warna` (`57b76b5`, mencakup `7b9c16e`). Semua pengujian memakai fixture/mock; tidak menyambung ke SAP, WBI_TEST, atau HANA. Commit lokal saja, tanpa push dan tanpa `git add -A`.
 
+## Inventory per lokasi dan PIC STEM
+
+Revisi berikutnya: **40 kegiatan**, alur Produksi / Pabrik / Central Kitchen dan Toko / Store terpisah, serah Toko paling lambat 22:00, serta 8 PIC STEM terkunci. [Rincian, asumsi dan bukti](WBI-INVENTORY-REVISION.md).
+
 ## Revisi seed jadwal WBI
 
 Seed WBI kini **35 kegiatan**, tanpa Training, Tahap E memakai Retail, dan Stock Opname mencakup Pabrik dan Toko. CV tetap 37 kegiatan dan seed CV tidak diubah; tidak ada migrasi berkas jadwal lama. Lihat [laporan revisi jadwal dan bukti terbaru](WBI-SCHEDULE-REVISION.md): 165 Java lulus, 195 JS lulus/18 skip, serta 6 skenario browser lulus.

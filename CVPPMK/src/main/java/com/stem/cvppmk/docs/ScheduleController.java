@@ -24,8 +24,9 @@ public class ScheduleController {
     public ScheduleController(ScheduleStore store, SetupAccessController access, ScheduleChatController chat, DataFiles files) { this.store = store; this.access = access; this.chat = chat; this.files = files; }
     /** Admin = Setup terbuka (otomatis di mode dev; di war setelah password Setup). Non-admin boleh mengubah PIC dan status; tanggal/catatan tetap admin. */
     @GetMapping("/access")
-    public ResponseEntity<Map<String, Object>> access(HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> access(HttpServletRequest request) throws IOException {
         Map<String, Object> result = new LinkedHashMap<>(); result.put("editable", access.unlocked(request));
+        result.put("fixedPicIds", store.fixedPicIds());
         return ok(result);
     }
     @GetMapping
@@ -50,6 +51,8 @@ public class ScheduleController {
         // mode lihat (bukan admin): hanya PIC dan status kegiatan yang boleh berubah; tanggal, jam, catatan, judul = admin
         if (!access.unlocked(request) && !onlyPicStatusChanged(before, after))
             throw new ScheduleStore.ScheduleException(403, "Mode lihat saja hanya boleh mengubah PIC dan status. Tanggal dan catatan diubah admin (Masuk admin).");
+        if (!access.unlocked(request) && !fixedPicsUnchanged(before, after, store.fixedPicIds()))
+            throw new ScheduleStore.ScheduleException(403, "PIC kegiatan STEM dikunci. Perubahan PIC hanya lewat editor admin.");
         ScheduleStore.Document saved = store.put(body.get("rev").intValue(), after);
         logPicChanges(before, saved.data, editorOf(request));
         return ok(saved);
@@ -80,6 +83,16 @@ public class ScheduleController {
             ((com.fasterxml.jackson.databind.node.ObjectNode) ib.get(i)).remove(java.util.Arrays.asList("pic", "status"));
         }
         return a.equals(b);
+    }
+
+    static boolean fixedPicsUnchanged(JsonNode before, JsonNode after, java.util.Set<String> fixed) {
+        Map<String,String> old = new LinkedHashMap<>();
+        for (JsonNode it : before.path("items")) old.put(it.path("id").asText(), it.path("pic").asText());
+        for (JsonNode it : after.path("items")) {
+            String id=it.path("id").asText(), was=old.get(id), now=it.path("pic").asText();
+            if (fixed.contains(id) && !java.util.Objects.equals(was,now) && !("".equals(was) && "STEM".equals(now))) return false;
+        }
+        return true;
     }
 
     /** Nama pengubah dari header X-Editor (URL-encoded oleh browser); kosong = "Tanpa nama". */

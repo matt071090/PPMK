@@ -51,13 +51,13 @@ try {
  await open('home.html');await page.locator('.m-check .big').waitFor();
  assert.equal(await page.evaluate(async()=>(await import('./js/data-policy.js')).capabilities.branchEnabled),false);
  evidence.checks.push('Check List summary and Home resolve nonbranch mode before Setup is unlocked');
- await open('schedule.html#/master');await page.locator('[data-pic="upload-master"]').waitFor();
+ await open('schedule.html#/master');await page.locator('[data-pic="master-A0"]').waitFor();
  assert.equal(await page.locator('[data-edit]').count(),0);
  const prev=await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()));const pic=`Tim WBI ${prev.rev+1}`;
- await page.locator('[data-pic="upload-master"]').fill(pic);await page.locator('[data-pic="upload-master"]').press('Tab');
+ await page.locator('[data-pic="master-A0"]').fill(pic);await page.locator('[data-pic="master-A0"]').press('Tab');
  await page.locator('[data-status="upload-master"]').selectOption('proses');await page.locator('#save').click();
  await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Jadwal tersimpan'));
- assert.equal((await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()))).data.items.find(i=>i.id==='upload-master').pic,pic);
+ assert.equal((await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()))).data.items.find(i=>i.id==='master-A0').pic,pic);
  assert.equal((await probe('/api/setup-access',200)).unlocked,false);
  evidence.checks.push('Locked Schedule still saves PIC/status and keeps the admin editor locked');
  assert.equal((await probe('/api/setup-access',200,18637)).unlocked,false);

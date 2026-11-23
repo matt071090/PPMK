@@ -1,7 +1,7 @@
 import { reviewableMenus, loadCapabilities } from "../data-policy.js";
 // Home: ringkasan semua modul dalam satu layar. Hanya membaca API yang sudah ada (+ api/health, api/schedule/chat/latest).
 // Fungsi hitung jadwal dipakai ulang dari schedule.js (mount Schedule hanya jalan di schedule.html).
-import { countdown, effectiveStatus, todayLocal, progress, nextMilestone, needsAttention, withFixedPic, withTrainingRollup } from './schedule.js';
+import { isInventoryActivity, countdown, effectiveStatus, todayLocal, progress, nextMilestone, needsAttention, withFixedPic, withTrainingRollup } from './schedule.js';
 import { withReview } from './schedule-review.js';
 import { addonPages } from './addon.js';
 import { company, companyTitle, loadCompany as loadMetadata } from '../company.js';
@@ -11,7 +11,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const fmt = (s, o = { day: 'numeric', month: 'short', year: 'numeric' }) => new Intl.DateTimeFormat('id-ID', o).format(new Date(`${s}T12:00:00`));
 const TABS = { ringkasan: 'Ringkasan', master: 'Master Data', training: 'Training', stock: 'Stock Opname', balance: 'Beginning Balance' };
 const tabOf = it => it.section === 'master' ? 'master' : it.section === 'training' ? 'training' : it.section === 'balance' ? 'balance'
-  : ['opname', 'cutoff', 'inventory', 'inventory-upload'].includes(it.id) ? 'stock' : it.id === 'training' ? 'training'
+  : isInventoryActivity(it.id) ? 'stock' : it.id === 'training' ? 'training'
   : ['prepare', 'deadline', 'upload-master', 'verify'].includes(it.id) ? 'master' : 'ringkasan';
 const getJson = async (url, timeoutMs = 20000) => {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), timeoutMs);
