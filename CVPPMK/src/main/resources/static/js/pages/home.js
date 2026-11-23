@@ -1,3 +1,4 @@
+import { reviewableMenus, loadCapabilities } from "../data-policy.js";
 // Home: ringkasan semua modul dalam satu layar. Hanya membaca API yang sudah ada (+ api/health, api/schedule/chat/latest).
 // Fungsi hitung jadwal dipakai ulang dari schedule.js (mount Schedule hanya jalan di schedule.html).
 import { countdown, effectiveStatus, todayLocal, progress, nextMilestone, needsAttention, withFixedPic, withTrainingRollup } from './schedule.js';
@@ -44,7 +45,7 @@ async function load() {
   loadHealth(false);
   loadCompany();
   const addon = await addonP;
-  if (staticMenus && addon.ok) render({ sch, items, reviewPages, menus: staticMenus.concat(addonPages(addon.v.objects || []).map(p => ({ id: p.id, title: p.title }))), chat, addonState: 'ok' });
+  if (staticMenus && addon.ok) render({ sch, items, reviewPages, menus: staticMenus.concat(reviewableMenus(addonPages(addon.v.objects || [])).map(p => ({ id: p.id, title: p.title }))), chat, addonState: 'ok' });
   else if (staticMenus) render({ sch, items, reviewPages, menus: staticMenus, chat, addonState: 'failed' });
 }
 
@@ -165,4 +166,4 @@ async function loadCompany() {
   } catch { /* nama default tetap dipakai */ }
 }
 
-loadMetadata().then(load).catch(e => { $('#home').textContent = e.message; });
+Promise.all([loadMetadata(), loadCapabilities()]).then(load).catch(e => { $('#home').textContent = e.message; });

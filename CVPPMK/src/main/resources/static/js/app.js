@@ -1,3 +1,4 @@
+import { loadCapabilities, nonBranch, emptyPreference, saveEmptyPreference, addonHasData, reviewableMenus } from "./data-policy.js";
 import { $, $$, esc, slug, company, showCompanyName, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, revealTab } from "./ui.js";
 import { companyTitle } from './company.js';
 import { xlsxBlob, download } from "./xlsx.js";
@@ -84,6 +85,7 @@ function buildNav() {
   $("#nav").innerHTML = `
     <div class="progress-box"><div class="lbl"><span>Menu sudah sesuai</span><b id="rv-count"></b></div>
       <div class="bar"><div id="rv-ok"></div><div id="rv-nok"></div></div></div>
+    ${addonState.objects ? `<div class="empty-menu-toggle"><label><input type="checkbox" id="addon-show-empty" ${emptyPreference("addon-menu") ? "checked" : ""}> Tampilkan yang kosong</label><small>${addonState.objects.filter(o => o.shown && !addonHasData(o)).length} menu Addon kosong${emptyPreference("addon-menu") ? "" : " disembunyikan"}</small></div>` : ""}
     ${chapters.map(ch => {
       const flat = ch.pages.length === 1;
       if (flat) { // bab satu halaman: tampil sebagai satu tautan saja
@@ -104,6 +106,10 @@ function buildNav() {
   $$(".nav-group > button").forEach(b => b.onclick = () => {
     const g = b.parentElement; g.classList.toggle("collapsed"); b.setAttribute("aria-expanded", !g.classList.contains("collapsed"));
   });
+  const emptyToggle = $("#addon-show-empty");
+  if (emptyToggle) emptyToggle.onchange = () => {
+    saveEmptyPreference("addon-menu", emptyToggle.checked); location.reload();
+  };
   focusChapter(true);
   paintNav();
 }
@@ -117,7 +123,7 @@ function focusChapter(closeOthers) {
 }
 // ikon status & bar progres mengikuti status review manual; menu Belum direview ditandai merah (data-s="none")
 function paintNav() {
-  const menus = pages.filter(p => p.status), cnt = s => menus.filter(p => statusOf(p.id) === s).length;
+  const menus = reviewableMenus(pages), cnt = s => menus.filter(p => statusOf(p.id) === s).length;
   $$("#nav [data-dot]").forEach(d => {
     const s = statusOf(d.dataset.dot), note = review.pages[d.dataset.dot]?.note;
     d.innerHTML = `${stIcon(s)}<span class="sr">${REVIEW[s][0]}</span>`; d.title = REVIEW[s][0] + (note ? ` – ${note}` : "");
@@ -450,7 +456,7 @@ function renderTodo(page) {
 
 // ---------- halaman Ringkasan ----------
 async function renderSummary(fresh) {
-  const ids = pages.filter(p => PAGES[p.id] && !PAGES[p.id].static).map(p => p.id);
+  const ids = pages.filter(p => PAGES[p.id] && !PAGES[p.id].static && !p.empty).map(p => p.id);
   const results = await Promise.allSettled(ids.map(id => load(id, fresh)));
   const by = Object.fromEntries(ids.map((id, i) => [id, results[i].status === "fulfilled" ? dataOf(results[i].value) : null]));
   const n = (id, key) => by[id] ? rowsOf(by[id][key]).length : "–";
@@ -461,10 +467,10 @@ async function renderSummary(fresh) {
     return [page, pageChecks(PAGES[id], by[id])];
   }).filter(([, list]) => list.length);
   const total = groups.reduce((t, [p, l]) => t + activeCount(p.id, l), 0);
-  const menus = pages.filter(p => p.status), nok = menus.filter(p => statusOf(p.id) === "nok");
+  const menus = reviewableMenus(pages), nok = menus.filter(p => statusOf(p.id) === "nok");
   const cnt = s => menus.filter(p => statusOf(p.id) === s).length;
   const html = `<div class="kpis">
-      ${kpi("warehouses", by.warehouses ? new Set(rowsOf(by.warehouses.warehouses).map(w => w.BPLName).filter(Boolean)).size : "–", "Branch")}
+      ${nonBranch() ? "" : kpi("warehouses", by.warehouses ? new Set(rowsOf(by.warehouses.warehouses).map(w => w.BPLName).filter(Boolean)).size : "–", "Branch")}
       ${kpi("warehouses", n("warehouses", "warehouses"), "Warehouse")}
       ${kpi("posting-period", n("posting-period", "periods"), "Posting period")}
       ${kpi("users", n("users", "users"), "User SAP B1")}
@@ -614,6 +620,7 @@ function toggleTheme() {
 (async () => {
   applyTheme(store.get("theme") === "dark" ? "dark" : "light");   // bawaan terang; gelap hanya bila dipilih
   if (store.get("show-cols")) document.body.classList.add("show-cols");
+  await loadCapabilities();
   let editable;
   [chapters, editable] = await Promise.all([
     fetch("sections.json").then(r => r.json()),
@@ -634,8 +641,8 @@ function toggleTheme() {
     try {
       const { objects } = Object.assign(addonState, await getJson("api/addon/objects"));
       addonCh.pages = addonPages(objects);
-      objects.filter(o => o.shown).forEach(o => { PAGES[addonCh.pages.find(p => p.addon === o.code).id] = addonPage(o); });
-      if (!addonCh.pages.length) { addonCh.pages = [{ id: "addon", title: addonCh.title }]; PAGES.addon = addonEmptyPage(); }
+      addonCh.pages.forEach(p => { PAGES[p.id] = addonPage(objects.find(o => o.code === p.addon)); });
+      if (!addonCh.pages.length) { addonCh.pages = [{ id: "addon", title: addonCh.title }]; PAGES.addon = addonEmptyPage(null, objects.filter(o => o.shown && !addonHasData(o)).length); }
     } catch (e) { addonCh.pages = [{ id: "addon", title: addonCh.title }]; PAGES.addon = addonEmptyPage(e.message); }
   }
   // halaman bertanda onlyIfData (mis. UoM) hanya tampil kalau hasil query itu lebih dari 1 baris (bukan cuma "Manual")

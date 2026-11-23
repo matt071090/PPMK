@@ -3,8 +3,8 @@ import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-const root=path.resolve(fileURLToPath(new URL('../../main/resources/static/',import.meta.url)));
-const resources=path.resolve(root,'..');
+const root=path.resolve(process.env.PREVIEW_STATIC_ROOT || fileURLToPath(new URL('../../main/resources/static/',import.meta.url)));
+const resources=path.resolve(fileURLToPath(new URL('../../main/resources/',import.meta.url)));
 const mode=process.env.PREVIEW_COMPANY || 'wbi';
 const company=mode==='wbi'?{code:'wbi',name:'PT Warung Begok Indonesia'}:{code:'',name:'CV. Putra Prima Mandiri Kediri'};
 const seed=JSON.parse(await readFile(path.join(resources,'schedule',mode==='wbi'?'default-wbi.json':'default.json'),'utf8'));
@@ -12,6 +12,23 @@ const baseSteps=JSON.parse(await readFile(path.join(resources,'setup/steps.json'
 const retailSteps=JSON.parse(await readFile(path.join(resources,'setup/retail-steps.json'),'utf8'));
 const steps=mode==='wbi'?[...baseSteps.filter(s=>s.tier!=='G'),...retailSteps]:baseSteps;
 const messages=[];
+let revision=0, schedule=structuredClone(seed);
+const object = (code, name, rowCount, tables=[{name:code,descr:name,type:'0'}], kind='t') => ({code,name,rowCount,tables,kind,shown:true,cat:'STEM'});
+const objects=[object('ST_PARAM','Parameter STEM',175),object('ST_UDRTH','Route produksi',240,[{name:'ST_UDRTH',descr:'Route',type:'1'},{name:'ST_UDRT1',descr:'Langkah route',type:'2'}],'m'),object('STEM_UNUSED','Tabel belum dipakai',0),object('STEM_TIBRANCHH','TI Branch',3)];
+const params=Array.from({length:172},(_,i)=>[String(i+1),i<60?`RETAIL_${String(i+1).padStart(3,'0')}`:`CADANGAN_${i+1}`,i<60?`Nilai ${i+1}`:'',i<60?'Pengaturan operasional':'']);
+params.push(['b1','SAPUSERINT','','Interbranch'],['b2','ITBRACCI','','Interbranch'],['p1','WHTRS','TRANSIT','Gudang transit']);
+const addonTables={ST_PARAM:()=>table(['Code','U_Key','U_Value','U_Desc'],params),ST_UDRTH:()=>table(['Code','Name','U_Remark'],Array.from({length:60},(_,i)=>[`RT${String(i+1).padStart(3,'0')}`,`Route produksi ${i+1}`,null])),ST_UDRT1:()=>table(['Code','LineId','U_WCCode'],Array.from({length:180},(_,i)=>[`RT${String(Math.floor(i/3)+1).padStart(3,'0')}`,i%3+1,i===179?'PENCARIAN CHILD TERAKHIR':`WC${i%3+1}`])),STEM_UNUSED:()=>table(['Code','Name'],[]),STEM_TIBRANCHH:()=>table(['Code','Name'],[['1','TI Branch']])};
+const udts=Array.from({length:172},(_,i)=>[`ST_TABEL_${String(i+1).padStart(3,'0')}`,i<60?`Referensi produksi ${i+1}`:'', '0',i<60?3:0,'','']);
+const sections={
+  udt:()=>({udt:table(['TableName','Descr','ObjectType','FieldCount','UdoCode','UdoChildOf'],udts),addon_rows:table(['Name','Rows'],[...udts.map((r,i)=>['@'+r[0],i<60?i+1:0]),['@ST_PARAM',175],['@ST_SHIFT',0],['@ST_UDWC',12]]),addon_params:addonTables.ST_PARAM()}),
+  udo:()=>({udo:table(['Code','Name','TableName','TYPE','MngSeries','CanCancel','CanLog','ChildTables','Rows'],[['ST_UDRTH','Route produksi','ST_UDRTH','1','N','Y','Y','ST_UDRT1',240],['STEM_UNUSED','Belum digunakan','STEM_UNUSED','1','N','N','N','',0]])}),
+  udf:()=>({fields:table(['TableID','Field','Descr','TypeID','SizeID','Dflt','NotNull'],Array.from({length:80},(_,i)=>['OITM',`U_Operasi${i+1}`,`Pengaturan operasi ${i+1}`,'A',30,'','N'])),addon_udf:table(['TableID','AliasID'],[['OWHS','STEM_Type']])}),
+  'saved-queries':()=>({categories:table(['CatName','QueryCount','IsSystem'],[['Produksi',65,'N'],['Belum digunakan',0,'N'],['SAP_DASHBOARD_STOCK',5,'Y']]),queries:table(['CatName','QName','Len','Created','LastRun','IsSystem'],Array.from({length:66},(_,i)=>['Produksi',`Laporan produksi ${i+1}`,i===65?0:120,'2026-11-01','2026-11-20','N']))}),
+  warehouses:()=>({warehouses:table(['WhsCode','WhsName','BPLName','Inactive','BinActivat','BalInvntAc'],[['UTAMA','Gudang utama',mode==='wbi'?null:'CV-KOMERSIAL','N','N','110100']])}),
+  users:()=>({users:table(['USER_CODE','U_NAME','SUPERUSER','Locked','Branches'],[['FIN01','Tim Keuangan','N','N',mode==='wbi'?null:'CV-KOMERSIAL']])}),
+  'business-partners':()=>({bp:table(['CardCode','CardName','CardType','GroupCode','frozenFor','Branches'],[['C001','Pelanggan Retail','C',100,'N',null]]),groups:table(['GroupCode','GroupName','GroupType'],[[100,'Pelanggan Retail','C']])}),
+  'sp-validation':()=>({addon_procs:table(['Name'],[['SBO_SP_TransactionNotification'],['SBO_SP_PostTransactionNotice']]),addon_funcs:table(['Name'],[['GetItemResourceCost']])})
+};
 const table=(columns=[],rows=[])=>({columns,rows,ms:1});
 function reply(res,data,status=200){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
 const server=http.createServer(async(req,res)=>{
@@ -22,11 +39,23 @@ const server=http.createServer(async(req,res)=>{
     if(p==='/api/review/mode')return reply(res,{editable:true});
     if(p==='/api/review')return reply(res,{pages:{}});
     if(p==='/api/health')return reply(res,{status:'UP',database:'Demo lokal'});
-    if(p==='/api/addon/objects')return reply(res,{objects:[],categories:[],stale:[]});
+    if(p==='/api/addon/objects')return reply(res,{objects,categories:['STEM'],stale:[]});
+    if(p.startsWith('/api/addon/data/')){const o=objects.find(o=>o.code===p.split('/').at(-1));return reply(res,{generatedAt:'2026-11-23T12:00:00',results:Object.fromEntries((o?.tables||[]).map(t=>[t.name,addonTables[t.name]()]))});}
     if(p==='/api/setup/capabilities')return reply(res,{branchEnabled:mode!=='wbi',uploadAllowed:true});
     if(p==='/api/setup/steps')return reply(res,steps);
     if(p==='/api/setup/sources')return reply(res,{target:'WBI_DEMO',same:[{id:'same:WBI_DEMO',schema:'WBI_DEMO',company:company.name}],others:[],missing:[],declared:true});
-    if(p==='/api/schedule')return reply(res,{rev:0,updatedAt:'2026-11-23T12:00:00Z',data:seed});
+    if(p==='/api/schedule/access')return reply(res,{editable:process.env.PREVIEW_ADMIN==='1'});
+    if(p==='/api/schedule') {
+      if(req.method==='PUT') {
+        let raw='';for await(const chunk of req)raw+=chunk;
+        const body=JSON.parse(raw);
+        if(body.rev!==revision)return reply(res,{message:'Konflik revisi'},409);
+        const strip=data=>({...data,items:data.items.map(({pic,status,...rest})=>rest)});
+        if(process.env.PREVIEW_ADMIN!=='1' && JSON.stringify(strip(body.data))!==JSON.stringify(strip(schedule)))return reply(res,{message:'Tanggal dan catatan hanya admin'},403);
+        schedule=body.data;revision++;
+      }
+      return reply(res,{rev:revision,updatedAt:'2026-11-23T12:00:00Z',data:schedule});
+    }
     if(p.includes('/chat')){
       if(p.endsWith('/summary'))return reply(res,{threads:{}});
       if(p.endsWith('/latest'))return reply(res,{messages:[]});
@@ -42,7 +71,7 @@ const server=http.createServer(async(req,res)=>{
     if(p.startsWith('/api/countdoc/queries'))return reply(res,{queries:[],checks:{},companies:[{schema:'WBI_DEMO',name:company.name}]});
     if(p.startsWith('/api/section/company-name'))return reply(res,{name:company.name});
     if(p==='/api/section/company-details')return reply(res,{results:{company:table(['CompnyName'],[[company.name]])}});
-    if(p.startsWith('/api/section/'))return reply(res,{results:{currency:table(['v'],[['IDR']]),udf:table(),udfv:table()}});
+    if(p.startsWith('/api/section/'))return reply(res,{generatedAt:'2026-11-23T12:00:00',results:sections[p.split('/').at(-1)]?.() || {currency:table(['v'],[['IDR']]),udf:table(),udfv:table()}});
     if(p.startsWith('/api/setup/')){
       const id=p.split('/')[3],s=steps.find(s=>s.id===id);
       if(p.endsWith('/sql')){res.writeHead(200,{'Content-Type':'text/plain'});return res.end('-- Demo lokal');}
@@ -63,4 +92,5 @@ const server=http.createServer(async(req,res)=>{
     res.writeHead(200,{'Content-Type':({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.png':'image/png','.ico':'image/x-icon'})[ext]||'application/octet-stream'});res.end(data);
   }catch(e){reply(res,{message:'Fixture tidak ditemukan'},404);}
 });
-server.listen(18635,'127.0.0.1',()=>process.stdout.write('Preview fixtures http://127.0.0.1:18635\n'));
+const port=+(process.env.PREVIEW_PORT||18635);
+server.listen(port,'127.0.0.1',()=>process.stdout.write(`Preview fixtures http://127.0.0.1:${port}\n`));

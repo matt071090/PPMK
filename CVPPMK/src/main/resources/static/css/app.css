@@ -972,3 +972,22 @@ table.data thead th { background: var(--table-head); color: var(--text-2); }
 .sx-table .sx-old { color: var(--muted); }
 .page-meta, .sx-req { color: var(--muted); }
 .brand .logo, .chat-fab, .chat-send { color: var(--on-accent); }
+
+/* Shared data paging; existing company palettes supply every colour. */
+.data-pager { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:12px 0 24px; font-size:12px; color:var(--muted); }
+.data-pager > div, .data-pager label { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.data-pager select { padding:8px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:6px; }
+.data-pager button:disabled { opacity:.5; cursor:default; }
+.toolbar > label { display:flex; align-items:center; gap:6px; font-size:12px; }
+.toolbar input[type=checkbox] { width:auto; flex:none; }
+@media(max-width:600px) {
+  .data-pager { gap:10px; }
+  .data-pager > div { width:100%; justify-content:space-between; gap:4px; }
+  .data-pager button, .data-pager select { min-height:44px; }
+  .toolbar { flex-wrap:wrap; }
+  .toolbar input[type=search], .toolbar select { max-width:100%; min-width:0; }
+}
+
+.empty-menu-toggle { margin:12px 16px; color:var(--muted); font-size:12px; }
+.empty-menu-toggle label { display:flex; align-items:center; gap:6px; min-height:44px; }
+.empty-menu-toggle small { display:block; }

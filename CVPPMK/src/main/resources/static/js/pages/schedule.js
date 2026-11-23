@@ -44,6 +44,7 @@ export function cardNote(note) {
 // Pekerjaan konsultan STEM: PIC otomatis "STEM" dan tidak bisa diubah (ubah daftar ini bila pembagian kerja berubah).
 export const STEM_ITEMS = ['training', 'training-1', 'upload-master', 'inventory-upload', 'ap-ar', 'fa', 'gl'];
 export const isStemItem = id => STEM_ITEMS.includes(id);
+export const fixedCompanyPic = (id, code = company.code) => !code && isStemItem(id);
 export function rollupStatus(statuses) {
   if (!statuses.length) return null;
   return statuses.every(s => s === 'selesai') ? 'selesai' : statuses.some(s => s === 'selesai' || s === 'proses') ? 'proses' : 'belum';
@@ -180,8 +181,12 @@ export function draftChanges(original, items) {
 if (typeof document !== 'undefined' && document.getElementById('draft-bar')) loadCompany().then(mount).catch(e => { document.getElementById('notice').textContent = e.message; });
 function mount() {
   const $ = s => document.querySelector(s), view = $('#view'), notice = $('#notice');
+  if (company.code) {
+    $('#pic-suggestions-help').innerHTML = 'Klik kolom <b>PIC</b> pada baris kegiatan. Pilih STEM dari saran atau ketik nama PIC sendiri.';
+    $('#cv-pic-help').hidden = true; $('#fixed-pic-help').hidden = true;
+  }
   const names = {ringkasan:'Ringkasan',master:'Master Data',training:'Training',stock:'Stock Opname',balance:'Beginning Balance'};
-  let chat = null, reviewPages = null, RV = null, editable = true, lockConfigured = true;
+  let chat = null, reviewPages = null, RV = null, editable = false, lockConfigured = true;
   let picUsers = [];
   async function loadPicUsers() {
     if (company.code) { picUsers = []; return; }
@@ -243,8 +248,9 @@ function mount() {
   const message = text => { notice.textContent = text; };
   function controls() { $('#discard').disabled = busy; $('#draft-bar').hidden = !dirty; $('#saved-tools').hidden = dirty && !conflict; $('#draft-count').textContent = `${doc ? draftChanges(baseline,doc.data.items).length : 0} perubahan belum disimpan`;  $('#save').disabled = !doc || !dirty || busy || conflict; $('#reload').disabled = busy; view.querySelectorAll('button,input,select,textarea').forEach(e => e.disabled = busy); }
   function render() {
-    const tab = current(); renderedTab=tab; $('#page-title').textContent = names[tab]; document.title = `${names[tab]} · Schedule ${company.code ? company.name : doc.data.project.name}`;
-    const brand = document.getElementById('schedule-company-name'); if (brand) brand.textContent = company.code ? company.name : doc.data.project.name;
+    const tab = current(), projectName = company.code ? company.name : (doc?.data?.project?.name || company.name);
+    renderedTab=tab; $('#page-title').textContent = names[tab]; document.title = `${names[tab]} · Schedule ${projectName}`;
+    const brand = document.getElementById('schedule-company-name'); if (brand) brand.textContent = projectName;
     const logo = document.getElementById('schedule-company-logo'); if (logo) logo.textContent = company.code ? company.code.toUpperCase() : 'PP';
     document.querySelectorAll('[data-tab]').forEach(a => { a.classList.toggle('active',a.dataset.tab===tab); if(a.dataset.tab===tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
     if (!doc) return;
@@ -350,9 +356,12 @@ function mount() {
   }
   async function loadAccess() {
     try {
-      const a = await (await fetch('api/schedule/access', { cache: 'no-store' })).json(); editable = a.editable !== false;
+      const response = await fetch('api/schedule/access', { cache: 'no-store' });
+      const a = await response.json();
+      if (!response.ok || typeof a.editable !== 'boolean') throw new Error('Akses admin belum diketahui');
+      editable = a.editable;
       if (!editable) { const s = await (await fetch('api/setup-access', { cache: 'no-store' })).json().catch(() => ({})); lockConfigured = s.configured !== false; }
-    } catch { /* gagal cek akses: biarkan server yang menolak PUT */ }
+    } catch { editable = false; /* fail closed: PIC/status remain available; admin fields stay locked */ }
   }
   view.addEventListener('submit', async e => {
     if (e.target.id !== 'unlock-form') return;
@@ -369,11 +378,12 @@ function mount() {
     document.querySelectorAll('[data-chat-slot]').forEach(slot => slot.replaceWith(chat.badge(slot.dataset.chatSlot, threadTitle(slot.dataset.chatSlot), !slot.dataset.chatSlot.startsWith('item:'))));
   }
   function openEditor(id) {
+    if (!editable) return;
     const it = doc.data.items.find(it=>it.id===id); if(!it) return;
     editorId = id;
     const field = (key,label,type='text') => `<label>${label}<input class="control" name="${key}" type="${type}" value="${esc(it[key])}" ${type==='date'?'required min="0001-01-01" max="9999-12-31"':'maxlength="200"'}></label>`;
     const dates = it.section==='balance' ? field('cutoffDate','Cut off','date')+field('handoverDate','Serah ke STEM','date')+field('uploadDate','Upload SAP','date')+field('handoverTime','Jam serah (HH:mm)')+field('uploadTime','Jam upload (HH:mm-HH:mm)') : field('startDate','Tanggal mulai','date')+field('endDate','Tanggal akhir','date');
-    $('#editor-slot').innerHTML = `<form class="editor"><h2>Ubah ${esc(it.title)}</h2><div class="fields">${dates}${isStemItem(it.id) ? `<div class="pic-fixed-row"><span>PIC</span><span class="pic-fixed">STEM<small>otomatis</small></span><input type="hidden" name="pic" value="STEM"></div>` : `<label>PIC${picSelectHtml(it.pic, `name="pic"`)}</label>`}<label>Status<select class="control" name="status">${['belum','proses','selesai'].map(s=>`<option ${s===it.status?'selected':''}>${s}</option>`).join('')}</select></label></div><label>Catatan<textarea class="control" name="note" maxlength="2000">${esc(it.note)}</textarea></label><div class="actions"><button class="control primary" type="submit">Terapkan ke draf</button><button class="control" type="button" id="cancel-edit">Batal</button></div><p>Setelah diterapkan, tekan Simpan perubahan untuk menyimpan ke server.</p><p id="edit-error" role="alert"></p></form>`;
+    $('#editor-slot').innerHTML = `<form class="editor"><h2>Ubah ${esc(it.title)}</h2><div class="fields">${dates}${fixedCompanyPic(it.id) ? `<div class="pic-fixed-row"><span>PIC</span><span class="pic-fixed">STEM<small>otomatis</small></span><input type="hidden" name="pic" value="STEM"></div>` : `<label>PIC${picSelectHtml(it.pic, `name="pic"`)}</label>`}<label>Status<select class="control" name="status">${['belum','proses','selesai'].map(s=>`<option ${s===it.status?'selected':''}>${s}</option>`).join('')}</select></label></div><label>Catatan<textarea class="control" name="note" maxlength="2000">${esc(it.note)}</textarea></label><div class="actions"><button class="control primary" type="submit">Terapkan ke draf</button><button class="control" type="button" id="cancel-edit">Batal</button></div><p>Setelah diterapkan, tekan Simpan perubahan untuk menyimpan ke server.</p><p id="edit-error" role="alert"></p></form>`;
     $('#cancel-edit').onclick = () => { editorId=null; render(); };
     const form = $('#editor-slot form'); form.onsubmit = e => {
       e.preventDefault(); const patch = Object.fromEntries(new FormData(form));
@@ -421,7 +431,7 @@ function mount() {
       try{localStorage.setItem('editor',n);}catch{}
     }
     busy=true; controls(); message('Menyimpan jadwal...');
-    try { doc.data.items.forEach(it=>{ if(isStemItem(it.id)) it.pic='STEM'; }); doc=await request('PUT',{rev:doc.rev,data:doc.data});baseline=structuredClone(doc.data.items);dirty=false;render();message('Jadwal tersimpan.'); }
+    try { doc.data.items.forEach(it=>{ if(fixedCompanyPic(it.id)) it.pic='STEM'; }); doc=await request('PUT',{rev:doc.rev,data:doc.data});baseline=structuredClone(doc.data.items);dirty=false;render();message('Jadwal tersimpan.'); }
     catch(e) { if(e.status===409) conflict=true;message(e.status===409?'Konflik revisi: draf tetap di layar. Salin perubahan Anda, lalu Muat ulang dan terapkan kembali.':`${e.message} Draf tetap tersedia; coba simpan lagi.`); }
     finally {busy=false;controls();}
   };

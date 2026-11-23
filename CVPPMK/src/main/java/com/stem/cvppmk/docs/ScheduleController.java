@@ -22,7 +22,7 @@ public class ScheduleController {
     private final ObjectMapper mapper = new ObjectMapper().enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
             .enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
     public ScheduleController(ScheduleStore store, SetupAccessController access, ScheduleChatController chat, DataFiles files) { this.store = store; this.access = access; this.chat = chat; this.files = files; }
-    /** Admin = Setup terbuka (otomatis di mode dev; di war setelah password Setup). Non-admin hanya boleh melihat jadwal. */
+    /** Admin = Setup terbuka (otomatis di mode dev; di war setelah password Setup). Non-admin boleh mengubah PIC dan status; tanggal/catatan tetap admin. */
     @GetMapping("/access")
     public ResponseEntity<Map<String, Object>> access(HttpServletRequest request) {
         Map<String, Object> result = new LinkedHashMap<>(); result.put("editable", access.unlocked(request));

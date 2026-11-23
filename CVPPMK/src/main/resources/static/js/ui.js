@@ -1,3 +1,5 @@
+import { mountPager } from "./paging.js";
+import { emptyPreference, saveEmptyPreference } from "./data-policy.js";
 // Helper render yang dipakai semua halaman.
 export const $ = (sel, el = document) => el.querySelector(sel);
 export const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
@@ -7,7 +9,7 @@ export const slug = s => String(s).toLowerCase().replace(/&/g, "and").replace(/[
 // Fungsi yang dijalankan setelah HTML halaman masuk ke DOM (pasang event untuk tabel cari, filter, dll).
 const mounts = [];
 export const onMount = fn => mounts.push(fn);
-export const flushMounts = () => mounts.splice(0).forEach(fn => fn());
+export const flushMounts = () => { while (mounts.length) mounts.splice(0).forEach(fn => fn()); };
 
 export const isEmpty = v => v === null || v === undefined || v === "";
 export const empty = () => `<span class="empty">belum diisi</span>`;
@@ -137,6 +139,7 @@ export const resetExports = () => { exportsReg.clear(); exportSeq = 0; lazyReg.c
 // detail baris expandable yang baru dirender saat pertama kali dibuka (opsi lazy di table)
 const lazyReg = new Map();
 let lazySeq = 0;
+let pagingSeq = 0;
 export const exportOf = id => exportsReg.get(id);
 
 // Teks polos dari HTML sel: tag dipisah koma, nama akun dipisah " - ", opsi yang tidak terpilih & "belum diisi" dibuang
@@ -183,7 +186,18 @@ export const sqlSheets = (d, names) => Object.entries(names).filter(([k]) => d[k
 // expand(r): HTML detail baris; baris jadi bisa diklik untuk buka/tutup detail di bawahnya.
 // exportCols: kolom Excel kalau berbeda dari kolom yang tampil (mis. isi detail ikut diekspor).
 // lazy: detail baru dirender saat baris dibuka (data besar).
-export function table(cols, rows, { flag, xid, allRows, noExport, expand, exportCols, lazy } = {}) {
+export function table(cols, rows, { flag, xid, allRows, noExport, expand, exportCols, lazy, paginate = true } = {}) {
+  if (paginate && rows.length > 25) {
+    const pid = `pg${++pagingSeq}`;
+    // Register export against all rows, including when this table sits inside a search result.
+    const exportId = xid || `x${++exportSeq}`;
+    if (!noExport) exportsReg.set(exportId, { cols: exportCols || cols, rows: allRows || rows });
+    onMount(() => {
+      const box = document.getElementById(pid); if (!box) return;
+      mountPager(box, rows, visible => table(cols, visible, { flag, xid: exportId, allRows: allRows || rows, noExport, expand, exportCols, lazy, paginate: false }), flushMounts);
+    });
+    return `${noExport || xid ? "" : `<div class="xbar">${exportBtn(exportId)}</div>`}<div id="${pid}"></div>`;
+  }
   const id = xid || `x${++exportSeq}`;
   if (!noExport) exportsReg.set(id, { cols: exportCols || cols, rows: allRows || rows });
   const n = cols.length + (expand ? 1 : 0);
@@ -214,46 +228,49 @@ document.addEventListener("click", e => {
 
 // Tabel expandable + kotak cari (ikut mencari isi detail yang tertutup) + tombol Buka/Tutup semua.
 export function expandList(id, cols, rows, opts = {}) {
-  onMount(() => {
-    const box = $(`#${id}`); if (!box) return;
-    const trs = $$(":scope > .table-wrap > table > tbody > tr.has-exp", box);
-    $("input[type=search]", box).oninput = e => {
-      const t = e.target.value.toLowerCase();
-      trs.forEach(tr => {
-        const hit = (tr.textContent + " " + tr.nextElementSibling.textContent).toLowerCase().includes(t);
-        tr.hidden = !hit; if (!hit) toggleRow(tr, false);
-      });
-    };
-    $$("[data-exp-all]", box).forEach(b => b.onclick = () => trs.filter(tr => !tr.hidden).forEach(tr => toggleRow(tr, b.dataset.expAll === "1")));
-  });
-  return `<div id="${id}"><div class="toolbar"><input type="search" placeholder="${esc(opts.placeholder || "Cari…")}" aria-label="Cari di tabel">
-      <button type="button" class="cbtn" data-exp-all="1">Buka semua</button><button type="button" class="cbtn" data-exp-all="0">Tutup semua</button></div>
-    ${table(cols, rows, opts)}</div>`;
+  return searchable(id, cols, rows, { ...opts, expandable: true });
 }
 
-// Tabel dengan kotak cari + filter dropdown opsional. limit: jumlah baris maksimum yang dirender (data besar).
-export function searchable(id, cols, rows, { filterKey, filterLabel, flag, limit = Infinity } = {}) {
-  const opts = filterKey ? [...new Set(rows.map(r => r[filterKey]))].filter(Boolean) : [];
+// Search/filter always runs on the complete dataset, before paging.
+export function searchable(id, cols, rows, opts = {}) {
+  const { filterKey, filterLabel, emptyRow, searchText, expandable, placeholder } = opts;
+  const searchCache = new Map();
+  const textOf = r => {
+    if (searchText) return searchText(r);
+    const basic = Object.values(r).map(v => typeof v === 'object' ? Object.values(v || {}).join(' ') : String(v ?? '')).join(' ');
+    if (!expandable || !opts.expand) return basic;
+    if (!searchCache.has(r)) searchCache.set(r, basic + ' ' + cellText(opts.expand(r)));
+    return searchCache.get(r);
+  };
+  const filters = filterKey ? [...new Set(rows.map(r => r[filterKey]))].filter(Boolean) : [];
   onMount(() => {
-    const box = $(`#${id}`); if (!box) return;
-    const q = $("input", box), sel = $("select", box), out = $(".out", box), cnt = $(".count", box);
+    const box = document.getElementById(id); if (!box) return;
+    const q = $("input[type=search]", box), sel = $("select[data-filter]", box), out = $(".out", box), cnt = $(".count", box);
+    const showEmpty = $("[data-show-empty]", box), hiddenCount = $("[data-empty-count]", box);
+    if (showEmpty) showEmpty.checked = emptyPreference(id);
     const draw = () => {
       const t = q.value.toLowerCase(), f = sel ? sel.value : "";
-      const list = rows.filter(r => (!f || r[filterKey] === f) &&
-        (!t || Object.values(r).some(v => String(v ?? "").toLowerCase().includes(t))));
-      // export mengikuti hasil cari/filter saat ini, tanpa batas limit tampilan
-      out.innerHTML = table(cols, list.slice(0, limit), { flag, xid: id, allRows: list });
-      $(".table-wrap", out).classList.add("tall");
-      cnt.textContent = list.length > limit
-        ? `menampilkan ${limit} dari ${list.length} baris yang cocok, persempit pencarian`
-        : `${list.length} dari ${rows.length} baris`;
+      const matches = rows.filter(r => (!f || r[filterKey] === f) &&
+        (!t || textOf(r).toLowerCase().includes(t)));
+      const hidden = emptyRow && !showEmpty.checked ? matches.filter(emptyRow).length : 0;
+      const list = matches.filter(r => !emptyRow || showEmpty.checked || !emptyRow(r));
+      opts.onFilter?.(list);
+      out.innerHTML = table(cols, list, { ...opts, xid: id, allRows: list });
+      cnt.textContent = `${list.length} dari ${rows.length} baris`;
+      if (hiddenCount) hiddenCount.textContent = `${hidden} item kosong disembunyikan`;
+      flushMounts();
     };
-    q.oninput = draw; if (sel) sel.onchange = draw; draw();
+    q.oninput = draw; if (sel) sel.onchange = draw;
+    if (showEmpty) showEmpty.onchange = () => { saveEmptyPreference(id, showEmpty.checked); draw(); };
+    $$('[data-exp-all]', box).forEach(b => b.onclick = () => $$('tr.has-exp', out).forEach(tr => toggleRow(tr, b.dataset.expAll === '1')));
+    draw();
   });
-  return `<div id="${id}">
-    <div class="toolbar"><input type="search" placeholder="Cari…" aria-label="Cari di tabel">
-      ${filterKey ? `<select aria-label="Filter ${esc(filterLabel)}"><option value="">Semua ${esc(filterLabel)}</option>${opts.map(o => `<option>${esc(o)}</option>`).join("")}</select>` : ""}
-      <span class="count"></span>${exportBtn(id)}</div>
+  return `<div id="${esc(id)}">
+    <div class="toolbar"><input type="search" placeholder="${esc(placeholder || 'Cari…')}" aria-label="Cari di tabel">
+      ${filterKey ? `<select data-filter aria-label="Filter ${esc(filterLabel)}"><option value="">Semua ${esc(filterLabel)}</option>${filters.map(o => `<option>${esc(o)}</option>`).join('')}</select>` : ''}
+      ${emptyRow ? '<label><input type="checkbox" data-show-empty> Tampilkan yang kosong</label><span class="muted" data-empty-count></span>' : ''}
+      ${expandable ? '<button type="button" class="cbtn" data-exp-all="1">Buka semua</button><button type="button" class="cbtn" data-exp-all="0">Tutup semua</button>' : ''}
+      <span class="count"></span>${opts.noExport ? '' : exportBtn(id)}</div>
     <div class="out"></div></div>`;
 }
 

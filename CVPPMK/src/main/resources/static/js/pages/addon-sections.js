@@ -3,6 +3,7 @@
 // Membandingkan yang DIHARAPKAN addon (addon-data.js) dengan isi DB (sql/<halaman>/*addon*.sql). Semua query baca saja.
 // Status: ok = sesuai, warn = ada tapi perlu diisi, danger = belum ada, none = opsional.
 import { esc, rowsOf, section, searchable } from "../ui.js";
+import { applicable, branchNotice } from "../data-policy.js";
 import { ADDONS } from "./addon-data.js";
 
 const kpis = list => `<div class="kpis">${list.map(([n, l]) => `<div class="kpi"><b>${n.toLocaleString("id-ID")}</b><span>${esc(l)}</span></div>`).join("")}</div>`;
@@ -20,30 +21,30 @@ const missingOpt = { t: "none", text: "Opsional, belum ada" };
 const failed = (d, keys) => keys.some(k => !d[k] || d[k].error);
 const NOTICE = `<p class="sec-lead">Belum bisa dibandingkan karena data dari DB gagal dibaca. Perbaiki dulu pesan error di atas, lalu klik Muat ulang.</p>`;
 
-const summary = (rows, noun) => kpis([[rows.length, noun], [count(rows, "ok"), "Siap"], [count(rows, "warn"), "Perlu diisi"], [count(rows, "danger"), "Belum ada"]]);
+const summary = (rows, noun) => kpis([[rows.filter(r => !r.empty).length, noun], [count(rows.filter(r => !r.empty), "ok"), "Siap"], [count(rows.filter(r => !r.empty), "warn"), "Perlu diisi"], [count(rows.filter(r => !r.empty), "danger"), "Belum ada"]]);
 
 // ---------- pembanding ----------
-const paramRows = (a, d) => {
+export const paramRows = (a, d) => {
   const db = new Map(rowsOf(d.addon_params).map(r => [upper(r.U_Key), r]));
-  return a.PARAMS.map(([key, group, level, desc]) => {
+  return applicable("PARAMS", a.PARAMS).map(([key, group, level, desc]) => {
     const hit = db.get(key), blank = !hit || String(hit.U_Value ?? "").trim() === "";
     const status = !hit ? (level === "w" ? { t: "danger" } : missingOpt)
       : blank ? (level === "w" ? { t: "warn" } : { t: "none", text: "Opsional, kosong" }) : { t: "ok" };
-    return { status, Key: key, Group: group, Desc: desc, Value: hit ? hit.U_Value : "" };
+    return { status: blank ? { t: "none", text: "Kosong / belum ada" } : status, empty: blank, Key: key, Group: group, Desc: desc, Value: hit ? hit.U_Value : "" };
   });
 };
-const tableRows = (a, d) => {
+export const tableRows = (a, d) => {
   const db = new Map(rowsOf(d.addon_rows).map(r => [upper(r.Name), r]));
-  return a.TABLES.map(([name, by, needsData, usedBy, note]) => {
-    const hit = db.get("@" + name), n = hit ? +hit.Rows : null;
-    const status = !hit ? { t: "danger" } : needsData && n === 0 ? { t: "warn", text: "Kosong" } : { t: "ok" };
-    return { status, Name: name, By: by, Used: usedBy, Rows: n, Note: note };
+  return applicable("TABLES", a.TABLES).map(([name, by, needsData, usedBy, note]) => {
+    const hit = db.get("@" + name), n = hit && hit.Rows !== null && hit.Rows !== undefined && Number.isFinite(+hit.Rows) ? +hit.Rows : null;
+    const status = !hit ? { t: "danger" } : n === null ? { t: "none", text: "Jumlah baris belum diketahui" } : needsData && n === 0 ? { t: "warn", text: "Kosong" } : { t: "ok" };
+    return { status: !hit || n === 0 ? { t: "none", text: "Kosong / belum ada" } : status, empty: !hit || n === 0, Name: name, By: by, Used: usedBy, Rows: n, Note: note };
   });
 };
-const udfRows = (a, d) => {
+export const udfRows = (a, d) => {
   const db = new Set(rowsOf(d.addon_udf).map(r => `${upper(r.TableID)}.${upper(r.AliasID)}`));
-  return a.UDFS.map(([tbl, alias, why]) => ({
-    status: db.has(`${upper(tbl)}.${upper(alias)}`) ? { t: "ok" } : { t: "danger" }, Table: tbl, Field: "U_" + alias, Used: why
+  return applicable("UDFS", a.UDFS).map(([tbl, alias, why]) => ({
+    empty: !db.has(`${upper(tbl)}.${upper(alias)}`), status: db.has(`${upper(tbl)}.${upper(alias)}`) ? { t: "ok" } : { t: "none", text: "Belum ada" }, Table: tbl, Field: "U_" + alias, Used: why
   }));
 };
 const procRows = (a, d) => {
@@ -58,23 +59,23 @@ const procRows = (a, d) => {
 const paramSection = (a, d) => {
   const rows = byStatus(paramRows(a, d)), known = new Set(a.PARAMS.map(p => p[0]));
   const extra = rowsOf(d.addon_params).filter(r => !known.has(upper(r.U_Key))).length;
-  return section(`addon-${a.id}-param`, `${a.name}: parameter (@ST_PARAM)`, summary(rows, "Key dicek") + searchable(`ad-${a.id}-p`, [statusCol,
+  return section(`addon-${a.id}-param`, `${a.name}: parameter (@ST_PARAM)`, branchNotice(a.PARAMS.length - rows.length) + summary(rows, "Key terisi") + searchable(`ad-${a.id}-p`, [statusCol,
     { key: "Key", label: "Key", fmt: code }, { key: "Group", label: "Kelompok" }, { key: "Desc", label: "Dipakai untuk" },
-    { key: "Value", label: "Nilai di DB", fmt: v => v ? code(v) : "" }], rows, { filterKey: "Group", filterLabel: "kelompok", flag: r => r.status.t === "danger" }),
+    { key: "Value", label: "Nilai di DB", fmt: v => v ? code(v) : "" }], rows, { emptyRow: r => r.empty, filterKey: "Group", filterLabel: "kelompok", flag: r => r.status.t === "danger" }),
     { level: 3, lead: `Key yang dibaca ${a.name}. Wajib = dibaca langsung di jalur utama. ${extra} key lain di @ST_PARAM tidak dicek di sini.` });
 };
 const tableSection = (a, d) => {
   const rows = byStatus(tableRows(a, d));
-  return section(`addon-${a.id}-tabel`, `${a.name}: tabel yang dibutuhkan`, summary(rows, "Tabel dicek") + searchable(`ad-${a.id}-t`, [statusCol,
+  return section(`addon-${a.id}-tabel`, `${a.name}: tabel yang dibutuhkan`, branchNotice(a.TABLES.length - rows.length) + summary(rows, "Tabel tersedia") + searchable(`ad-${a.id}-t`, [statusCol,
     { key: "Name", label: "Tabel", fmt: v => code("@" + v) }, { key: "Rows", label: "Baris", num: true, fmt: v => v === null ? "" : v.toLocaleString("id-ID") },
-    { key: "By", label: "Dibuat oleh" }, { key: "Used", label: "Dibaca oleh" }, { key: "Note", label: "Catatan" }], rows, { flag: r => r.status.t === "danger" }),
-    { level: 3, lead: "Tabel yang perlu isi data tapi masih kosong ditandai, karena modulnya tidak bisa dipakai sebelum itu." });
+    { key: "By", label: "Dibuat oleh" }, { key: "Used", label: "Dibaca oleh" }, { key: "Note", label: "Catatan", fmt: v => v ? esc(v) : "" }], rows, { emptyRow: r => r.empty, flag: r => !r.empty && r.status.t === "danger" }),
+    { level: 3, lead: "Tabel tanpa data disembunyikan secara bawaan dan tidak dihitung sebagai temuan. Aktifkan Tampilkan yang kosong untuk melihatnya." });
 };
 const udfSection = (a, d) => {
   const rows = byStatus(udfRows(a, d));
-  return section(`addon-${a.id}-udf`, `${a.name}: field yang dibutuhkan`, summary(rows, "Field dicek") + searchable(`ad-${a.id}-u`, [statusCol,
+  return section(`addon-${a.id}-udf`, `${a.name}: field yang dibutuhkan`, branchNotice(a.UDFS.length - rows.length) + summary(rows, "Field tersedia") + searchable(`ad-${a.id}-u`, [statusCol,
     { key: "Table", label: "Tabel", fmt: code }, { key: "Field", label: "Field", fmt: code }, { key: "Used", label: "Fungsi" }], rows,
-    { flag: r => r.status.t === "danger" }), { level: 3, lead: "Dibuat oleh DBCreator addon. Field branch hanya ada bila DBCreator dijalankan pada DB yang memakai branch." });
+    { emptyRow: r => r.empty, flag: r => !r.empty && r.status.t === "danger" }), { level: 3, lead: "Dibuat oleh DBCreator addon. Field branch hanya ada bila DBCreator dijalankan pada DB yang memakai branch." });
 };
 const procSection = (a, d) => {
   const rows = byStatus(procRows(a, d));
@@ -86,7 +87,8 @@ const procSection = (a, d) => {
 
 // ---------- ringkasan masalah untuk kotak temuan halaman ----------
 const problems = (a, rows, noun) => {
-  const out = [], bad = count(rows, "danger"), warn = count(rows, "warn");
+  const filled = rows.filter(r => !r.empty);
+  const out = [], bad = count(filled, "danger"), warn = count(filled, "warn");
   if (bad) out.push(["danger", `${a.name}: ${bad} ${noun} yang dibutuhkan belum ada di DB ini.`]);
   if (warn) out.push(["warn", `${a.name}: ${warn} ${noun} sudah ada tapi masih kosong.`]);
   return out;

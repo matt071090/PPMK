@@ -191,8 +191,31 @@ public class AddonController {
             if (used.contains(t.getKey()) || !("0".equals(type) || "5".equals(type))) continue;
             list.add(object(t.getKey(), t.getValue()[0], "t", Collections.singletonList(t.getKey()), outb, maps.get(t.getKey())));
         }
+        // One metadata query for all objects. Missing statistics stay unknown, never an invented zero.
+        try {
+            Map<String, Long> counts = new HashMap<>();
+            for (Map<String, Object> row : jdbc.queryForList("SELECT TABLE_NAME, RECORD_COUNT FROM SYS.M_TABLES WHERE SCHEMA_NAME = CURRENT_SCHEMA AND TABLE_NAME LIKE '@%'")) {
+                Object count = row.get("RECORD_COUNT");
+                if (count instanceof Number) counts.put(String.valueOf(row.get("TABLE_NAME")), ((Number) count).longValue());
+            }
+            for (Map<String, Object> o : list) {
+                Long count = objectRowCount((List<Map<String, Object>>) o.get("tables"), counts);
+                if (count != null) o.put("rowCount", count);
+            }
+        } catch (DataAccessException e) { /* unknown remains visible; data endpoint reports actual read errors */ }
         list.sort(Comparator.comparing(o -> String.valueOf(o.get("code"))));
         return list;
+    }
+
+    static Long objectRowCount(List<Map<String, Object>> tables, Map<String, Long> counts) {
+        if (tables.isEmpty()) return null;
+        long total = 0;
+        for (Map<String, Object> t : tables) {
+            Long n = counts.get("@" + t.get("name"));
+            if (n == null) return null;
+            total += n;
+        }
+        return total;
     }
 
     private static Map<String, Object> object(String code, String name, String kind, List<String> tables, Map<String, String[]> outb, Map<String, Object> map) {

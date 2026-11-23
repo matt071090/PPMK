@@ -1,3 +1,4 @@
+import { nonBranch } from "../data-policy.js";
 // Bab 1: General Parameter. Urutan dan nomor mengikuti blueprint "01.01 General Parameters".
 import {
   $, $$, esc, val, YN, badgeYN, coded, rowsOf, isEmpty, onMount, section, kv, settings, table, searchable, tags, udfCols, hasUdf, exportSheets, sqlSheets,
@@ -363,7 +364,7 @@ function checkUsers(users) {
   const su = users.filter(u => u.SUPERUSER === "Y");
   if (users.length && su.length === users.length) out.push(["warn", `Semua user (${su.length}) berstatus Superuser. Perlu dicek lagi untuk otorisasi saat go-live.`]);
   const noBranch = users.filter(u => !u.Branches).map(u => u.USER_CODE);
-  if (noBranch.length) out.push(["info", `User tanpa assignment branch: ${noBranch.join(", ")}.`]);
+  if (!nonBranch() && noBranch.length) out.push(["info", `User tanpa assignment branch: ${noBranch.join(", ")}.`]);
   return out;
 }
 function checkOrg(branches) {
@@ -751,10 +752,10 @@ sap.sld.password=[PASSWORD]</pre></div>`) + users;
     render(d) {
       const cols = [{ key: "USER_CODE", label: "User Code" }, { key: "U_NAME", label: "Nama" },
         { key: "SUPERUSER", label: "Superuser", fmt: badgeYN }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
-        { key: "Branches", label: "Branch", fmt: v => tags(v) }, { key: "LastLogin", label: "Login terakhir" }, ...udfCols(d.users)];
+        ...(!nonBranch() ? [{ key: "Branches", label: "Branch", fmt: v => tags(v) }] : []), { key: "LastLogin", label: "Login terakhir" }, ...udfCols(d.users)];
       // Excel: branch bisa lebih dari satu per user, jadi dipisah ke sheet "Branch Assignment" (sql/users/02_branches.sql)
       const xlsx = exportSheets([{ name: "Users", cols: cols.filter(c => c.key !== "Branches"), rows: rowsOf(d.users) },
-        ...sqlSheets(d, { branches: "Branch Assignment" })], "User");
+        ...(!nonBranch() ? sqlSheets(d, { branches: "Branch Assignment" }) : [])], "User");
       return section("users", "User SAP B1", xlsx + table(cols, rowsOf(d.users), { noExport: true }));
     }
   },
@@ -816,8 +817,9 @@ sap.sld.password=[PASSWORD]</pre></div>`) + users;
     lead: "Branch (unit bisnis). Transaksi, user, dan numbering series dipisahkan per branch. Daftar gudang ada di halaman <a href=\"#/warehouses\">Warehouse</a>.",
     menu: "Administration › Setup › Financials › Branches",
     tables: ["OBPL", "OWHS", "USR6"],
-    checks: d => checkOrg(rowsOf(d.branches)),
+    checks: d => nonBranch() ? [] : checkOrg(rowsOf(d.branches)),
     render(d) {
+      if (nonBranch()) return `<p class="sec-lead">Pemeriksaan branch disembunyikan (company tanpa branch).</p>`;
       return section("branches", "Branch", table([{ key: "BPLId", label: "ID", num: 1 }, { key: "BPLName", label: "Nama Branch" },
           { key: "MainBPL", label: "Branch utama", fmt: badgeYN }, { key: "Disabled", label: "Nonaktif", fmt: badgeYN },
           { key: "DflWhs", label: "Warehouse default" }, { key: "TaxIdNum", label: "NPWP" },

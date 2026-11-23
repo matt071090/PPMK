@@ -1,3 +1,4 @@
+import { nonBranch } from "../data-policy.js";
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
 import { mainTable, tableName, tableModule } from "../sap-tables.js";
@@ -274,7 +275,7 @@ const ADDR_TYPE = { B: "Bill To", S: "Ship To" };
 const money = v => esc((+v).toLocaleString("id-ID"));
 const dash = v => isEmpty(v) ? `<span class="muted">–</span>` : esc(v);
 const acctPair = (code, name) => `<span class="acct">${esc(code)}<small>${esc(name || "akun tidak ditemukan")}</small></span>`;
-const bpNoBranch = b => b.frozenFor !== "Y" && isEmpty(b.Branches);
+const bpNoBranch = b => !nonBranch() && b.frozenFor !== "Y" && isEmpty(b.Branches);
 // ctx: { contacts, addresses (Map CardCode -> baris), udf (metadata UDF OCRD), branches (semua nama branch) }
 function bpDetail(b, ctx) {
   const cp = ctx.contacts.get(b.CardCode) || [], ad = ctx.addresses.get(b.CardCode) || [];
@@ -283,10 +284,10 @@ function bpDetail(b, ctx) {
       b.frozenFor === "Y" ? `<span class="badge">Inactive</span>` : `<span class="badge yes">Active</span>`],
     [esc(b.CardCode), esc(b.GroupName || "–"), b.Currency === "##" ? "All Currencies" : esc(b.Currency || ""),
       b.LicTradNum ? `NPWP ${esc(b.LicTradNum)}` : "", b.CardFName && b.CardFName !== b.CardName ? `Foreign name: ${esc(b.CardFName)}` : ""])
-    + `<div class="md-label">Branch Assignment</div>
+    + (nonBranch() ? "" : `<div class="md-label">Branch Assignment</div>
     <div class="bp-branches">${ctx.branches.map(br => assigned.has(br)
       ? `<span class="bp-br y"><b>✓</b>${esc(br)}</span>` : `<span class="bp-br n"><b>–</b>${esc(br)}</span>`).join("")}
-      ${assigned.size ? "" : `<span class="badge warn">Belum di-assign ke branch, BP tidak bisa dipakai di dokumen</span>`}</div>`;
+      ${assigned.size ? "" : `<span class="badge warn">Belum di-assign ke branch, BP tidak bisa dipakai di dokumen</span>`}</div>`);
   const list = [
     ["General", fieldList([["Tel 1", b.Phone1], ["Tel 2", b.Phone2], ["Mobile Phone", b.Cellular], ["Fax", b.Fax], ["E-Mail", b.E_Mail],
       ["Web Site", b.IntrntSite], ["Shipping Type", b.ShipType], ["Type of Business", BP_BIZ[b.CmpPrivate] || b.CmpPrivate],
@@ -314,12 +315,12 @@ function bpDetail(b, ctx) {
 function bpView(t, name, list, groups, ctx) {
   const grps = groups.filter(g => g.GroupType === t), noBr = list.filter(bpNoBranch).length;
   return kpis([[list.length, name + (t === "C" ? " & lead" : "")], [grps.length, "Group"], [list.filter(b => b.frozenFor === "Y").length, "Inactive"],
-      [noBr, "Aktif tanpa branch"]])
+      ...(!nonBranch() ? [[noBr, "Aktif tanpa branch"]] : [])])
     + listDetail(`bpv-${t}`, list, {
       noun: name.toLowerCase(), placeholder: "Cari kode / nama / NPWP / telepon…",
       chips: [{ label: "Semua group" }, ...grps.map(g => ({ label: g.GroupName, test: b => b.GroupCode === g.GroupCode,
         title: `Kode ${g.GroupCode} · Price list: ${g.PriceListName || "–"}${g.Locked === "Y" ? " · dikunci" : ""}` }))],
-      checks: [{ label: `Hanya tanpa branch${noBr ? ` (${noBr})` : ""}`, test: bpNoBranch }, { label: "Sembunyikan inactive", test: b => b.frozenFor !== "Y" }],
+      checks: [...(!nonBranch() ? [{ label: `Hanya tanpa branch${noBr ? ` (${noBr})` : ""}`, test: bpNoBranch }] : []), { label: "Sembunyikan inactive", test: b => b.frozenFor !== "Y" }],
       dim: b => b.frozenFor === "Y",
       text: b => [b.CardCode, b.CardName, b.CardFName, b.GroupName, b.LicTradNum, b.Phone1].filter(Boolean).join(" "),
       item: b => `<span class="md-name">${esc(b.CardName)}</span>
@@ -401,7 +402,7 @@ export const PAGES = {
             { key: "ActType", label: "Tipe", fmt: codedCell(ACT_TYPE) }, { key: "ActCurr", label: "Mata uang", fmt: v => v === "##" ? "Semua" : val(v) },
             { key: "LocManTran", label: "Control", fmt: v => v === "Y" ? `<span class="badge info">Control</span>` : "" },
             { key: "Finanse", label: "Kas", fmt: v => v === "Y" ? `<span class="badge yes">Kas</span>` : "" },
-            { key: "Branches", label: "Branch", fmt: v => tags(v, { none: "Semua branch" }) }, ...udfCols(d.accounts)],
+            ...(!nonBranch() ? [{ key: "Branches", label: "Branch", fmt: v => tags(v, { none: "Semua branch" }) }] : []), ...udfCols(d.accounts)],
             rows, { filterKey: "Drawer", filterLabel: "drawer" }),
           { no: "2.1.2", lead: "Huruf tebal = akun judul (tidak bisa diposting). Indentasi mengikuti level akun. Branch kosong = akun tidak dibatasi ke branch tertentu." });
     }
@@ -572,7 +573,7 @@ export const PAGES = {
   },
 
   "warehouses": {
-    lead: "Gudang per branch, beserta akun G/L di tab Accounting-nya. Setiap warehouse terikat ke satu branch.",
+    get lead() { return nonBranch() ? "Gudang beserta akun G/L di tab Accounting-nya. Company ini tidak memakai branch." : "Gudang per branch, beserta akun G/L di tab Accounting-nya. Setiap warehouse terikat ke satu branch."; },
     menu: "Administration › Setup › Inventory › Warehouses",
     tables: ["OWHS", "OBPL", "OACT"],
     checks(d) {
@@ -587,14 +588,14 @@ export const PAGES = {
           { key: "name", label: "Nama Akun", fmt: v => esc(v ?? "") }],
         WHS_ACCTS.map(([c, label]) => ({ label, code: w[c], name: isEmpty(w[c]) ? null : names[w[c]] || "akun tidak ditemukan" })), { noExport: 1 });
       const noInv = w => method === "W" && w.Inactive !== "Y" && isEmpty(w.BalInvntAc);
-      const base = [{ key: "WhsCode", label: "Kode" }, { key: "WhsName", label: "Nama" }, { key: "BPLName", label: "Branch" }];
+      const base = [{ key: "WhsCode", label: "Kode" }, { key: "WhsName", label: "Nama" }, ...(!nonBranch() ? [{ key: "BPLName", label: "Branch" }] : [])];
       const flags = [{ key: "Inactive", label: "Nonaktif", fmt: badgeYN }, { key: "Locked", label: "Dikunci", fmt: badgeYN },
         { key: "BinActivat", label: "Bin", fmt: badgeYN }, ...udfCols(d.warehouses)];
       const cols = [...base, { key: "BalInvntAc", label: "Inventory Account", fmt: (v, w) => noInv(w) ? `<span class="badge warn">kosong</span>` : val(v) },
         { key: "Accts", label: "Akun terisi", fmt: (v, w) => `${WHS_ACCTS.filter(([c]) => !isEmpty(w[c])).length}/${WHS_ACCTS.length}` }, ...flags];
       const exportCols = [...base, ...flags, ...WHS_ACCTS.map(([c, label]) => ({ key: c, label, fmt: acct }))];
       const branches = [...new Set(whs.map(w => w.BPLName).filter(Boolean))];
-      return kpis([[whs.length, "Warehouse"], [whs.filter(w => w.Inactive !== "Y").length, "Aktif"], [branches.length, "Branch"]])
+      return kpis([[whs.length, "Warehouse"], [whs.filter(w => w.Inactive !== "Y").length, "Aktif"], ...(!nonBranch() ? [[branches.length, "Branch"]] : [])])
         + section("list", "Daftar Warehouse", expandList("whs-box", cols, whs,
           { expand: detail, exportCols, flag: noInv, placeholder: "Cari warehouse / branch / kode akun / nama akun…" }),
         { lead: (method === "W"
@@ -605,11 +606,11 @@ export const PAGES = {
   },
 
   "business-partners": {
-    lead: "Customer dan vendor per group, beserta price list default group dan branch yang di-assign ke tiap BP. BP hanya bisa dipakai di dokumen branch yang tercentang di tab Branches.",
+    get lead() { return nonBranch() ? "Customer dan vendor per group, beserta price list default group. Company ini tidak memakai branch." : "Customer dan vendor per group, beserta price list default group dan branch yang di-assign ke tiap BP. BP hanya bisa dipakai di dokumen branch yang tercentang di tab Branches."; },
     menu: "Business Partners › Business Partner Master Data · Administration › Setup › Business Partners › Customer Groups / Vendor Groups",
     tables: ["OCRD", "OCRG", "CRD8", "OBPL", "OPLN", "OCPR", "CRD1", "CRD2", "OSHP"],
     checks(d) {
-      const noBranch = rowsOf(d.bp).filter(b => b.frozenFor !== "Y" && isEmpty(b.Branches)).length;
+      const noBranch = rowsOf(d.bp).filter(bpNoBranch).length;
       const out = noBranch ? [["warn", `${noBranch} BP aktif belum di-assign ke branch mana pun, sehingga tidak bisa dipakai di dokumen.`]] : [];
       if (!rowsOf(d.shipping).length) out.push(["info", "Belum ada shipping type."]);
       return out;
@@ -709,13 +710,15 @@ export const PAGES = {
     menu: "Tools › Customization Tools › Object Registration Wizard",
     tables: ["OUDO", "UDO1"],
     render(d) {
-      const u = rowsOf(d.udo);
-      return kpis([[u.length, "UDO"], [u.filter(x => x.TYPE === "3").length, "Tipe Document"], [u.filter(x => x.TYPE === "1").length, "Tipe Master Data"]])
+      const counts = new Map((addonState.objects || []).map(o => [o.code, o.rowCount]));
+      const u = rowsOf(d.udo).map(r => ({ ...r, Rows: counts.get(r.Code) }));
+      const filled = u.filter(r => r.Rows === null || r.Rows === undefined || +r.Rows > 0);
+      return kpis([[filled.length, "UDO ditampilkan"], [filled.filter(x => x.TYPE === "3").length, "Tipe Document"], [filled.filter(x => x.TYPE === "1").length, "Tipe Master Data"]])
         + section("list", "Daftar UDO", searchable("udo-t", [{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
           { key: "TYPE", label: "Tipe", fmt: codedCell(UDO_TYPE) }, { key: "TableName", label: "Tabel header", fmt: v => `<code>@${esc(v)}</code>` },
           { key: "ChildTables", label: "Tabel baris", fmt: v => isEmpty(v) ? "" : v.split(", ").map(t => `<code>@${esc(t)}</code>`).join(" ") },
           { key: "MngSeries", label: "Series", fmt: badgeYN }, { key: "CanCancel", label: "Cancel", fmt: badgeYN }, { key: "CanLog", label: "Log", fmt: badgeYN },
-          { key: "_menu", label: "Menu 7 Addon", fmt: (_, r) => udoMenu(r) }], u),
+          { key: "_menu", label: "Menu 7 Addon", fmt: (_, r) => udoMenu(r) }], u, { emptyRow: r => r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }),
           { lead: "UDO Master Data otomatis jadi menu di bab 7 Addon. UDO Document bisa dijadikan menu kalau isinya lebih cocok dicek sebagai master data (mode dev); sub kategorinya diatur di Setup › Mapping Add-on." });
     }
   },
@@ -725,10 +728,11 @@ export const PAGES = {
     menu: "Tools › Customization Tools › User-Defined Tables - Setup",
     tables: ["OUTB", "CUFD", "OUDO", "UDO1"],
     render(d) {
-      const t = rowsOf(d.udt).map(x => ({ ...x, Pemakai: x.UdoCode ? `UDO ${x.UdoCode}` : x.UdoChildOf ? `UDO ${x.UdoChildOf} (baris)` : "" }));
+      const rowCounts = new Map(rowsOf(d.addon_rows).map(r => [String(r.Name).replace(/^@/, ""), r.Rows]));
+      const t = rowsOf(d.udt).map(x => ({ ...x, Rows: rowCounts.get(x.TableName), Pemakai: x.UdoCode ? `UDO ${x.UdoCode}` : x.UdoChildOf ? `UDO ${x.UdoChildOf} (baris)` : "" }));
       return section("list", "Daftar UDT", searchable("udt-t", [{ key: "TableName", label: "Tabel", fmt: v => `<code>@${esc(v)}</code>` },
         { key: "Descr", label: "Deskripsi" }, { key: "ObjectType", label: "Tipe", fmt: codedCell(UDT_TYPE) },
-        { key: "FieldCount", label: "Jumlah field", num: 1 }, { key: "Pemakai", label: "Dipakai oleh" }], t));
+        { key: "Rows", label: "Baris data", num: 1 }, { key: "FieldCount", label: "Jumlah field", num: 1 }, { key: "Pemakai", label: "Dipakai oleh" }], t, { emptyRow: r => r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }));
     }
   },
 
@@ -770,13 +774,13 @@ export const PAGES = {
     tables: ["OUQR", "OQCN"],
     render(d) {
       const allQ = rowsOf(d.queries), q = allQ.filter(x => x.IsSystem !== "Y");
-      const cats = rowsOf(d.categories).filter(c => c.IsSystem !== "Y" && +c.QueryCount > 0), hidden = allQ.length - q.length;
+      const cats = rowsOf(d.categories).filter(c => c.IsSystem !== "Y"), hidden = allQ.length - q.length;
       const note = hidden ? `<p class="sec-lead">${hidden.toLocaleString("id-ID")} query bawaan SAP disembunyikan.</p>` : "";
-      return section("categories", "Kategori", table([{ key: "CatName", label: "Kategori" }, { key: "QueryCount", label: "Jumlah query", num: 1 }], cats),
-          { lead: "Kategori query buatan user yang berisi query." })
+      return section("categories", "Kategori", searchable("query-cats", [{ key: "CatName", label: "Kategori" }, { key: "QueryCount", label: "Jumlah query", num: 1 }], cats, { emptyRow: r => +r.QueryCount === 0 }),
+          { lead: "Kategori query buatan user. Kategori kosong bisa ditampilkan lewat toggle." })
         + section("queries", "Daftar Query", note + searchable("q-t", [{ key: "CatName", label: "Kategori" }, { key: "QName", label: "Nama query" },
           { key: "Len", label: "Panjang (karakter)", num: 1, fmt: num }, { key: "Created", label: "Dibuat" }, { key: "LastRun", label: "Terakhir dijalankan" }], q,
-          { filterKey: "CatName", filterLabel: "kategori" }));
+          { emptyRow: r => !r.Len || +r.Len === 0, filterKey: "CatName", filterLabel: "kategori" }));
     }
   }
 };
