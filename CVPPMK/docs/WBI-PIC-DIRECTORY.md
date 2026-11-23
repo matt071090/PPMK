@@ -5,7 +5,7 @@ Melanjutkan commit inventory/PIC-STEM `18bd4b3`, sesuai revisi terakhir Fakhri: 
 - Profil company berada di `company/wbi.json`; API company mengirim sumber, grup dan kode pengecualian. JS tidak menguji nama/kode company WBI untuk memilih daftar.
 - WBI mengambil `api/section/users`: hanya Locked=N dan bukan kode sistem/layanan/gerai pada konfigurasi. SUPERUSER sendiri tidak dikecualikan, sehingga pemakai sah seperti CEO-WBI tetap dapat dipilih.
 - Dropdown menampilkan `+ PIC`, STEM, lalu grup WBI dengan **USER CODE (USERNAME)**. Nilai pilihan disimpan sebagai `WBI:<code>`. Tabel, Ringkasan per area, Home dan catatan perubahan PIC memakai kode/nama yang sesuai.
-- Nama di luar daftar tetap boleh diketik; kegagalan baca SAP menghasilkan saran kosong, tidak mengambil daftar CV. Delapan kegiatan STEM tetap terkunci.
+- Nama di luar daftar tetap boleh diketik; kegagalan baca SAP menghasilkan saran kosong, tidak mengambil daftar CV. Enam kegiatan upload STEM tetap terkunci; kedua kegiatan serah inventory bebas, sesuai [koreksi PIC terakhir](WBI-HANDOVER-PIC-CORRECTION.md).
 - Konfirmasi daftar tetap melalui Review pada menu User (1.5). Panduan PIC menautkan ke menu itu; tidak menambahkan menu/modnav baru.
 - CV tetap sumber `data/ppmk-users.json`, grup PPMK, dan nilai lama PPMK:<code>. Seed CV tidak diubah.
 

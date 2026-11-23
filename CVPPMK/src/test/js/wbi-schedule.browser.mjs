@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE?pathToFileURL(process.env.PLAYWRIGHT_MODULE).href:'playwright');
-const out=new URL('../../../docs/qa-wbi-inventory/',import.meta.url);await mkdir(out,{recursive:true});
+const out=new URL('../../../docs/qa-wbi-handover-pic/',import.meta.url);await mkdir(out,{recursive:true});
 const evidence={scenarios:1,checks:[],screenshots:[],errors:[]};
 const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
 const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'Asia/Jakarta'});
@@ -23,7 +23,7 @@ try {
  assert.match(await page.locator('#inventory-flows .timeline-card').first().innerText(),/Produksi\/Pabrik · Toko\/Store/);
  const tokoUpload=page.locator('.timeline-card').filter({has:page.locator('b',{hasText:/Upload SAP Toko\/Store/})});assert.match(await tokoUpload.getAttribute("title"),/24:00/s);assert.doesNotMatch(await tokoUpload.innerText(),/22:00-\d/);
  assert.match(await page.locator('.rules').innerText(),/Produksi \/ Pabrik \/ Central Kitchen:.*19:00-20:00.*Toko \/ Store:.*22:00/s);
- assert.equal(await page.locator('[data-pic="inventory"]').count(),0);assert.equal(await page.locator('[data-pic="inventory-toko"]').count(),0);assert.equal(await page.locator('[data-pic="inventory-upload-toko"]').count(),0);
+ assert.equal(await page.locator('[data-pic="inventory"]').count(),1);assert.equal(await page.locator('[data-pic="inventory-toko"]').count(),1);assert.equal(await page.locator('[data-pic="inventory-upload-toko"]').count(),0);
  assert.equal(await page.locator('[data-pic="opname-toko"]').count(),1);assert.match(await page.locator('.activity-table').innerText(),/STEM.*terkunci/s);
  for(const [device,width]of [['desktop',1440],['mobile',390]]){
   await page.setViewportSize({width,height:1000});await page.waitForTimeout(400);
@@ -37,11 +37,11 @@ try {
  for(const [device,width]of [['desktop',1440],['mobile',390]]){await page.setViewportSize({width,height:1000});await open('schedule.html#/ringkasan');assert.ok(await page.locator('#view .timeline-card').evaluateAll(els=>{const boxes=els.map(e=>e.getBoundingClientRect());return boxes.every((a,i)=>boxes.every((b,j)=>i===j||a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top));}),'timeline cards must not overlap');await page.locator('#view .timeline-shell').screenshot({path:new URL(`main-timeline-${device}.png`,out).pathname});evidence.screenshots.push(`main-timeline-${device}.png`);if(width===1440){await page.locator('#view .timeline-shell').evaluate(e=>e.scrollLeft=e.scrollWidth);await page.locator('#view .timeline-shell').screenshot({path:new URL('main-timeline-end-desktop.png',out).pathname});evidence.screenshots.push('main-timeline-end-desktop.png');}}
  await open('schedule.html#/stock');
  evidence.checks.push('One combined timeline merges count/cutoff and preserves distinct handover/upload times; no 390px page overflow; STEM PIC locked');
- const saved=await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()));assert.equal(saved.data.items.filter(i=>i.pic==='STEM').length,8);
+ const saved=await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()));assert.equal(saved.data.items.filter(i=>i.pic==='STEM').length,6);
  const denied=await page.evaluate(async doc=>{doc.data.items.find(i=>i.id==='inventory-upload-toko').pic='Tidak boleh';return(await fetch('api/schedule',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({rev:doc.rev,data:doc.data})})).status;},saved);assert.equal(denied,403);
- const freePic=`Tim Toko ${saved.rev+1}`;await page.locator('[data-pic="opname-toko"]').fill(freePic);await page.locator('[data-pic="opname-toko"]').press('Tab');await page.locator('#save').click();await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Jadwal tersimpan'));
- const after=await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()));assert.equal(after.data.items.find(i=>i.id==='opname-toko').pic,freePic);assert.equal(after.data.items.find(i=>i.id==='inventory-upload-toko').pic,'STEM');
- evidence.checks.push('Non-admin STEM PIC tampering returns 403; free opname PIC saves without overwriting STEM or other PIC');
+ const freePic=`Tim Toko ${saved.rev+1}`;await page.locator('[data-pic="inventory"]').focus();await page.locator('.pic-pop [data-v="WBI:WBI-ACC-STF1"]').click();await page.locator('[data-pic="inventory-toko"]').fill('Tim Serah Toko');await page.locator('[data-pic="inventory-toko"]').press('Tab');await page.locator('[data-pic="opname-toko"]').fill(freePic);await page.locator('[data-pic="opname-toko"]').press('Tab');await page.locator('#save').click();await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Jadwal tersimpan'));
+ const after=await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()));assert.equal(after.data.items.find(i=>i.id==='opname-toko').pic,freePic);assert.equal(after.data.items.find(i=>i.id==='inventory').pic,'WBI:WBI-ACC-STF1');assert.equal(after.data.items.find(i=>i.id==='inventory-toko').pic,'Tim Serah Toko');assert.equal(after.data.items.find(i=>i.id==='inventory-upload-toko').pic,'STEM');
+ evidence.checks.push('Non-admin STEM PIC tampering returns 403; both handover PICs save via WBI dropdown/free text; opname PIC saves without overwriting uploads');
  await open('schedule.html#/stock',18638);await page.locator('[data-edit="inventory-upload-toko"]').click();const adminBefore=await page.evaluate(()=>fetch('api/schedule').then(r=>r.json())),adminPic=`STEM pengganti ${adminBefore.rev+1}`;await page.locator('#editor-slot [name="pic"]').fill(adminPic);
  await page.locator('#editor-slot button[type="submit"]').click();await page.locator('#save').click();await page.waitForFunction(()=>document.querySelector('#notice').textContent.includes('Jadwal tersimpan'));
  assert.equal((await page.evaluate(()=>fetch('api/schedule').then(r=>r.json()))).data.items.find(i=>i.id==='inventory-upload-toko').pic,adminPic);

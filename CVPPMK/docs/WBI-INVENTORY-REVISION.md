@@ -1,5 +1,7 @@
 # Inventory WBI per lokasi dan PIC STEM
 
+> Riwayat implementasi awal: penetapan STEM pada kedua kegiatan serah dalam laporan ini sudah dikoreksi menjadi bebas; enam upload tetap terkunci. Lihat [audit PIC terbaru untuk seluruh 40 kegiatan](WBI-HANDOVER-PIC-CORRECTION.md).
+
 Branch `wbi/fixes-1`, melanjutkan `9d693d5`; commit lokal tanpa push.
 
 - **40 kegiatan** = 18 milestone + 16 master + 6 balance. Tambahan: 4 milestone Toko / Store dan 1 baris saldo awal lokasi itu untuk Ringkasan per area/Beginning Balance, mengikuti susunan Produksi / Pabrik / Central Kitchen.

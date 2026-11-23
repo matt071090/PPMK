@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {scheduleTabs,progress,groupProgress,timelineMilestones,nextMilestone,countdown,cardNote,withFixedPic,areaStatus,timelinePosition,inventoryLocations,combinedInventoryFlow,inventoryFlow,balanceTimeline,shortInventoryTitle,isInventoryActivity} from '../../main/resources/static/js/pages/schedule.js';
 const read=name=>JSON.parse(readFileSync(new URL(`../../main/resources/schedule/${name}.json`,import.meta.url)));
 const wbi=read('default-wbi'),cv=read('default'),get=id=>wbi.items.find(i=>i.id===id);
-const stemIds=['upload-master','inventory','inventory-upload','inventory-toko','inventory-upload-toko','ap-ar','fa','gl'];
+const stemIds=['upload-master','inventory-upload','inventory-upload-toko','ap-ar','fa','gl'];
 test('WBI has 40 activities, 18 milestones, 16 master and 6 balance; no Training/Farm',()=>{
  assert.equal(wbi.items.length,40);assert.equal(cv.items.length,37);assert.doesNotMatch(JSON.stringify(wbi),/training|farm/i);
  assert.deepEqual(Object.fromEntries(['milestone','master','balance'].map(s=>[s,wbi.items.filter(i=>i.section===s).length])),{milestone:18,master:16,balance:6});
@@ -48,7 +48,7 @@ test('location labels originate in seed; one combined flow preserves all distinc
 });
 test('shared fixed-PIC projection locks only seed-marked STEM activities and preserves admin override',()=>{
  const ids=wbi.items.filter(i=>i.pic==='STEM').map(i=>i.id);assert.deepEqual(ids.sort(),[...stemIds].sort());
- const projected=withFixedPic(wbi.items,true,ids,true);assert.equal(projected.filter(i=>i.picFixed).length,8);assert.equal(projected.find(i=>i.id==='opname').picFixed,undefined);
+ const projected=withFixedPic(wbi.items,true,ids,true);assert.equal(projected.filter(i=>i.picFixed).length,6);assert.equal(projected.find(i=>i.id==='opname').picFixed,undefined);
  const override=withFixedPic([{id:'inventory-upload-toko',pic:'STEM pengganti'}],true,ids,true)[0];assert.equal(override.pic,'STEM pengganti');assert.equal(override.picFixed,true);
 });
 
@@ -56,4 +56,18 @@ test('WBI seed and shared schedule UI contain client-facing language only; midni
  assert.doesNotMatch(JSON.stringify(wbi),/asumsi|Fakhri|koordinator|TODO|FIXME|worker/i);
  assert.doesNotMatch(readFileSync(new URL('../../main/resources/static/js/pages/schedule.js',import.meta.url),'utf8'),/asumsi|Fakhri|koordinator|TODO|FIXME|worker/i);
  assert.equal(get('inventory-upload-toko').startDate,'2026-12-31');assert.equal(countdown(get('inventory-upload-toko').endDate,'2026-12-31'),0);
+});
+
+test('all handovers are free; legacy saved STEM value does not lock a handover',()=>{
+ const ids=wbi.items.filter(i=>i.pic==='STEM').map(i=>i.id);
+ for(const it of wbi.items.filter(i=>/^Serah /i.test(i.title))) {assert.equal(it.pic,'');assert.ok(!ids.includes(it.id));}
+ for(const id of ['inventory','inventory-toko']){
+  assert.equal(get(id).pic,'');
+  const row=withFixedPic([{id,pic:'STEM'}],true,ids,true)[0];assert.equal(row.pic,'STEM');assert.equal(row.picFixed,undefined);
+ }
+});
+test('only six upload milestones are STEM; combined timeline labels keep CV ownership',()=>{
+ assert.equal(stemIds.length,6);
+ for(const id of stemIds){assert.match(get(id).title,/^Upload /);assert.equal(get(id).pic,'STEM');if(cv.items.some(i=>i.id===id))assert.equal(cv.items.find(i=>i.id===id).pic,'STEM');}
+ for(const it of wbi.items.filter(i=>i.section==='balance'))assert.equal(it.pic,'');
 });

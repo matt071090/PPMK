@@ -80,7 +80,7 @@ class CompanyDataTest {
         assertNotNull(row);ScheduleStore.validate(data);assertEquals("2026-12-31",row.path("uploadDate").asText());
         for(String invalid:Arrays.asList("24:01","24:00-24:00","25:00")) {row.put("uploadTime",invalid);assertThrows(ScheduleStore.ScheduleException.class,()->ScheduleStore.validate(data));}
     }
-    private Set<String> wbiFixedIds() { return new HashSet<>(Arrays.asList("upload-master","inventory","inventory-upload","inventory-toko","inventory-upload-toko","ap-ar","fa","gl")); }
+    private Set<String> wbiFixedIds() { return new HashSet<>(Arrays.asList("upload-master","inventory-upload","inventory-upload-toko","ap-ar","fa","gl")); }
     @Test void wbiLocationsHaveSeparateTimesAndStemRoles() throws Exception {
         ScheduleStore store=new ScheduleStore(company("wbi").dir(root.toString()),"schedule/default-wbi.json");
         Map<String,JsonNode> items=new HashMap<>();for(JsonNode it:store.get().data.path("items"))items.put(it.path("id").asText(),it);

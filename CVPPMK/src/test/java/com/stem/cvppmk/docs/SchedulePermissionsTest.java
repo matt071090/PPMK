@@ -71,6 +71,34 @@ class SchedulePermissionsTest {
         for(com.fasterxml.jackson.databind.JsonNode item:data.path("items")) if("upload-master".equals(item.path("id").asText()))((ObjectNode)item).put("pic","STEM").put("status","proses");
         mvc.perform(put("/api/schedule").contentType("application/json").content(body(0,data))).andExpect(status().isOk());
     }
+    @ParameterizedTest @ValueSource(strings={"inventory","inventory-toko"})
+    void wbiHandoverPicIsEditableForFreshAndPreviouslySavedStemValue(String id) throws Exception {
+        for(String initial:Arrays.asList("","STEM")) {
+            DataFiles f=files("wbi");Path folder=f.dir(root.resolve(id+(initial.isEmpty()?"-fresh":"-saved")).toString());
+            ScheduleStore store=new ScheduleStore(folder,"schedule/default-wbi.json");
+            ObjectNode data=(ObjectNode)store.get().data.deepCopy();
+            if(!initial.isEmpty()) {
+                for(com.fasterxml.jackson.databind.JsonNode item:data.path("items"))if(id.equals(item.path("id").asText()))((ObjectNode)item).put("pic",initial);
+                store.put(0,data);store=new ScheduleStore(folder,"schedule/default-wbi.json");
+            }
+            assertFalse(store.fixedPicIds().contains(id));MockMvc mvc=controller(store,f);int rev=store.get().rev;
+            data=(ObjectNode)store.get().data.deepCopy();
+            for(com.fasterxml.jackson.databind.JsonNode item:data.path("items"))if(id.equals(item.path("id").asText()))((ObjectNode)item).put("pic","WBI:WBI-ACC-STF1").put("status","proses");
+            mvc.perform(put("/api/schedule").contentType("application/json").content(body(rev,data))).andExpect(status().isOk());
+            assertEquals(data,store.get().data);
+            for(com.fasterxml.jackson.databind.JsonNode item:store.get().data.path("items"))if("inventory-upload".equals(item.path("id").asText())||"inventory-upload-toko".equals(item.path("id").asText()))assertEquals("STEM",item.path("pic").asText());
+        }
+    }
+    @ParameterizedTest @ValueSource(strings={"upload-master","inventory-upload","inventory-upload-toko","ap-ar","fa","gl"})
+    void wbiUploadPicRemainsLockedButStatusIsEditable(String id) throws Exception {
+        DataFiles f=files("wbi");ScheduleStore store=new ScheduleStore(f.dir(root.toString()),"schedule/default-wbi.json");MockMvc mvc=controller(store,f);
+        ObjectNode data=(ObjectNode)store.get().data.deepCopy();
+        for(com.fasterxml.jackson.databind.JsonNode item:data.path("items"))if(id.equals(item.path("id").asText()))((ObjectNode)item).put("pic","Tim WBI");
+        mvc.perform(put("/api/schedule").contentType("application/json").content(body(0,data))).andExpect(status().isForbidden());
+        for(com.fasterxml.jackson.databind.JsonNode item:data.path("items"))if(id.equals(item.path("id").asText()))((ObjectNode)item).put("pic","STEM").put("status","proses");
+        mvc.perform(put("/api/schedule").contentType("application/json").content(body(0,data))).andExpect(status().isOk());
+        assertEquals(data,store.get().data);
+    }
     @Test void wbiAdminCanOverrideFixedPicAndNonAdminKeepsThatValue() throws Exception {
         DataFiles f=files("wbi");ScheduleStore store=new ScheduleStore(f.dir(root.toString()),"schedule/default-wbi.json");MockMvc mvc=controller(store,f);
         org.springframework.mock.web.MockHttpSession session=new org.springframework.mock.web.MockHttpSession();session.setAttribute("cvppmk.setup.unlocked",true);

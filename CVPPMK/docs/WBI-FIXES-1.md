@@ -6,11 +6,11 @@ Branch `wbi/fixes-1`, dibuat dari `wbi/ui-warna` (`57b76b5`, mencakup `7b9c16e`)
 
 **40 kegiatan**, 6 area, 4 tab tanpa Training. Satu alur inventory berisi 6 kartu; opname/cut off sejadwal digabung, serah/upload tetap terpisah: Produksi/Pabrik 19:00 dan 19:00–20:00, Toko/Store batas serah 22:00 lalu upload **31 Desember 24:00** tanpa jam selesai. Garis waktu utama 14 kartu, jarak kartu diuji tidak berpotongan; desktop bisa digeser, HP 390px tetap satu sumbu vertikal. [Revisi terakhir dan perubahan kata-kata](WBI-TIMELINE-REVISION.md) menggantikan asumsi jam upload Toko pada laporan terdahulu.
 
-Delapan PIC STEM terkunci mengikuti penanda seed; PIC WBI lain dipilih dari user SAP aktif lewat Check List 1.5 atau teks bebas saat direktori gagal. Tidak ada menu/CRUD User WBI baru; CV tetap memakai `ppmk-users.json`. [Direktori PIC dan bukti](WBI-PIC-DIRECTORY.md), [rincian pemisahan kegiatan/PIC STEM](WBI-INVENTORY-REVISION.md).
+**Koreksi PIC terbaru: enam kegiatan upload STEM terkunci, dua kegiatan serah inventory bebas dan kosong di seed (34 kegiatan bebas seluruhnya).** [Audit seluruh 40 kegiatan dan bukti](WBI-HANDOVER-PIC-CORRECTION.md). Enam PIC STEM terkunci mengikuti penanda seed; PIC WBI lain dipilih dari user SAP aktif lewat Check List 1.5 atau teks bebas saat direktori gagal. Tidak ada menu/CRUD User WBI baru; CV tetap memakai `ppmk-users.json`. [Direktori PIC dan bukti](WBI-PIC-DIRECTORY.md), [rincian pemisahan kegiatan/PIC STEM](WBI-INVENTORY-REVISION.md).
 
 Addon memakai profil company: Retail & iReapBiz, STEM Base, WebPortal SAP; transaksi/log terpisah dan kode belum dikenal Lainnya. Master Report Web masuk WebPortal; Farm disembunyikan dan tidak masuk review WBI. CV sidebar sebelum/sesudah identik byte demi byte. [Audit, ambiguitas dan 8 screenshot](WBI-ADDON-PROFILE.md).
 
-Verifikasi akhir: **176 Java lulus**, **205 JS lulus / 18 skip**, 0 gagal; 1 skenario inventory (5 kelompok, 7 screenshot) dan 3 kelompok Addon (8 screenshot), seluruhnya fixture/mock lokal. [Log Java](qa-wbi-addon/java8-tests.log), [log JS](qa-wbi-addon/js-tests.log). Belum SAP/SL/HANA nyata, deployment atau 18 tes jsdom. Tidak ada migrasi jadwal lama; seed dipakai hanya jika berkas jadwal company belum ada.
+Verifikasi setelah koreksi PIC serah: **184 Java lulus**, **207 JS lulus / 18 skip**, 0 gagal; 1 skenario inventory (5 kelompok, 7 screenshot) dan 3 kelompok Addon (8 screenshot), seluruhnya fixture/mock lokal. [Log Java terbaru](qa-wbi-handover-pic/java8-tests.log), [log JS terbaru](qa-wbi-handover-pic/js-tests.log). Belum SAP/SL/HANA nyata, deployment atau 18 tes jsdom. Tidak ada migrasi jadwal lama; seed dipakai hanya jika berkas jadwal company belum ada.
 
 ## Riwayat revisi seed WBI
 

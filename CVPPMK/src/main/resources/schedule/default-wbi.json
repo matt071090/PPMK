@@ -94,7 +94,7 @@
       "startDate": "2026-12-31",
       "endDate": "2026-12-31",
       "status": "belum",
-      "pic": "STEM",
+      "pic": "",
       "note": "Produksi / Pabrik / Central Kitchen. Serah ke STEM pukul 19:00 pada 31 Desember 2026.",
       "cutover": true
     },
@@ -138,7 +138,7 @@
       "startDate": "2026-12-31",
       "endDate": "2026-12-31",
       "status": "belum",
-      "pic": "STEM",
+      "pic": "",
       "note": "Toko / Store. Batas akhir serah ke STEM. Paling lambat 31 Desember 2026 pukul 22:00.",
       "cutover": true
     },
