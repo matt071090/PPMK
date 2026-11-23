@@ -161,7 +161,7 @@
       "endDate": "2027-01-01",
       "status": "belum",
       "pic": "",
-      "note": "Inventory Produksi / Pabrik / Central Kitchen dan Toko / Store mengikuti alur masing-masing lokasi. Jam selesai upload Toko / Store belum ditentukan. Saldo A/P, A/R, Fixed Asset, dan G/L menyusul.",
+      "note": "Inventory Produksi / Pabrik / Central Kitchen dan Toko / Store mengikuti alur masing-masing lokasi. Saldo A/P, A/R, Fixed Asset, dan G/L menyusul.",
       "cutover": true
     },
     {
