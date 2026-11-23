@@ -7,7 +7,7 @@ async function packagedRead(installed, packaged) {
   catch (e) { if(e.code !== 'ENOENT') throw e; return readFile(new URL(packaged, import.meta.url), 'utf8'); }
 }
 const source = await packagedRead('../../main/resources/static/js/pages/schedule.js', '../static/js/pages/schedule.js');
-const { mergeUsers, withSubmitRange, rollupStatus, withTrainingRollup, balanceTimeline, withFixedPic, isStemItem, activeUsers, picLabel, picOptions, cardNote, isValidDate, todayLocal, countdown, effectiveStatus, validRange, needsAttention, timelineMilestones, areaStatus, savedAt, progress, groupProgress, nextMilestone, todayMarker, draftChanges, timelinePosition, compactTimelineDate } = await import('../../main/resources/static/js/pages/schedule.js');
+const { mergeUsers, withSubmitRange, rollupStatus, withTrainingRollup, balanceTimeline, withFixedPic, isStemItem, activeUsers, picLabel, picOptions, cardNote, isValidDate, todayLocal, countdown, effectiveStatus, validRange, needsAttention, timelineMilestones, areaStatus, savedAt, progress, groupProgress, nextMilestone, todayMarker, draftChanges, timelineTodayIndex, compactTimelineDate } = await import('../../main/resources/static/js/pages/schedule.js');
 const seed = JSON.parse(await packagedRead('../../main/resources/schedule/default.json', '../resources/schedule/default.json'));
 test('format ketat dan tanggal kalender nyata', () => {
   for (const s of ['2026-12-01','2027-01-01','2024-02-29','2000-02-29','0001-01-01']) assert.equal(isValidDate(s),true,s);
@@ -170,24 +170,24 @@ test('tanggal timeline: tunggal, rentang bulan sama, lintas bulan/tahun', () => 
   assert.throws(()=>compactTimelineDate('2026-12-02','2026-12-01'),RangeError);
   assert.throws(()=>compactTimelineDate('2026-02-29'),RangeError);
 });
-test('hari ini visual: interpolasi slot rata pada tanggal tidak berjarak rata', () => {
+test('hari ini visual: penanda ada di sumbu sebelum titik yang mulai hari ini atau sesudahnya, bukan menimpa label tanggal', () => {
   const rows=[{startDate:'2026-12-01',endDate:'2026-12-01'},
     {startDate:'2026-12-11',endDate:'2026-12-11'},
     {startDate:'2026-12-31',endDate:'2027-01-02'}];
-  const near=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-9,`${actual} ≈ ${expected}`);
-  near(timelinePosition(rows,'2026-12-01'),100/6);
-  near(timelinePosition(rows,'2026-12-06'),100/3);
-  assert.equal(timelinePosition(rows,'2026-12-11'),50);
-  near(timelinePosition(rows,'2026-12-21'),200/3);
-  near(timelinePosition(rows,'2027-01-02'),250/3);
-  assert.equal(timelinePosition(rows,'2026-11-30'),null);
-  assert.equal(timelinePosition(rows,'2027-01-03'),null);
+  assert.equal(timelineTodayIndex(rows,'2026-12-01'),0);
+  assert.equal(timelineTodayIndex(rows,'2026-12-06'),1);
+  assert.equal(timelineTodayIndex(rows,'2026-12-11'),1);
+  assert.equal(timelineTodayIndex(rows,'2026-12-21'),2);
+  assert.equal(timelineTodayIndex(rows,'2026-12-31'),2);
+  assert.equal(timelineTodayIndex(rows,'2027-01-02'),3);
+  assert.equal(timelineTodayIndex(rows,'2026-11-30'),null);
+  assert.equal(timelineTodayIndex(rows,'2027-01-03'),null);
 });
 test('hari ini visual: kosong, satu rentang, tanggal mulai sama', () => {
-  assert.equal(timelinePosition([],'2026-12-01'),null);
-  assert.equal(timelinePosition([{startDate:'2026-12-01',endDate:'2026-12-03'}],'2026-12-02'),50);
+  assert.equal(timelineTodayIndex([],'2026-12-01'),null);
+  assert.equal(timelineTodayIndex([{startDate:'2026-12-01',endDate:'2026-12-03'}],'2026-12-02'),1);
   const rows=[{startDate:'2026-12-01',endDate:'2026-12-01'},{startDate:'2026-12-01',endDate:'2026-12-03'}];
-  assert.equal(timelinePosition(rows,'2026-12-01'),75);
+  assert.equal(timelineTodayIndex(rows,'2026-12-01'),0);
 });
 
 test('cardNote: membuang kalimat bertanggal/berjam, menyisakan deskripsi', () => {

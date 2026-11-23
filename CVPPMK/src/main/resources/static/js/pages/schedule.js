@@ -209,16 +209,11 @@ export function withSubmitRange(entry, items) {
   if (!hand.length || !up.length || hand[0] > up[up.length - 1]) return entry;
   return Object.assign({}, entry, { startDate: hand[0], endDate: up[up.length - 1], title: entry.title.replace(/^Upload /, 'Serah & upload '), note: 'Serah ke STEM lalu upload SAP.' });
 }
-export function timelinePosition(items, today = todayLocal()) {
-  if (!todayMarker(items,today)) return null;
-  let slot=items.length-1;
-  for(let i=0;i<items.length-1;i++) {
-    if(today<items[i+1].startDate) {
-      const span=countdown(items[i+1].startDate,items[i].startDate);
-      slot=i+(span ? countdown(today,items[i].startDate)/span : 0); break;
-    }
-  }
-  return (slot+.5)/items.length*100;
+// Penanda "Hari ini" di garis waktu: indeks titik yang akan didahului penanda (0 = sebelum titik pertama, panjang daftar = setelah titik terakhir).
+// Titik yang mulai hari ini berada setelah penanda; titik yang sudah mulai lebih awal berada sebelumnya. null bila hari ini di luar rentang garis waktu.
+export function timelineTodayIndex(items, today = todayLocal()) {
+  if (!todayMarker(items, today)) return null;
+  return items.filter(it => it.startDate < today).length;
 }
 export function compactTimelineDate(start,end=start) {
   if(!validRange(start,end)) throw new RangeError('Rentang tanggal tidak valid.');
@@ -324,11 +319,13 @@ function mount() {
     const targetOf = it => isInventoryActivity(it.id)?'stock':it.id==='training'?'training':['prepare','deadline','upload-master','verify'].includes(it.id)?'master':'ringkasan';
     const entryOf = it => withSubmitRange({id:it.id,title:it.title,startDate:it.startDate,endDate:it.endDate,status:it.status,note:it.notes||it.note||'',target:targetOf(it)}, all);
     // Garis waktu bersama (Ringkasan dan Stock Opname). Entri: {id,title,startDate,endDate,status,note,target,time?}. Tanggal/jam di sumbu, bukan di kartu.
-    const timelineHtml = (list, nextId, marker) => `<div class="timeline-shell${inventoryLocations(all).length>1?' multi-location':''}">${inventoryLocations(all).length>1?`<div class="timeline-track" style="--count:${list.length}">`:''}<ol class="timeline${list.length<=6?' wide':''}" style="--count:${list.length || 1}">${list.map((e,i)=>{
+    const timelineHtml = (list, nextId, marker) => `<div class="timeline-shell"><ol class="timeline" style="--count:${list.length || 1}">${list.map((e,i)=>{
       const status=effectiveStatus(e.status,e.endDate), short=compactTimelineDate(e.startDate,e.endDate);
-      const note=cardNote(e.note || ''), summary=note.length>90 ? note.slice(0,87)+'…' : note, title=shortInventoryTitle(e.title,all), sub=esc(short.year)+(e.time?' · '+esc(e.time):'');
-      return `<li class="${i%2?'below':'above'} ${e.id===nextId?'upcoming':''}" style="--slot:${i+1};--tone:var(--tl-${i%5})"><span class="timeline-dot ${status}" aria-hidden="true">${status==='selesai'?'✓':status==='telat'?'!':''}</span><span class="timeline-stem" aria-hidden="true"></span><span class="timeline-date" aria-hidden="true">${esc(short.label)}<small>${sub}</small></span><a class="timeline-card" href="#/${e.target}" title="${esc(e.title+' · '+format(e.startDate)+(e.endDate!==e.startDate?' s/d '+format(e.endDate):'')+(e.time?' · '+e.time:'')+(note?' · '+note:''))}"><span class="mobile-date">${esc(short.label)} <small>${sub}</small></span><b>${esc(title)}</b>${summary?`<span class="timeline-note">${esc(summary)}</span>`:''}${badge(status)}${e.id===nextId?'<span class="next-label">Berikutnya</span>':''}<span class="sr-only">${dates(e)}</span></a></li>`;
-    }).join('')}</ol>${marker!==null&&marker!==undefined?`<span class="timeline-today" style="--position:${marker/100}" title="${esc(format(todayLocal()))}"><span>Hari ini</span></span>`:''}${inventoryLocations(all).length>1?'</div>':''}</div>`;
+      const note=cardNote(e.note || ''), title=shortInventoryTitle(e.title,all), sub=esc(short.year)+(e.time?' · '+esc(e.time):'');
+      const todayCls=marker===i?'':marker===list.length&&i===list.length-1?' after':null;
+      const today=todayCls===null?'':`<span class="timeline-today${todayCls}" title="${esc(format(todayLocal()))}">Hari ini</span>`;
+      return `<li class="${e.id===nextId?'upcoming':''}"><span class="timeline-date" aria-hidden="true">${esc(short.label)}<small>${sub}</small></span><span class="timeline-axis" aria-hidden="true"><span class="timeline-dot ${status}">${status==='selesai'?'✓':status==='telat'?'!':''}</span>${today}</span><a class="timeline-card" href="#/${e.target}" title="${esc(e.title+' · '+format(e.startDate)+(e.endDate!==e.startDate?' s/d '+format(e.endDate):'')+(e.time?' · '+e.time:'')+(note?' · '+note:''))}"><span class="mobile-date">${esc(short.label)} <small>${sub}</small></span><b>${esc(title)}</b>${note?`<span class="timeline-note">${esc(note)}</span>`:''}<span class="timeline-foot">${badge(status)}${e.id===nextId?'<span class="next-label">Berikutnya</span>':''}</span><span class="sr-only">${dates(e)}</span></a></li>`;
+    }).join('')}</ol></div>`;
     const rules = doc.data.rules.filter((rule,i)=>tab==='ringkasan'||i===0&&tab==='master');
     const lockNote = editable ? '' : `<div class="callout warn lock-note"><b>Mode lihat.</b> PIC dan status bisa diubah lalu Simpan; tanggal dan catatan hanya admin. Diskusi bisa dipakai semua. ${lockConfigured ? `<form id="unlock-form" class="unlock"><label class="sr-only" for="unlock-pw">Password admin</label><input id="unlock-pw" class="control" type="password" autocomplete="current-password" placeholder="Password admin (sama dengan Setup)" maxlength="200"><button class="control secondary" type="submit">Buka kunci</button><span id="unlock-msg" role="alert"></span></form>` : ''}</div>`;
     $('#chat-head-slot').innerHTML = `<span data-chat-slot="${tab==='ringkasan'?'umum':'tab:'+tab}"></span>`;
@@ -352,7 +349,7 @@ function mount() {
         const loc=locations.find(l=>l.handover?.id===e.id);
         if(!loc?.upload) return e;
         return {...e,title:'Serah & upload '+(loc.label||'inventory'),status:rollupStatus([e.status,loc.upload.status]),time:loc.balance.uploadTime||loc.balance.handoverTime,note:loc.balance.uploadTime?e.note:loc.balance.note};
-      }), marker=timelinePosition(entries);
+      }), marker=timelineTodayIndex(entries);
       if(next) html += `<p class="next">Berikutnya: <b>${esc(next.title)}</b> dalam ${countdown(next.startDate)} hari</p>`;
       html += `<h2>Garis waktu</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr> Pilih kartu untuk membuka tab kegiatan.</p>${timelineHtml(entries, next?.id, marker)}`;
       const attention = needsAttention(all);
@@ -377,12 +374,12 @@ function mount() {
       const locations=inventoryLocations(all);
       html += '<div id="inventory-flows"><h2>Alur inventory</h2>';
       for (const steps of locations.length>1 ? [combinedInventoryFlow(all)] : locations.map(inventoryFlow)) {
-        html += `<p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps,null,timelinePosition(steps))}`;
+        html += `<p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps,null,timelineTodayIndex(steps))}`;
       }
       const locationRules=doc.data.rules.filter(rule=>locations.some(loc=>loc.label && rule.startsWith(loc.label+':')));
       html += `<section class="rules"><h2>Aturan</h2><ul>${locationRules.length?locationRules.map(rule=>`<li>${esc(rule)}</li>`).join(''):'<li>Tanpa penerimaan/pengiriman selama opname.</li><li>Transaksi 31 Des diakui Januari 2027.</li><li>Pergerakan setelah cut off dikoordinasikan dengan STEM.</li>'}</ul></section></div>`;
     }
-    if (tab === 'balance') { const steps=balanceTimeline(all); html += `<h2>Alur saldo awal</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${steps.length?timelineHtml(steps, null, timelinePosition(steps)):''}<p>Status di sini mencatat kesiapan saldo awal per area, terpisah dari status milestone Ringkasan.</p>`; }
+    if (tab === 'balance') { const steps=balanceTimeline(all); html += `<h2>Alur saldo awal</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${steps.length?timelineHtml(steps, null, timelineTodayIndex(steps)):''}<p>Status di sini mencatat kesiapan saldo awal per area, terpisah dari status milestone Ringkasan.</p>`; }
     html += '<div id="editor-slot"></div>';
     const reviewNote = r => r ? r.pages.map(p=>`<a class="review-link" href="${RV.reviewHref(p.id)}" title="Buka halaman Review ${esc(p.id)}">${r.pages.length>1?esc(p.id)+': ':''}${esc(RV.REVIEW_LABEL[p.status]||'Review')}</a>`).join(' · ') : '';
     function statusCell(it,status) {
@@ -399,13 +396,13 @@ function mount() {
       }).join('')}</tbody></table></div>`;
     }
     if(tab==='master') {
-      { const steps=items.filter(it=>it.section==='milestone').map(entryOf); html += `<h2>Garis waktu</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps, null, timelinePosition(steps))}`; }
+      { const steps=items.filter(it=>it.section==='milestone').map(entryOf); html += `<h2>Garis waktu</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps, null, timelineTodayIndex(steps))}`; }
       html += '<h2>Milestone</h2>'+table(items.filter(it=>it.section==='milestone'));
       const deadline=all.find(it=>it.id==='deadline');
       if(deadline) html += `<p class="muted">Batas akhir data dari user: ${esc(format(deadline.endDate))}.</p>`;
       html += groupProgress(all).map(g=>`<details class="stage" data-group="${g.group}" ${matchMedia('(min-width: 601px)').matches||g.items.some(it=>effectiveStatus(it.status,it.endDate)==='telat')?'open':''}><summary><b>Tahap ${g.group}</b><span>${esc(format(g.startDate))} s/d ${esc(format(g.endDate))} · ${g.done}/${g.total} selesai</span><progress max="100" value="${g.percent}" aria-label="Progres Tahap ${g.group}">${g.percent}%</progress></summary>${table(g.items)}</details>`).join('');
     } else {
-      if (tab === 'training') { const steps=items.filter(it=>it.section==='training').map(entryOf); if (steps.length > 1) html += `<h2>Garis waktu</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps, null, timelinePosition(steps))}`; }
+      if (tab === 'training') { const steps=items.filter(it=>it.section==='training').map(entryOf); if (steps.length > 1) html += `<h2>Garis waktu</h2><p class="legend">✓ selesai · ◐ proses · ○ belum · ! telat <abbr title="Telat: tanggal akhir sudah lewat dan status belum selesai (tanggal lokal perangkat).">ⓘ</abbr></p>${timelineHtml(steps, null, timelineTodayIndex(steps))}`; }
       html += table(items);
     }
     view.innerHTML = html; mountChatSlots(); applyAccess(); controls();

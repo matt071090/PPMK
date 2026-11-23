@@ -113,71 +113,56 @@
  .schedule .today-track span { width:auto; transform:none; margin-left:0 !important; }
 }
 
-/* Palette inherits app.css light/dark tokens, including automatic dark mode. */
-.schedule .timeline-shell {
- --tl-0:var(--accent-strong); --tl-1:var(--warn); --tl-2:var(--info);
- --tl-3:var(--ok); --tl-4:var(--danger);
- position:relative; margin:28px 0; padding:16px 12px;
- background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius);
-}
-.schedule .timeline-shell.multi-location { overflow-x:auto; }
-.schedule .timeline-track { position:relative; width:max(100%, calc(var(--count) * 120px)); }
-.schedule .timeline { position:relative; display:grid; grid-template-columns:repeat(var(--count),minmax(0,1fr)); grid-template-rows:minmax(190px,1fr) 66px 24px 66px minmax(190px,1fr); list-style:none; padding:0; margin:0; }
-.schedule .timeline::before { content:''; position:absolute; top:50%; left:0; right:0; height:1px; background:var(--border-strong); }
-.schedule .timeline::after { content:''; position:absolute; top:calc(50% - 3px); left:0; width:6px; height:6px; border-radius:50%; background:var(--muted); box-shadow:none; }
-.schedule .timeline-shell::after { content:''; position:absolute; right:12px; top:calc(50% - 3px); width:6px; height:6px; background:var(--muted); border-radius:50%; }
-.schedule .timeline li { grid-column:var(--slot); grid-row:1/6; display:grid; grid-template-rows:subgrid; min-width:0; position:relative; padding:0; border:0; }
-.schedule .timeline-card { position:relative; grid-row:1; align-self:end; justify-self:center; width:150%; max-width:190px; min-width:0; min-height:40px; display:flex; flex-direction:column; align-items:flex-start; gap:7px; padding:12px; color:var(--text); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; font-size:13px; line-height:1.45; overflow-wrap:anywhere; text-decoration:none; }
-.schedule .timeline li:first-child .timeline-card { justify-self:start; }
-.schedule .timeline li:last-child .timeline-card { justify-self:end; }
-.schedule .timeline-card:hover { border-color:var(--tone); text-decoration:none; }
-.schedule .timeline-card b { font-size:14px; line-height:1.4; }
-.schedule .timeline-note { color:var(--text-2); font-size:12px; }
-.schedule .timeline .badge { white-space:normal; padding:1px 5px; font-size:12px; }
-.schedule .timeline-date { grid-row:4; align-self:start; justify-self:center; padding-top:8px; color:var(--tone); font-size:clamp(15px,1.5vw,22px); line-height:1.15; font-weight:700; text-align:center; width:100%; }
-.schedule .timeline-date small { display:block; font-size:12px; margin-top:6px; font-weight:400; }
-.schedule .timeline .below .timeline-card { grid-row:5; align-self:start; }
-.schedule .timeline .below .timeline-date { grid-row:2; align-self:end; padding:0 0 8px; }
-.schedule .timeline-stem { grid-row:2; width:1px; height:100%; background:var(--tone); justify-self:center; align-self:stretch; position:relative; }
-.schedule .timeline-stem::before { content:''; position:absolute; width:5px; height:5px; border-radius:50%; background:var(--tone); left:-2px; top:-2px; }
-.schedule .timeline .below .timeline-stem { grid-row:4; align-self:stretch; }
-.schedule .timeline .below .timeline-stem::before { top:auto; bottom:-2px; }
-.schedule .timeline-dot { position:absolute; z-index:2; top:calc(50% - 10px); left:calc(50% - 10px); width:20px; height:20px; border:2px solid var(--tone); border-radius:50%; background:var(--bg-soft); display:grid; place-items:center; font-size:13px; font-weight:700; color:var(--text); }
+/* ===== Garis waktu: kisi yang membungkus ke baris berikutnya (tanpa geser samping).
+   Tiap titik = tanggal di atas, titik di sumbu, kartu di bawahnya; kartu satu baris selalu sama tinggi.
+   Satu warna aksen untuk semua titik; status hanya lewat ikon titik dan label status (bukan warna dekoratif). ===== */
+.schedule .timeline-shell { --tone:var(--accent-strong); position:relative; margin:24px 0; padding:22px 14px 18px; background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius); }
+.schedule .timeline { list-style:none; margin:0 auto; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(176px,1fr)); row-gap:22px; max-width:calc(var(--count) * 280px); }
+.schedule .timeline li { position:relative; display:flex; flex-direction:column; min-width:0; padding:0 6px; border:0; }
+.schedule .timeline-date { padding-bottom:8px; text-align:center; font-size:15px; line-height:1.2; font-weight:700; color:var(--text); white-space:nowrap; }
+.schedule .timeline-date small { display:block; margin-top:3px; font-size:12px; font-weight:500; color:var(--text-2); }
+.schedule .timeline-axis { position:relative; flex:none; height:38px; display:flex; justify-content:center; }
+.schedule .timeline-axis::before { content:''; position:absolute; top:9px; left:-6px; right:-6px; height:2px; background:var(--border-strong); }
+.schedule .timeline li:first-child .timeline-axis::before { left:50%; }
+.schedule .timeline li:last-child .timeline-axis::before { right:50%; }
+.schedule .timeline-axis::after { content:''; position:absolute; top:20px; left:calc(50% - .5px); width:1px; height:18px; background:var(--border-strong); }
+.schedule .timeline-dot { position:relative; z-index:1; flex:none; width:20px; height:20px; border:2px solid var(--tone); border-radius:50%; background:var(--bg-soft); display:grid; place-items:center; font-size:12px; font-weight:700; color:var(--text); }
 .schedule .timeline-dot.selesai { background:var(--tone); color:var(--bg); }
 .schedule .timeline-dot.proses { background:linear-gradient(90deg,var(--tone) 50%,var(--bg-soft) 50%); }
 .schedule .timeline-dot.telat { border-color:var(--danger); color:var(--danger); background:var(--danger-soft); }
-.schedule .timeline .upcoming .timeline-dot { outline:3px solid var(--tone); outline-offset:4px; animation:timeline-pulse 2.4s ease-in-out infinite; }
-.schedule .next-label { color:var(--text); font-size:11px; font-weight:700; border-bottom:1px solid var(--tone); }
-.schedule .timeline-today { position:absolute; z-index:3; left:calc(12px + (100% - 24px) * var(--position)); top:calc(50% - 22px); height:44px; border-left:2px dashed var(--text-2); pointer-events:none; }
-.schedule .timeline-today span { position:absolute; top:46px; left:0; transform:translateX(-50%); white-space:nowrap; padding:2px 4px; font-size:10px; color:var(--text); background:var(--bg-soft); }
+.schedule .timeline .upcoming .timeline-dot { outline:3px solid var(--accent-soft); outline-offset:2px; animation:timeline-pulse 2.4s ease-in-out infinite; }
+.schedule .timeline-today { position:absolute; z-index:2; left:-6px; top:0; height:20px; padding:0 9px; display:inline-flex; align-items:center; border:1px solid var(--accent); border-radius:999px; background:var(--accent-soft); color:var(--accent-strong); font-size:11px; font-weight:700; line-height:1; white-space:nowrap; }
+.schedule .timeline-today.after { left:auto; right:-6px; }
+.schedule .timeline-card { flex:1; min-width:0; min-height:96px; display:flex; flex-direction:column; align-items:flex-start; gap:6px; padding:11px 12px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--tone); border-radius:8px; box-shadow:0 1px 2px var(--ui-color-115); font-size:13px; line-height:1.45; overflow-wrap:anywhere; text-decoration:none; }
+.schedule .timeline-card:hover { border-color:var(--accent); text-decoration:none; }
+.schedule .timeline-card:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.schedule .timeline-card b { font-size:14px; line-height:1.35; }
+.schedule .timeline-note { color:var(--text-2); font-size:12px; line-height:1.45; }
+.schedule .timeline-foot { margin-top:auto; padding-top:2px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.schedule .timeline .badge { white-space:normal; padding:1px 6px; font-size:12px; }
+.schedule .next-label { padding:1px 9px; border-radius:999px; background:var(--accent-soft); color:var(--accent-strong); font-size:11px; font-weight:700; }
 .schedule .mobile-date { display:none; }
 .schedule .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-@keyframes timeline-pulse { 50% { outline-offset:7px; } }
+@keyframes timeline-pulse { 50% { outline-offset:5px; } }
 @media(prefers-reduced-motion:reduce) { .schedule .timeline .upcoming .timeline-dot { animation:none; } }
-@media(min-width:900px) and (max-width:1200px) {
- .schedule .timeline-card { padding:9px; font-size:12px; }
- .schedule .timeline-card b { font-size:13px; }
- .schedule .timeline-note { font-size:11px; }
-}
-@media(max-width:899px) {
- .schedule .timeline-shell { padding:18px 12px; }
- .schedule .timeline-track { width:auto; }
- .schedule .timeline { display:flex; flex-direction:column; gap:22px; }
- .schedule .timeline::before { top:0; bottom:0; left:12px; right:auto; width:1px; height:auto; }
- .schedule .timeline::after { top:0; left:10px; }
- .schedule .timeline-shell::after { left:22px; right:auto; top:auto; bottom:16px; }
- .schedule .timeline li { display:block; padding-left:42px; }
- .schedule .timeline .timeline-card { width:100%; max-width:none; padding:14px; font-size:13px; }
- .schedule .timeline-card b { font-size:15px; }
- .schedule .timeline-note { font-size:12px; }
- .schedule .timeline-dot { top:22px; left:3px; }
- .schedule .timeline-stem { position:absolute; top:32px; left:23px; width:19px; height:1px; }
- .schedule .timeline-stem::before { display:none; }
+/* HP: daftar tegak dengan sumbu di kiri; tanggal pindah ke dalam kartu */
+@media(max-width:639px) {
+ .schedule .timeline-shell { padding:32px 12px; }
+ .schedule .timeline { display:flex; flex-direction:column; gap:26px; max-width:none; }
+ .schedule .timeline::before { content:''; position:absolute; top:-12px; bottom:-12px; left:12px; width:2px; background:var(--border-strong); }
+ .schedule .timeline { position:relative; }
+ .schedule .timeline li { display:block; padding:0 0 0 42px; }
  .schedule .timeline-date { display:none; }
- .schedule .mobile-date { display:block; color:var(--tone); font-size:22px; font-weight:700; }
- .schedule .mobile-date small { font-size:12px; font-weight:400; }
- .schedule .timeline-today { left:15px; top:calc(18px + (100% - 36px) * var(--position)); width:20px; height:0; border-left:0; border-top:2px dashed var(--text-2); }
- .schedule .timeline-today span { top:0; left:-1px; transform:rotate(-90deg); transform-origin:left top; }
+ .schedule .timeline-axis { position:static; height:0; }
+ .schedule .timeline-axis::before { display:none; }
+ .schedule .timeline-axis::after { top:30px; left:23px; width:19px; height:1px; }
+ .schedule .timeline-dot { position:absolute; top:20px; left:3px; }
+ .schedule .timeline-today { top:-24px; left:0; }
+ .schedule .timeline-today.after { top:auto; bottom:-24px; right:auto; left:0; }
+ .schedule .timeline-card { padding:14px; font-size:13px; }
+ .schedule .timeline-card b { font-size:15px; }
+ .schedule .mobile-date { display:block; color:var(--text); font-size:20px; font-weight:700; line-height:1.2; }
+ .schedule .mobile-date small { font-size:12px; font-weight:500; color:var(--text-2); }
 }
 
 .schedule .chat-line { margin: 0 0 12px; display: flex; justify-content: flex-end; }
@@ -202,20 +187,6 @@
  .schedule .area-table td[data-label="PIC"] { color:var(--muted); }
  .schedule .area-table td small { display:block; margin-top:3px; color:var(--muted); font-size:12px; }
  .schedule .area-table tbody tr:hover td { background:var(--accent-soft); }
-}
-/* Rapikan timeline (desktop): kartu sama tinggi, aksen warna di tepi atas, label Berikutnya jadi pil */
-@media(min-width:900px) {
- .schedule .timeline-shell { padding:26px 18px 22px; }
- .schedule .timeline { grid-template-rows:auto 60px 24px 60px auto; }
- .schedule .timeline-card { align-self:stretch; width:150%; max-width:190px; min-height:120px; background:var(--surface); border-top:3px solid var(--tone); box-shadow:0 1px 2px var(--ui-color-115); gap:6px; padding:11px 12px; }
- .schedule .timeline-date { padding-top:14px; }
- .schedule .timeline .below .timeline-date { padding:0 0 14px; }
- .schedule .timeline-card b { font-size:14px; }
- .schedule .timeline-note { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
- .schedule .timeline-card .badge { margin-top:auto; }
- .schedule .timeline-date { font-weight:750; letter-spacing:-.01em; font-size:clamp(13px,1.3vw,18px); white-space:nowrap; }
- .schedule .timeline-date small { display:block; margin-top:2px; opacity:.85; }
- .schedule .next-label { border:0; padding:1px 9px; border-radius:999px; background:var(--accent-soft); color:var(--accent-strong); }
 }
 
 .schedule .pic-select { width:100%; min-height:40px; }
@@ -243,14 +214,6 @@
  .schedule .activity-table th:last-child { width:16%; }
 }
 
-/* Timeline dengan sedikit titik (<=6): kartu selalu di tengah titiknya, lebar dibatasi supaya tidak renggang */
-@media(min-width:900px) {
- .schedule .timeline.wide { max-width:calc(var(--count) * 260px); margin:0 auto; }
- .schedule .timeline.wide li:first-child .timeline-card, .schedule .timeline.wide li:last-child .timeline-card { justify-self:center; }
- .schedule .timeline.wide .timeline-card { width:min(190px, calc(100% - 12px)); }
- .schedule .timeline.wide::after { display:none; }
- .schedule .timeline-shell:has(.timeline.wide)::after { display:none; }
-}
 
 /* ===== admin-ui-system: status kategori konsisten (badge tabel, pilihan status, timeline, ringkasan area, KPI) ===== */
 .schedule .badge.selesai { color:var(--ok); background:var(--ok-soft); border-color:color-mix(in srgb, var(--ok) 45%, transparent); }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {scheduleTabs,progress,groupProgress,timelineMilestones,nextMilestone,countdown,cardNote,withFixedPic,areaStatus,timelinePosition,inventoryLocations,combinedInventoryFlow,inventoryFlow,balanceTimeline,shortInventoryTitle,isInventoryActivity} from '../../main/resources/static/js/pages/schedule.js';
+import {scheduleTabs,progress,groupProgress,timelineMilestones,nextMilestone,countdown,cardNote,withFixedPic,areaStatus,timelineTodayIndex,inventoryLocations,combinedInventoryFlow,inventoryFlow,balanceTimeline,shortInventoryTitle,isInventoryActivity} from '../../main/resources/static/js/pages/schedule.js';
 const read=name=>JSON.parse(readFileSync(new URL(`../../main/resources/schedule/${name}.json`,import.meta.url)));
 const wbi=read('default-wbi'),cv=read('default'),get=id=>wbi.items.find(i=>i.id===id);
 const stemIds=['upload-master','inventory-upload','inventory-upload-toko','ap-ar','fa','gl'];
@@ -33,7 +33,7 @@ test('WBI 4 tabs and CV 5 tabs; progress/areas/master groups and Kick Off remain
  for(const sec of ['milestone','master','balance'])assert.equal(areaStatus(wbi.items.filter(i=>i.section===sec),'2026-11-23'),'belum');
  assert.equal(nextMilestone(wbi.items,'2026-11-23').id,'kickoff');assert.equal(countdown(get('kickoff').startDate,'2026-11-23'),8);
  assert.equal(timelineMilestones(wbi.items).length,12);assert.equal(timelineMilestones(cv.items).length,11);
- assert.ok(Number.isFinite(timelinePosition(timelineMilestones(wbi.items),'2026-12-30')));
+ assert.ok(Number.isFinite(timelineTodayIndex(timelineMilestones(wbi.items),'2026-12-30')));
 });
 test('location labels originate in seed; one combined flow preserves all distinct times',()=>{
  const locations=inventoryLocations(wbi.items);assert.equal(locations.length,2);
