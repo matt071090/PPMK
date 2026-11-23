@@ -1,0 +1,438 @@
+{
+  "checks": [
+    "Fresh locked session gets only public false flag while Setup capabilities/steps/sources/template-ref remain 403",
+    "Locked WBI hides all 11 branch keys even with Tampilkan yang kosong on and shows count, at 1440px and 390px",
+    "Locked generic ST_PARAM also hides its 2 stored branch keys and reports count",
+    "Check List summary and Home resolve nonbranch mode before Setup is unlocked",
+    "Locked Schedule still saves PIC/status and keeps the admin editor locked",
+    "Locked CV/branch fixture retains branch keys using public true flag",
+    "Unknown flag and public endpoint HTTP failure retain branch checks without falling back to Setup",
+    "Upload templates read the public flag; their existing protected reference data still denies locked access",
+    "Check List/Home/Schedule make zero protected Setup requests and have zero JavaScript exceptions"
+  ],
+  "http": [
+    {
+      "path": "/api/setup-access",
+      "status": 200,
+      "data": {
+        "dev": false,
+        "unlocked": false,
+        "configured": true
+      }
+    },
+    {
+      "path": "/api/setup/capabilities",
+      "status": 403,
+      "data": {
+        "message": "Setup terkunci. Masukkan password Setup dulu."
+      }
+    },
+    {
+      "path": "/api/setup/steps",
+      "status": 403,
+      "data": {
+        "message": "Setup terkunci. Masukkan password Setup dulu."
+      }
+    },
+    {
+      "path": "/api/setup/sources",
+      "status": 403,
+      "data": {
+        "message": "Setup terkunci. Masukkan password Setup dulu."
+      }
+    },
+    {
+      "path": "/api/section/template-ref",
+      "status": 403,
+      "data": {
+        "message": "Setup terkunci. Masukkan password Setup dulu."
+      }
+    },
+    {
+      "path": "/api/branch-mode",
+      "status": 200,
+      "data": {
+        "branchEnabled": false
+      }
+    },
+    {
+      "path": "/api/setup-access",
+      "status": 200,
+      "data": {
+        "dev": false,
+        "unlocked": false,
+        "configured": true
+      }
+    },
+    {
+      "path": "/api/setup-access",
+      "status": 200,
+      "data": {
+        "dev": false,
+        "unlocked": false,
+        "configured": true
+      }
+    },
+    {
+      "path": "/api/branch-mode",
+      "status": 200,
+      "data": {
+        "branchEnabled": true
+      }
+    },
+    {
+      "path": "/api/setup/capabilities",
+      "status": 403,
+      "data": {
+        "message": "Setup terkunci. Masukkan password Setup dulu."
+      }
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/setup-access",
+      "method": "GET"
+    },
+    {
+      "path": "/api/branch-mode",
+      "method": "GET"
+    },
+    {
+      "path": "/api/review/mode",
+      "method": "GET"
+    },
+    {
+      "path": "/api/review",
+      "method": "GET"
+    },
+    {
+      "path": "/api/addon/objects",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/uom",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/uom-groups",
+      "method": "GET"
+    },
+    {
+      "path": "/api/company",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/udt",
+      "method": "GET"
+    },
+    {
+      "path": "/api/addon/data/ST_PARAM",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/company-details",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/general-settings",
+      "method": "GET"
+    },
+    {
+      "path": "/api/sl/admin-info",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/sales-employee",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/users",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/authorizations",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/ui-templates",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/document-numbering",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/coa",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/gl-determination",
+      "method": "GET"
+    },
+    {
+      "path": "/api/sl/period-category",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/tax",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/currencies",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/banks",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/house-bank",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/freight",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/landed-cost",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/cost-center",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/payment-terms",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/payment-methods",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/posting-period",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/fixed-asset",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/item-groups",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/items",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/warehouses",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/business-partners",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/price-lists",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/master-summary",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/approval",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/alerts",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/layouts",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/sp-validation",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/udo",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/udf",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/saved-queries",
+      "method": "GET"
+    },
+    {
+      "path": "/api/addon/data/ST_UDRTH",
+      "method": "GET"
+    },
+    {
+      "path": "/api/setup-access",
+      "method": "GET"
+    },
+    {
+      "path": "/api/company",
+      "method": "GET"
+    },
+    {
+      "path": "/api/branch-mode",
+      "method": "GET"
+    },
+    {
+      "path": "/api/addon/objects",
+      "method": "GET"
+    },
+    {
+      "path": "/api/schedule",
+      "method": "GET"
+    },
+    {
+      "path": "/api/review",
+      "method": "GET"
+    },
+    {
+      "path": "/api/review/mode",
+      "method": "GET"
+    },
+    {
+      "path": "/api/schedule/chat/latest",
+      "method": "GET"
+    },
+    {
+      "path": "/api/health",
+      "method": "GET"
+    },
+    {
+      "path": "/api/setup-access",
+      "method": "GET"
+    },
+    {
+      "path": "/api/company",
+      "method": "GET"
+    },
+    {
+      "path": "/api/schedule/access",
+      "method": "GET"
+    },
+    {
+      "path": "/api/setup-access",
+      "method": "GET"
+    },
+    {
+      "path": "/api/schedule/chat/summary",
+      "method": "GET"
+    },
+    {
+      "path": "/api/review",
+      "method": "GET"
+    },
+    {
+      "path": "/api/schedule",
+      "method": "GET"
+    },
+    {
+      "path": "/api/schedule",
+      "method": "GET"
+    },
+    {
+      "path": "/api/schedule",
+      "method": "PUT"
+    },
+    {
+      "path": "/api/schedule",
+      "method": "GET"
+    },
+    {
+      "path": "/api/setup-access",
+      "method": "GET"
+    },
+    {
+      "path": "/api/branch-mode",
+      "method": "GET"
+    },
+    {
+      "path": "/api/review/mode",
+      "method": "GET"
+    },
+    {
+      "path": "/api/review",
+      "method": "GET"
+    },
+    {
+      "path": "/api/addon/objects",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/uom",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/uom-groups",
+      "method": "GET"
+    },
+    {
+      "path": "/api/company",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/udt",
+      "method": "GET"
+    },
+    {
+      "path": "/api/setup-access",
+      "method": "GET"
+    },
+    {
+      "path": "/api/branch-mode",
+      "method": "GET"
+    },
+    {
+      "path": "/api/review/mode",
+      "method": "GET"
+    },
+    {
+      "path": "/api/review",
+      "method": "GET"
+    },
+    {
+      "path": "/api/addon/objects",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/uom",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/uom-groups",
+      "method": "GET"
+    },
+    {
+      "path": "/api/company",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/udt",
+      "method": "GET"
+    },
+    {
+      "path": "/api/branch-mode",
+      "method": "GET"
+    },
+    {
+      "path": "/api/section/template-ref",
+      "method": "GET"
+    }
+  ],
+  "errors": [],
+  "screenshots": [
+    "locked-stem-params-desktop.png",
+    "locked-stem-params-mobile.png"
+  ]
+}

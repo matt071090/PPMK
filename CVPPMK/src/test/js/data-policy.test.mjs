@@ -79,7 +79,7 @@ for(const branches of [true,false,null]) test(`checklist branch findings ${branc
 });
 test('capability fetch does not infer company mode from company name or upload permission',async()=>{
  for(const [payload,expected]of [[{branchEnabled:false,uploadAllowed:false},false],[{branchEnabled:true},true],[{branchEnabled:null},null],[{},null]]){
-  globalThis.fetch=async()=>({ok:true,json:async()=>payload});await policy.loadCapabilities();assert.equal(policy.capabilities.branchEnabled,expected);
+  globalThis.fetch=async(url,options)=>{assert.equal(url,'api/branch-mode');assert.equal(options.cache,'no-store');return {ok:true,json:async()=>payload};};await policy.loadCapabilities();assert.equal(policy.capabilities.branchEnabled,expected);
  }
  globalThis.fetch=async()=>{throw new Error('offline')};await policy.loadCapabilities();assert.equal(policy.capabilities.branchEnabled,null);
 });
@@ -87,4 +87,10 @@ test('unavailable row statistics stay visible with unknown status, never claim S
  policy.capabilities.branchEnabled=true;
  const r=tableRows(ADDONS[0],{addon_rows:table(['Name','Rows'],[['@ST_PARAM',null]])}).find(r=>r.Name==='ST_PARAM');
  assert.equal(r.empty,false);assert.equal(r.Rows,null);assert.equal(r.status.t,'none');assert.match(r.status.text,/belum diketahui/);
+});
+
+test('public mode HTTP failure keeps branch checks and does not retry protected Setup',async()=>{
+ let calls=0;
+ globalThis.fetch=async url=>{calls++;assert.equal(url,'api/branch-mode');return {ok:false,status:503,json:async()=>({message:'Unavailable'})};};
+ assert.equal((await policy.loadCapabilities()).branchEnabled,null);assert.equal(policy.nonBranch(),false);assert.equal(calls,1);
 });

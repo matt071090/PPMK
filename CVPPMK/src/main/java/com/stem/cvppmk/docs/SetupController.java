@@ -144,10 +144,7 @@ public class SetupController {
     }
 
     private boolean branchMode() {
-        String target = targetSchema();
-        if (target == null || !target.equals(sl.companyDatabase()))
-            throw new IllegalStateException("Company DB baca dan Service Layer tujuan tidak sama. Upload diblokir.");
-        return SetupBranchPolicy.parseMode(jdbc.queryForObject("SELECT \"MltpBrnchs\" FROM OADM", String.class));
+        return BranchModeReader.read(jdbc, sl);
     }
 
     @GetMapping("/capabilities")

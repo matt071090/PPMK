@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 const root=path.resolve(process.env.PREVIEW_STATIC_ROOT || fileURLToPath(new URL('../../main/resources/static/',import.meta.url)));
 const resources=path.resolve(fileURLToPath(new URL('../../main/resources/',import.meta.url)));
 const mode=process.env.PREVIEW_COMPANY || 'wbi';
+const dev=process.env.PREVIEW_DEV==='1', unlocked=dev || process.env.PREVIEW_ADMIN==='1';
+const branchEnabled=process.env.PREVIEW_BRANCH_MODE===undefined ? mode!=='wbi' : ({Y:true,N:false}[process.env.PREVIEW_BRANCH_MODE] ?? null);
 const company=mode==='wbi'?{code:'wbi',name:'PT Warung Begok Indonesia'}:{code:'',name:'CV. Putra Prima Mandiri Kediri'};
 const seed=JSON.parse(await readFile(path.join(resources,'schedule',mode==='wbi'?'default-wbi.json':'default.json'),'utf8'));
 const baseSteps=JSON.parse(await readFile(path.join(resources,'setup/steps.json'),'utf8'));
@@ -34,24 +36,26 @@ function reply(res,data,status=200){res.writeHead(status,{'Content-Type':'applic
 const server=http.createServer(async(req,res)=>{
   try {
     const url=new URL(req.url,'http://127.0.0.1'),p=url.pathname;
+    if(p==='/api/branch-mode')return reply(res,{branchEnabled});
+    if((p==='/api/setup'||p.startsWith('/api/setup/')||p==='/api/section/template-ref')&&!unlocked)return reply(res,{message:'Setup terkunci. Masukkan password Setup dulu.'},403);
     if(p==='/api/company')return reply(res,company);
-    if(p==='/api/setup-access')return reply(res,{dev:true,unlocked:true,configured:true});
-    if(p==='/api/review/mode')return reply(res,{editable:true});
+    if(p==='/api/setup-access')return reply(res,{dev,unlocked,configured:true});
+    if(p==='/api/review/mode')return reply(res,{editable:dev});
     if(p==='/api/review')return reply(res,{pages:{}});
     if(p==='/api/health')return reply(res,{status:'UP',database:'Demo lokal'});
     if(p==='/api/addon/objects')return reply(res,{objects,categories:['STEM'],stale:[]});
     if(p.startsWith('/api/addon/data/')){const o=objects.find(o=>o.code===p.split('/').at(-1));return reply(res,{generatedAt:'2026-11-23T12:00:00',results:Object.fromEntries((o?.tables||[]).map(t=>[t.name,addonTables[t.name]()]))});}
-    if(p==='/api/setup/capabilities')return reply(res,{branchEnabled:mode!=='wbi',uploadAllowed:true});
+    if(p==='/api/setup/capabilities')return reply(res,{branchEnabled,uploadAllowed:branchEnabled!==null});
     if(p==='/api/setup/steps')return reply(res,steps);
     if(p==='/api/setup/sources')return reply(res,{target:'WBI_DEMO',same:[{id:'same:WBI_DEMO',schema:'WBI_DEMO',company:company.name}],others:[],missing:[],declared:true});
-    if(p==='/api/schedule/access')return reply(res,{editable:process.env.PREVIEW_ADMIN==='1'});
+    if(p==='/api/schedule/access')return reply(res,{editable:unlocked});
     if(p==='/api/schedule') {
       if(req.method==='PUT') {
         let raw='';for await(const chunk of req)raw+=chunk;
         const body=JSON.parse(raw);
         if(body.rev!==revision)return reply(res,{message:'Konflik revisi'},409);
         const strip=data=>({...data,items:data.items.map(({pic,status,...rest})=>rest)});
-        if(process.env.PREVIEW_ADMIN!=='1' && JSON.stringify(strip(body.data))!==JSON.stringify(strip(schedule)))return reply(res,{message:'Tanggal dan catatan hanya admin'},403);
+        if(!unlocked && JSON.stringify(strip(body.data))!==JSON.stringify(strip(schedule)))return reply(res,{message:'Tanggal dan catatan hanya admin'},403);
         schedule=body.data;revision++;
       }
       return reply(res,{rev:revision,updatedAt:'2026-11-23T12:00:00Z',data:schedule});

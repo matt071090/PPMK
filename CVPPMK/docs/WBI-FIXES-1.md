@@ -2,7 +2,56 @@
 
 Branch `wbi/fixes-1`, dibuat dari `wbi/ui-warna` (`57b76b5`, mencakup `7b9c16e`). Semua pengujian memakai fixture/mock; tidak menyambung ke SAP, WBI_TEST, atau HANA. Commit lokal saja, tanpa push dan tanpa `git add -A`.
 
-## Hasil
+## Koreksi: flag publik untuk sesi Setup terkunci
+
+Temuan koordinator benar: `SetupController` mempunyai `@ModelAttribute` yang memanggil `SetupAccessController.require()` sebelum **semua** handler Setup, termasuk GET capabilities. Fixture awal mengembalikan dev/unlocked true, sehingga 13 skenario browser dan 60 screenshot awal **belum membuktikan** perilaku sesi Setup terkunci.
+
+Perbaikan lanjutan pada branch yang sama:
+
+- GET **`api/branch-mode`** publik, `Cache-Control: no-store`, body tepat satu field `{branchEnabled: true|false|null}`. Tidak mengembalikan uploadAllowed, nama/schema DB, host, path, atau pesan exception.
+- `BranchModeReader.read()` dipakai bersama endpoint publik dan `SetupController.branchMode()`: kesamaan CURRENT_SCHEMA/SL company lalu `OADM.MltpBrnchs`, menggunakan parser yang sama. Mismatch/flag tidak dikenal/error dibalas null pada endpoint publik; pemeriksaan branch tetap dipertahankan. Pembacaan flag tidak memanggil login/GET/POST SL.
+- `data-policy.js` dan `upload.js` memakai flag publik; Home/Check List ikut melalui helper yang sama. Hanya `pages/setup.js` yang tetap memanggil `api/setup/capabilities`. Endpoint Setup dan izin upload tetap terkunci.
+- Fixture kini **terkunci secara bawaan**: dev=false, unlocked=false; seluruh `/api/setup/*` dan `section/template-ref` menolak 403. `PREVIEW_ADMIN=1` mensimulasikan sesi admin; `PREVIEW_DEV=1` untuk mode dev. Flag fixture bisa dioverride Y/N/unknown melalui `PREVIEW_BRANCH_MODE`.
+
+Bukti setelah koreksi:
+
+| Uji ulang | Hasil |
+|---|---|
+| Seluruh Java pada JDK 8 | **163 lulus, 0 gagal/error/skip**. Tambahan 14 tes flag/gate Setup + 26 tes audit endpoint. [Log](qa-fixes-locked/java8-tests.log) |
+| Seluruh JS | **208 terdaftar: 190 lulus, 0 gagal, 18 skip** karena jsdom tetap tidak tersedia. URL publik/no-store dan perilaku HTTP gagal diuji. [Log](qa-fixes-locked/js-tests.log) |
+| Browser dengan Setup terkunci | **9 skenario lulus, 0 exception JS**. HTTP Setup capabilities/steps/sources 403, flag publik false/true/null, seluruh 11 key tidak ada dalam hasil filter WBI walau toggle kosong aktif, catatan 11 terlihat, 2 key branch di ST_PARAM generik tersembunyi, Home/Check List/Schedule tetap berjalan, CV branch tetap menampilkan key, HTTP failure mempertahankan pemeriksaan, dan Template Upload memakai sumber flag baru. [Hasil + jejak permintaan](qa-fixes-locked/browser-evidence.json) |
+| Screenshot sesi terkunci | [Desktop 1440px](qa-fixes-locked/locked-stem-params-desktop.png), [HP 390px](qa-fixes-locked/locked-stem-params-mobile.png). Tidak ada overflow halaman. |
+
+Audit endpoint untuk sesi tanpa unlock (handler Java nyata melalui MockMvc, seluruh DB/SL/SLD dimock):
+
+| Endpoint yang dipakai halaman | Hasil/izin |
+|---|---|
+| company; setup-access; review, mode, log, remarks | **200**, tidak memerlukan unlock. Remarks GET pada mode non-dev mengembalikan objek kosong. |
+| section/company-name, company-details, udo, udt, udf, saved-queries | **200**; handler section biasa tidak mempunyai gerbang Setup. |
+| addon/objects dan addon/data/ST_PARAM | **200**; gerbang Setup hanya pada PUT mapping, bukan GET. |
+| schedule, access, export; schedule/chat, summary, latest | **200**; access menyatakan editable=false. Simpan PIC/status non-admin juga lulus uji browser terkunci dan Java yang sudah ada. |
+| health; sl/admin-info, company-info, period-category; sld/license | **200**; tidak mempunyai gerbang Setup. Ini audit akses dengan mock, bukan pengujian koneksi langsung. |
+| setup/capabilities, steps, sources, warehouses | **403**, tanpa memanggil dependensi DB/SL; tetap dilindungi. |
+| section/template-ref | **403 secara sengaja** di mode non-dev tanpa unlock. Halaman Template Upload adalah halaman dev yang disembunyikan pada WAR; pengujian memanggilnya secara eksplisit dan membuktikan flag publik berhasil dibaca sebelum referensi ditolak. Izin referensi tidak dibuka oleh perbaikan ini. |
+
+Tidak ditemukan endpoint baca lain yang membuat Home/Check List/Schedule memerlukan unlock Setup. Setup Chat dan Tools memang tetap memerlukan unlock dan bukan sumber data bagi ketiga halaman itu.
+
+Reproduksi dari root repo, dengan dua terminal server:
+
+```sh
+node CVPPMK/src/test/js/preview-server.mjs
+PREVIEW_COMPANY=cv PREVIEW_PORT=18637 node CVPPMK/src/test/js/preview-server.mjs
+```
+
+Jalankan browser pada terminal ketiga:
+
+```sh
+PLAYWRIGHT_MODULE=/Users/fakhridhiya_/Desktop/Mac-Kerja/_tools/pw/node_modules/playwright/index.mjs node CVPPMK/src/test/js/locked-access.browser.mjs
+```
+
+Tidak menyambung ke SAP/WBI_TEST/HANA, tidak memasang paket, tidak mengubah CSS/token warna, dan tidak push. Deployment Tomcat/WAR serta data dan hak akses DB hidup tetap belum teruji.
+
+## Hasil implementasi awal
 
 - **Mode lihat memang mengizinkan PIC + status lalu Simpan.** Server sudah membatasi perubahan selain dua field itu. Ditemukan bug nyata: Simpan di WBI tetap menimpa 7 PIC kegiatan konsultan menjadi STEM, meskipun layar WBI mengizinkan PIC bebas. Guard company sekarang konsisten pada tampilan, editor admin, dan Simpan. PIC WBI yang tidak diubah tetap kosong; CV tetap memakai PIC STEM pada 7 kegiatan yang sama. Panduan PIC WBI mengikuti perilaku ini.
 - Tanggal, jam, judul, catatan, identitas proyek, dan struktur kegiatan tetap hak admin. Gagal membaca akses sekarang tetap mengunci editor admin. Tes HTTP Java memakai sesi non-admin dan folder sementara `wbi/schedule/`; penolakan perubahan terlarang tidak menaikkan revisi.
@@ -11,7 +60,7 @@ Branch `wbi/fixes-1`, dibuat dari `wbi/ui-warna` (`57b76b5`, mencakup `7b9c16e`)
 - Toggle **Tampilkan yang kosong** tersimpan di browser per tabel/menu; jumlah yang disembunyikan tampil. Tabel/parameter/field katalog yang tidak tersedia atau kosong tidak menghasilkan temuan. Saat ditampilkan, statusnya netral. Menu Addon kosong juga dikeluarkan dari pembilang/penyebut review di Check List dan Home, termasuk saat toggle aktif.
 - Fixture Daftar UDT: **172 tabel = 60 berisi + 112 kosong**, tampil 25 per halaman. Jumlah field 0 sendiri **bukan** bukti tabel kosong: tabel Code/Name tanpa UDF dapat berisi data yang sah. Statistik yang tidak tersedia tetap terlihat sebagai belum diketahui, bukan dibuat 0.
 - Export memakai seluruh hasil filter. File [hasil unduhan nyata](qa-fixes-1/filtered-udt.xlsx) berisi **99 baris data + 1 header**, ketika layar hanya menampilkan 25 baris. Untuk UDO dengan child, ekspor mencakup semua header hasil filter dan seluruh child terkait, bukan halaman aktif saja. Parent dengan UDF kosong tetapi mempunyai child tetap ditampilkan.
-- **Non-branch berdasarkan GET `api/setup/capabilities`**, sama dengan Setup: `SetupController.branchMode()` memeriksa kesamaan DB baca/SL lalu membaca `OADM.MltpBrnchs`. Tidak menebak dari nama/kode WBI; flag null/gagal mempertahankan pemeriksaan branch. Tidak ada endpoint SAP yang dipanggil selama tes.
+- **Non-branch berdasarkan GET publik `api/branch-mode`**, memakai reader bersama dengan Setup: `SetupController.branchMode()` memeriksa kesamaan DB baca/SL lalu membaca `OADM.MltpBrnchs`. Tidak menebak dari nama/kode WBI; flag null/gagal mempertahankan pemeriksaan branch. Tidak ada endpoint SAP yang dipanggil selama tes.
 - Company tanpa branch: **11 key STEM, 1 tabel TI Branch, 10 UDF STEM, dan 8 UDF Breeding** khusus branch disaring dari katalog. Key bersama seperti WHTRS, tipe gudang, dan tipe ITR tetap ada. Parameter branch juga disaring pada halaman generik `@ST_PARAM`. Catatan jumlah yang disembunyikan muncul pada bagian terkait. KPI Branch Ringkasan/Warehouse, warning assignment BP/user, panel/filter assignment BP, kolom branch Warehouse/User/COA, dan pemeriksaan organisasi branch mengikuti flag yang sama.
 - Warna/token Gemini tidak diubah. Penambahan CSS hanya komponen pager dan toggle menu, memakai token yang sudah ada.
 
@@ -29,7 +78,9 @@ Branch `wbi/fixes-1`, dibuat dari `wbi/ui-warna` (`57b76b5`, mencakup `7b9c16e`)
 
 Pemeriksaan nilai UDF di luar valid values pada master data lain tetap ada. Bab 4.4 procedure/function juga tetap memiliki pemeriksaan keberadaan objek; perubahan ini tidak menghilangkan pemeriksaan tersebut.
 
-## Bukti uji
+## Bukti uji awal (sebelum koreksi sesi terkunci)
+
+Angka dan screenshot pada bagian ini adalah bukti commit awal; hasil terbaru untuk sesi terkunci ada di bagian koreksi di atas.
 
 | Pengujian | Hasil |
 |---|---|
@@ -50,7 +101,7 @@ git diff --check
 
 Maven pertama mengisi cache dependensi dari Maven Central; pengujian akhir JDK 8 berjalan offline. Tidak menjalankan brew/npm/pip install. Server preview hanya bind `127.0.0.1`; browser membatalkan permintaan selain localhost.
 
-Untuk reproduksi browser, jalankan 3 server fixture dari root repo pada terminal terpisah: port 18635 untuk source sekarang, 18636 dengan `PREVIEW_STATIC_ROOT` menunjuk hasil `git archive wbi/ui-warna CVPPMK/src/main/resources/static`, serta `PREVIEW_COMPANY=cv PREVIEW_PORT=18637` untuk CV. Setiap server memakai `node CVPPMK/src/test/js/preview-server.mjs`; port bawaan 18635, override melalui `PREVIEW_PORT`. Browser perlu Chrome dan Playwright yang sudah terpasang; skrip tidak memasang paket.
+Skenario browser awal dan 60 screenshot disimpan sebagai riwayat. Untuk pengujian sesi terkunci gunakan dua server dan `locked-access.browser.mjs` di bagian koreksi; fixture awal yang dev/unlocked tidak lagi dipakai sebagai bukti akses non-admin.
 
 ## Batas yang belum teruji
 
@@ -63,4 +114,6 @@ Untuk reproduksi browser, jalankan 3 server fixture dari root repo pada terminal
 
 - `e39816c`: perbaikan mode lihat/PIC, paging bersama, filter kosong/non-branch, dan fixture/tes.
 
-Commit dokumentasi bukti menyusul commit implementasi; daftar final dua commit dilaporkan ke koordinator.
+- `ea3f5f2`: audit dan bukti implementasi awal.
+
+Commit baru koreksi flag publik, fixture terkunci, tes dan pembaruan laporan dilaporkan ke koordinator setelah validasi.

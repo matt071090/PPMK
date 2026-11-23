@@ -1,8 +1,9 @@
-// Capability comes from the same server endpoint used by Setup. Unknown preserves checks.
+// Public display flag uses the same server reader as Setup, without requiring its unlock session.
+// Unknown preserves checks; this flag never grants permission to upload.
 export const capabilities = { branchEnabled: null };
 export async function loadCapabilities() {
   try {
-    const r = await fetch('api/setup/capabilities', { cache: 'no-store' });
+    const r = await fetch('api/branch-mode', { cache: 'no-store' });
     if (!r.ok) throw new Error('Mode branch belum tersedia');
     const d = await r.json();
     capabilities.branchEnabled = typeof d.branchEnabled === 'boolean' ? d.branchEnabled : null;
