@@ -209,7 +209,7 @@ export function table(cols, rows, { flag, xid, allRows, noExport, expand, export
       : `<tr class="${cls}">${cells}</tr>`;
   };
   return `${noExport || xid ? "" : `<div class="xbar">${exportBtn(id)}</div>`}<div class="table-wrap"><table class="data${expand ? " expandable" : ""}">
-    <thead><tr>${expand ? "<th></th>" : ""}${cols.map(c => `<th>${esc(c.label)}</th>`).join("")}</tr></thead>
+    <thead><tr>${expand ? "<th></th>" : ""}${cols.map(c => `<th${c.num ? " class=\"num\"" : ""}>${esc(c.label)}</th>`).join("")}</tr></thead>
     <tbody>${rows.map(row).join("")
       || `<tr><td colspan="${n}" style="text-align:center;color:var(--muted);padding:28px">Tidak ada data</td></tr>`}</tbody>
   </table></div>`;

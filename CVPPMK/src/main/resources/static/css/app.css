@@ -991,3 +991,26 @@ table.data thead th { background: var(--table-head); color: var(--text-2); }
 .empty-menu-toggle { margin:12px 16px; color:var(--muted); font-size:12px; }
 .empty-menu-toggle label { display:flex; align-items:center; gap:6px; min-height:44px; }
 .empty-menu-toggle small { display:block; }
+
+/* ===== Rapikan tampilan (wbi/ui-polish): tata letak dan jarak saja, token warna tidak diubah ===== */
+/* Header HP: nama company boleh turun ke 2 baris, tidak terpotong "…"; tombol diskusi header diganti tombol melayang */
+@media (max-width: 600px) {
+  .top .brand span span { white-space: normal; line-height: 1.2; font-size: 13.5px; overflow: visible; }
+  #setup-chat-slot { display: none; }
+  .toolbar input[type=search] { flex: 1 1 100%; max-width: none; }
+  .toolbar .count { margin-left: 0; }
+  .hn-chk { flex-wrap: wrap; row-gap: 0; }
+  .hn-chk small { flex-basis: 100%; margin-left: 26px; }
+}
+/* Label temuan tidak terpecah dua baris di sebelah nama panjang */
+.callout .ct { overflow-wrap: anywhere; }
+.callout .ct b { white-space: nowrap; }
+/* Tabel: judul kolom angka rata kanan seperti isinya */
+table.data th.num { text-align: right; }
+/* Kolom pencarian tabel setup cukup lebar untuk petunjuknya */
+.toolbar input[type=search] { max-width: 480px; }
+/* HANA: tombol Hubungkan setara tinggi isian, teks di tengah; petunjuk centang terbaca */
+.hn-form .cbtn.primary { justify-content: center; min-height: 42px; font-size: 14px; }
+.hn-chk small { font-size: 12px; }
+/* Count Document: jarak judul ke kartu pertama */
+.cd-app > h1 + .cd-card { margin-top: 14px; }

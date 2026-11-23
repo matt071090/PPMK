@@ -8,7 +8,10 @@
 <style>
 body.setup-app .content { padding: 0 16px 24px; }
 .rp-head { display: flex; align-items: baseline; gap: 12px; margin: 12px 0 0; }
-.rp-head h1 { margin: 0; font-size: 20px; }
+.rp-head h1 { margin: 0; font-size: 20px; white-space: nowrap; flex: none; }
+.top .back-btn span { display: inline; }
+@media (max-width: 899px) { .rp-head { display: block; } .rp-head h1 { margin-bottom: 4px; } }
+@media (max-width: 600px) { .top .back-btn { display: none; } }
 .rp-head p { margin: 0; color: var(--muted); font-size: 13px; }
 .rp { display: grid; gap: 12px; align-items: start; }
 .rp-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0; }

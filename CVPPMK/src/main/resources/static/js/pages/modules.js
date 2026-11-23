@@ -1,6 +1,7 @@
 import { nonBranch, hiddenAddonTable } from "../data-policy.js";
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
+import { company } from "../company.js";
 import { mainTable, tableName, tableModule } from "../sap-tables.js";
 import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, callouts, kv, settings, table, tabs, searchable, tags, udfCols, expandList, exportButton, exportSheets, sqlSheets, autoCols, VALUATION, GL_METHOD } from "../ui.js";
 import { SP_PAGE } from "./sp-validation.js";
@@ -673,7 +674,7 @@ export const PAGES = {
     lead: "Dokumen yang harus disetujui sebelum diposting: siapa yang membuat (originator), tahap persetujuan, dan dokumen yang dicakup.",
     menu: "Administration › Approval Procedures › Approval Stages · Approval Templates",
     tables: ["OWTM", "WTM1", "WTM2", "WTM3", "OWST"],
-    checks: d => rowsOf(d.templates).length ? [] : [["warn", "Belum ada approval template. Di blueprint referensi, PO, PR, SO, dan dokumen inventory memakai approval. Pastikan memang tidak diperlukan di CVPPMK."]],
+    checks: d => rowsOf(d.templates).length ? [] : [["warn", "Belum ada approval template. Di blueprint referensi, PO, PR, SO, dan dokumen inventory memakai approval. Pastikan memang tidak diperlukan di " + (company.code ? "company ini" : "CVPPMK") + "."]],
     render: d => section("templates", "Approval Template", table([{ key: "Name", label: "Nama" }, { key: "Docs", label: "Dokumen (kode objek)" },
         { key: "Originators", label: "Originator" }, { key: "Stages", label: "Tahap" }, { key: "Active", label: "Aktif", fmt: badgeYN }], rowsOf(d.templates)))
       + section("stages", "Approval Stage", table([{ key: "Name", label: "Nama" }, { key: "MaxReqr", label: "Jumlah approval dibutuhkan", num: 1 },
