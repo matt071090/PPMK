@@ -1,6 +1,6 @@
 # Serah terima WBI — 23 November 2026
 
-Bagian 1–5 dan Retail selesai di branch lokal **wbi/main** pada workspace `C:/Users/Fakhri/orca/workspaces/PPMK/razorbill`. `main` tetap `ab74c0c`; tidak ada push atau `git add -A`. Seluruh staging memakai satu nama berkas per perintah. Bagian warna sudah dialihkan ke Gemini dan perubahan warna worker dibatalkan utuh.
+Bagian 1–5 dan Retail selesai di branch lokal **wbi/main** pada workspace `C:/Users/Fakhri/orca/workspaces/PPMK/razorbill`, termasuk perbaikan sinkronisasi checkout lokal/menu di bawah. `main` tetap `ab74c0c`; tidak ada push atau `git add -A`. Seluruh staging memakai satu nama berkas per perintah. Bagian warna sudah dialihkan ke Gemini dan percobaan warna worker dibatalkan utuh; CSS terbaru checkout asal dibawa hanya sebagai bagian merge yang diminta.
 
 ## Commit lokal
 
@@ -34,9 +34,9 @@ Tidak dibuat uploader saldo awal baru: inventory/AP/AR/GL diisi user sendiri. Ti
 
 ## Bukti
 
-- **Java: 116 lulus, 0 gagal/error/skipped** — SetupController 64, CompanyData 21, Retail 31. Termasuk matriks branch/non-branch × kosong/0/valid/tak dikenal pada create/update, katalog CV utuh, namespace/seed/atomic/revisi, akses chat, field/key/detail Retail dan sumber kosong/tidak sah.
-- **JavaScript: 129 lulus, 0 gagal/skipped**. Termasuk matriks browser/template/payload, favicon, nama ekspor/browser namespace, serta sumber=target dan detail Route.
-- **Dua build clean package berhasil** dari wbi/main: profil default menghasilkan [cvppmk.war](../target/cvppmk.war), `-Pwbi` menghasilkan [wbi.war](../target/wbi.war). Resource profil masing-masing telah diperiksa, bytecode Java 8, WBI tidak membundel konfigurasi lokal CV. Angka tes dan SHA-256 artefak: [verification.json](qa-wbi/verification.json).
+- **Java terbaru: 118 lulus, 0 gagal/error/skipped** — SetupController 64, CompanyData 21, Retail 31, ditambah suite sumber CountDocCustomTests dan CountDocQueryTests masing-masing satu tes JUnit yang menjalankan seluruh pemeriksaan internalnya. Termasuk matriks branch/non-branch × kosong/0/valid/tak dikenal pada create/update, katalog CV utuh, namespace/seed/atomic/revisi, akses chat, field/key/detail Retail dan sumber kosong/tidak sah.
+- **JavaScript terbaru: 182 lulus, 0 gagal/skipped**. Termasuk tes Schedule/Daftar Query yang sebelumnya belum ikut dan regresi menu delapan halaman, di samping matriks browser/template/payload, favicon, nama ekspor/browser namespace, serta sumber=target dan detail Route.
+- **Dua build clean package serah terima awal berhasil** dari wbi/main: profil default menghasilkan [cvppmk.war](../target/cvppmk.war), `-Pwbi` menghasilkan [wbi.war](../target/wbi.war). Resource profil masing-masing telah diperiksa, bytecode Java 8, WBI tidak membundel konfigurasi lokal CV. Bukti/SHA-256 artefak awal (sebelum perbaikan navigasi): [verification.json](qa-wbi/verification.json). WAR belum dibuild ulang dalam tugas navigasi ini untuk menghemat beban PC; build ulang setelah pekerjaan Gemini.
 - UI fixture Retail diuji 1440 px dan 390 px; company WBI, Tier Retail, tidak ada link Farm Breeding, status Sama, console bersih dan tidak ada overflow halaman. Screenshot: [desktop](qa-wbi/retail-route-desktop.png), [HP](qa-wbi/retail-route-mobile.png). Fixture tidak menyambung SAP.
 - SL nyata: Login/metadata berhasil; BusinessPlaces **0**; sampel Warehouse.BusinessPlaceID dan AssetClass.BPLID **null**; metadata dan GET Shift sebelumnya tidak memiliki U_BRANCH. Pengulangan Shift GET terakhir timeout. [Bukti baca SL](qa-wbi/sl-readonly-summary.json).
 - Sebelas entity Retail terverifikasi lewat GET metadata/UDT/UDO/count: 19, 5, 24, 2, 3, 2, 52, 26, 6, 4, 3 baris sesuai urutan katalog. [Metadata bersih](qa-wbi/retail-metadata.json). Koreksi katalog: Petty Cash memakai STEM_PETTYCASHCAT; Inspection Mapping U_ST_INSTYPEMAP; Rule Transfer Code angka auto increment; U_Discount Price Category tidak ada.
@@ -48,3 +48,27 @@ Worker hanya memakai POST Login dan SL GET, **tanpa JDBC/SQL nyata dan tanpa POS
 Isi variabel lingkungan sesuai [BUILD-WBI.md](BUILD-WBI.md), jalankan aplikasi dan verifikasi runtime JDBC/OADM serta dua WAR di Tomcat. Host/port diketahui dari konfirmasi Fakhri; koneksi JDBC belum diuji worker. POST/PATCH dan enum/referensi UDF Retail belum diuji; metadata bukan bukti penerimaan tulis. Detail Route lama harus diubah di SAP. Saldo awal diisi manual.
 
 Gemini mengerjakan warna setelah commit ini; regresi fungsi/tes sesudah perubahan Gemini merupakan pekerjaan berikutnya. Arsip percobaan warna yang dibatalkan tersedia di `C:/Users/Fakhri/AppData/Local/Temp/wbi-color-handoff/` bila diperlukan, bukan desain final yang disetujui.
+
+## Perbaikan: perubahan lokal checkout asal belum terbawa
+
+Seluruh **14 berkas modified** di `D:/STEM/GitHub/PPMK/CVPPMK` diperiksa lewat diff HEAD vs working tree; checkout asal hanya dibaca dan snapshot berkas modified dipastikan tetap sama sesudah pekerjaan. Merge memakai basis HEAD sumber, isi terbaru sumber, dan versi WBI sebagai tiga sisi; konflik HTML/properties diselesaikan dengan mempertahankan fitur WBI serta perubahan sumber. CountDocController dan perubahan unavailable pada countdoc.js ternyata sudah ada di WBI, sehingga tidak ditimpa lagi.
+
+| Sumber modified | Keputusan |
+|---|---|
+| .gitignore | Tambah abaikan sl-*.properties dan JSON hasil analisa klien |
+| CountDocController.java, js/pages/countdoc.js | Perubahan sumber sudah ada; tetap dipertahankan |
+| resources/application.properties | Bawa compression, komentar custom-query default mati, cache no-cache; profil aktif WBI dan read-only tetap |
+| css/app.css | Bawa persis delta sumber: palette terang lembut, responsivitas tombol header, dan CSS modnav; tidak membuat desain warna baru |
+| index.html, setup.html, hana.html, countdoc.html, rpt.html | Merge menu bersama, tema default terang, favicon/submenu; redirect index tanpa hash ke Home tetap sesuai sumber |
+| js/app.js | Bawa buka/tutup bab aktif dan tema default; judul tetap menambahkan company |
+| js/pages/rpt.js, tools/rpt-agent/Agent.cs, build.cmd | Bawa bersama versi agen 0.8 dan UI Kirim ke SAP agar endpoint cocok; tidak menjalankan agen/SAP |
+
+Modnav kini terpasang **tepat sekali di semua delapan HTML**: index, home, schedule, setup, countdoc, Daftar Query, rpt, hana. RPT yang semula tidak punya sidebar kini mempunyai wadah sidebar/menu mobile agar skrip menu benar-benar terlihat. Menu Home/Schedule/Project Check List tersedia juga ketika admin terkunci; Setup/Tools tetap mengikuti akses sesi server. Namespace cache akses per konteks WAR pada modnav tetap dipertahankan.
+
+Judul tab memakai nama company dari konfigurasi/OADM lewat helper companyTitle; route Checklist, Setup, dan HANA tidak menimpanya lagi dengan teks CVPPMK. Header WBI, seed PIC kosong, namespace DataFiles, branch guard, profil WBI, dan katalog Retail tidak ditimpa. Delapan halaman diverifikasi di browser fixture: menu tunggal, Schedule terlihat, dan judul memuat PT Warung Begok Indonesia — [audit](qa-wbi/navigation-audit.json). Klik **Schedule dari Project Check List** benar-benar membuka Schedule WBI — [asal](qa-wbi/navigation-checklist.png), [tujuan](qa-wbi/navigation-schedule.png).
+
+Inventaris lengkap **61 path untracked** sumber beserta keputusan tersedia di [source-sync-audit.json](qa-wbi/source-sync-audit.json). Yang baru dibawa: `countdoc-query.html`, `tools/rpt-agent/SapUpload.cs`, dua suite Java CountDoc, serta tiga suite JS CountDoc Query/Schedule/Schedule Review. Tes sumber disesuaikan hanya untuk import modul WBI, download async yang menunggu company, dan pemanggilan JUnit. File modnav, favicon, seed CV, query lib/controller, health, dan schedule-review sudah ada; versi Schedule/chat/store lain dipertahankan karena selisihnya adalah namespace, seed, dan reuse WBI yang disengaja.
+
+Tidak dibawa: `static/data/ppmk-users.json` (daftar PIC pribadi CV; WBI sengaja memakai PIC sendiri yang kosong), seluruh `tools/sl-analisa/*` (skrip analisa ad hoc klien dan cache Python; bukan dependensi web). Tidak menyalin config rahasia atau data hidup. Agen C#/DI API tidak dibuild/dijalankan; pengujian endpoint upload SAP tetap di luar tugas ini.
+
+Tes hemat: `mvn '-Dnet.bytebuddy.experimental=true' '-DargLine=-Xmx256m' test` dan `node --test --test-concurrency=1 src/test/js/*.test.mjs`; hasil **118 Java + 182 JS, semuanya lulus, 0 gagal/skip**. Tidak ada akses JDBC/SAP pada perbaikan ini. Gemini dapat mulai warna dari commit perbaikan navigasi ini; tidak ada pekerjaan implementasi yang tertinggal pada worker.

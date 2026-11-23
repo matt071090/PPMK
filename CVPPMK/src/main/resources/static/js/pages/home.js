@@ -3,7 +3,7 @@
 import { countdown, effectiveStatus, todayLocal, progress, nextMilestone, needsAttention, withFixedPic, withTrainingRollup } from './schedule.js';
 import { withReview } from './schedule-review.js';
 import { addonPages } from './addon.js';
-import { company, loadCompany as loadMetadata } from '../company.js';
+import { company, companyTitle, loadCompany as loadMetadata } from '../company.js';
 
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -158,7 +158,10 @@ async function loadCompany() {
   try {
     const d = await getJson('api/section/company-details', 30000), r = d.results && d.results.company;
     const i = r && r.columns ? r.columns.indexOf('CompnyName') : -1;
-    if (i >= 0 && r.rows[0] && r.rows[0][i]) $('#company-name').textContent = r.rows[0][i];
+    if (i >= 0 && r.rows[0] && r.rows[0][i]) {
+      $('#company-name').textContent = r.rows[0][i];
+      document.title = companyTitle('Home', r.rows[0][i]);
+    }
   } catch { /* nama default tetap dipakai */ }
 }
 

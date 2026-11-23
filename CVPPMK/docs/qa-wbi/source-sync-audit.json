@@ -1,0 +1,527 @@
+[
+  {
+    "kind": "modified",
+    "path": "CVPPMK/.gitignore",
+    "state": "diff",
+    "bytes": 387,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/CountDocController.java",
+    "state": "same",
+    "bytes": 18448,
+    "decision": "Already identical; no overwrite needed"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/application.properties",
+    "state": "diff",
+    "bytes": 1665,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/static/countdoc.html",
+    "state": "diff",
+    "bytes": 36346,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/static/css/app.css",
+    "state": "diff",
+    "bytes": 64175,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/static/hana.html",
+    "state": "diff",
+    "bytes": 5018,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/static/index.html",
+    "state": "diff",
+    "bytes": 3018,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/static/js/app.js",
+    "state": "diff",
+    "bytes": 43296,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/static/js/pages/countdoc.js",
+    "state": "diff",
+    "bytes": 65804,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/static/js/pages/rpt.js",
+    "state": "diff",
+    "bytes": 128662,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/static/rpt.html",
+    "state": "diff",
+    "bytes": 19380,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/src/main/resources/static/setup.html",
+    "state": "diff",
+    "bytes": 2094,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/tools/rpt-agent/Agent.cs",
+    "state": "diff",
+    "bytes": 79338,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "modified",
+    "path": "CVPPMK/tools/rpt-agent/build.cmd",
+    "state": "diff",
+    "bytes": 1317,
+    "decision": "Merged source local changes; preexisting WBI changes preserved"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/CountDocCheckStore.java",
+    "state": "diff",
+    "bytes": 6341,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/CountDocCustomStore.java",
+    "state": "diff",
+    "bytes": 19182,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/CountDocQueryCatalog.java",
+    "state": "same",
+    "bytes": 6060,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/CountDocQueryController.java",
+    "state": "same",
+    "bytes": 29338,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/CountDocSqlValidator.java",
+    "state": "same",
+    "bytes": 9704,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/HealthController.java",
+    "state": "same",
+    "bytes": 5210,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/ScheduleChatController.java",
+    "state": "diff",
+    "bytes": 8292,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/ScheduleController.java",
+    "state": "diff",
+    "bytes": 7585,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/java/com/stem/cvppmk/docs/ScheduleStore.java",
+    "state": "diff",
+    "bytes": 10036,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/schedule/default.json",
+    "state": "same",
+    "bytes": 11702,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/countdoc-query.html",
+    "state": "MISSING",
+    "bytes": 14910,
+    "decision": "Imported; tests adapted to WBI imports/async downloads and JUnit execution"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/data/ppmk-users.json",
+    "state": "MISSING",
+    "bytes": 1625,
+    "decision": "Skipped: CV personal PIC list; WBI intentionally uses its own blank PIC"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/favicon.ico",
+    "state": "same",
+    "bytes": 4752,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/home.html",
+    "state": "diff",
+    "bytes": 7591,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/img/favicon-180.png",
+    "state": "same",
+    "bytes": 15253,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/img/favicon-32.png",
+    "state": "same",
+    "bytes": 1505,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/js/modnav.js",
+    "state": "diff",
+    "bytes": 4785,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/js/pages/countdoc-query-lib.js",
+    "state": "same",
+    "bytes": 5094,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/js/pages/countdoc-query.js",
+    "state": "diff",
+    "bytes": 21914,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/js/pages/home.js",
+    "state": "diff",
+    "bytes": 13388,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/js/pages/schedule-chat.js",
+    "state": "diff",
+    "bytes": 12854,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/js/pages/schedule-review.js",
+    "state": "same",
+    "bytes": 3158,
+    "decision": "Already present and identical"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/js/pages/schedule.js",
+    "state": "diff",
+    "bytes": 42510,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/main/resources/static/schedule.html",
+    "state": "diff",
+    "bytes": 31616,
+    "decision": "Preserved WBI-specific namespace, identity, seed, or shared chat implementation; source changes checked"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/test/java/com/stem/cvppmk/docs/CountDocCustomTests.java",
+    "state": "MISSING",
+    "bytes": 37465,
+    "decision": "Imported; tests adapted to WBI imports/async downloads and JUnit execution"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/test/java/com/stem/cvppmk/docs/CountDocQueryTests.java",
+    "state": "MISSING",
+    "bytes": 9349,
+    "decision": "Imported; tests adapted to WBI imports/async downloads and JUnit execution"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/test/js/countdoc-query.test.mjs",
+    "state": "MISSING",
+    "bytes": 16234,
+    "decision": "Imported; tests adapted to WBI imports/async downloads and JUnit execution"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/test/js/schedule-review.test.mjs",
+    "state": "MISSING",
+    "bytes": 2532,
+    "decision": "Imported; tests adapted to WBI imports/async downloads and JUnit execution"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/src/test/js/schedule.test.mjs",
+    "state": "MISSING",
+    "bytes": 18733,
+    "decision": "Imported; tests adapted to WBI imports/async downloads and JUnit execution"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/rpt-agent/SapUpload.cs",
+    "state": "MISSING",
+    "bytes": 8788,
+    "decision": "Imported; tests adapted to WBI imports/async downloads and JUnit execution"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/__pycache__/sl.cpython-313.pyc",
+    "state": "MISSING",
+    "bytes": 5481,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/backdated.py",
+    "state": "MISSING",
+    "bytes": 2154,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/backdated2.py",
+    "state": "MISSING",
+    "bytes": 4164,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/bebek_ana.py",
+    "state": "MISSING",
+    "bytes": 5676,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/biaya_detail.py",
+    "state": "MISSING",
+    "bytes": 2311,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/ceo_ana.py",
+    "state": "MISSING",
+    "bytes": 5231,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/ceo_pull.py",
+    "state": "MISSING",
+    "bytes": 1571,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/dekomposisi.py",
+    "state": "MISSING",
+    "bytes": 2897,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/drivers.py",
+    "state": "MISSING",
+    "bytes": 2085,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/explore_dates.py",
+    "state": "MISSING",
+    "bytes": 1701,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/export_ceo.py",
+    "state": "MISSING",
+    "bytes": 5908,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/export_dash.py",
+    "state": "MISSING",
+    "bytes": 14572,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/export_rugi.py",
+    "state": "MISSING",
+    "bytes": 2698,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/hpp_aktual.py",
+    "state": "MISSING",
+    "bytes": 2301,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/isi_lainnya.py",
+    "state": "MISSING",
+    "bytes": 1571,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/kenapa_rugi.py",
+    "state": "MISSING",
+    "bytes": 2931,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/performa.py",
+    "state": "MISSING",
+    "bytes": 4078,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/pnl_hpp.py",
+    "state": "MISSING",
+    "bytes": 3898,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/pnl_struktur.py",
+    "state": "MISSING",
+    "bytes": 3038,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/pull_bebek.py",
+    "state": "MISSING",
+    "bytes": 1596,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/pull_je.py",
+    "state": "MISSING",
+    "bytes": 1013,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/pull_je_h1.py",
+    "state": "MISSING",
+    "bytes": 908,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/pull_je_hist.py",
+    "state": "MISSING",
+    "bytes": 910,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/pull_lines.py",
+    "state": "MISSING",
+    "bytes": 1382,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/reval_check.py",
+    "state": "MISSING",
+    "bytes": 508,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/reval_flow.py",
+    "state": "MISSING",
+    "bytes": 1899,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/reval_money.py",
+    "state": "MISSING",
+    "bytes": 2120,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/sl.py",
+    "state": "MISSING",
+    "bytes": 2581,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/stok_hpp.py",
+    "state": "MISSING",
+    "bytes": 5519,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/stok_hpp2.py",
+    "state": "MISSING",
+    "bytes": 3363,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  },
+  {
+    "kind": "untracked",
+    "path": "CVPPMK/tools/sl-analisa/tren_tahun.py",
+    "state": "MISSING",
+    "bytes": 2912,
+    "decision": "Skipped: ad hoc CV client analysis scripts/cache, not an application dependency"
+  }
+]

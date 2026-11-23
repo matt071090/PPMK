@@ -1,5 +1,8 @@
 # kredensial database
 /application.properties
+/sl-*.properties
+# hasil tarikan data klien dari SL (analisa), jangan di-push
+/tools/sl-analisa/*.json
 target/
 .vscode/
 # data klien (master data LIVE), jangan di-push

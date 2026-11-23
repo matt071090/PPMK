@@ -33,7 +33,7 @@ export function autoCols(r) {
 }
 // Header: nama company dari DB (OADM.CompnyName), juga dipakai di nama file export; kalau gagal tetap "No company".
 // Logo = huruf depan 2 kata pertama, tanpa bentuk badan usaha (CV. Putra Prima ... -> PP).
-import { company, loadCompany } from './company.js';
+import { company, companyTitle, loadCompany } from './company.js';
 export { company };
 export function showCompanyName() {
   return loadCompany().then(c => c.name !== 'No company' ? { name: c.name } : fetch("api/section/company-name").then(r => r.ok ? r.json() : null)).then(d => {
@@ -44,7 +44,7 @@ export function showCompanyName() {
     const words = d.name.split(/\s+/).filter(w => !/^(CV|PT|UD|TBK)\.?$/i.test(w));
     const logoNode = $("#company-logo");
     if (logoNode) logoNode.textContent = words.slice(0, 2).map(w => w[0]).join("").toUpperCase() || "NC";
-    if (company.code) document.title = document.title.replace(/CVPPMK/gi, company.code.toUpperCase());
+    document.title = companyTitle(document.title);
   }).catch(() => { });
 }
 export const rowsOf = r => r && r.rows ? r.rows.map(row => Object.fromEntries(r.columns.map((c, i) => [c, row[i]]))) : [];

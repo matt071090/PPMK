@@ -8,5 +8,9 @@ set R=
 for %%n in (ReportAppServer.ReportDefModel ReportAppServer.Controllers ReportAppServer.ClientDoc ReportAppServer.DataDefModel ReportAppServer.CommonObjectModel) do set R=!R! -r:%G64%\CrystalDecisions.%%n\%V%\CrystalDecisions.%%n.dll
 for %%n in (CrystalReports.Engine Shared) do set R=!R! -r:%GM%\CrystalDecisions.%%n\%V%\CrystalDecisions.%%n.dll
 if not exist "%~dp0bin" mkdir "%~dp0bin"
-"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" -nologo -platform:x64 -target:winexe -out:"%~dp0bin\StemRptAgent.exe" -r:System.Web.Extensions.dll -r:System.Windows.Forms.dll -r:System.Drawing.dll !R! "%~dp0Agent.cs"
+set SAPI=%ProgramFiles%\SAP\Data Transfer Workbench\Interop.SAPbobsCOM.dll
+set X=
+set SRC="%~dp0Agent.cs"
+if exist "%SAPI%" (set X=-define:HASSAP "-r:%SAPI%"& set SRC="%~dp0Agent.cs" "%~dp0SapUpload.cs") else echo [info] Interop.SAPbobsCOM.dll tidak ada: fitur Kirim ke SAP dimatikan.
+"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" -nologo !X! -platform:x64 -target:winexe -out:"%~dp0bin\StemRptAgent.exe" -r:System.Web.Extensions.dll -r:System.Windows.Forms.dll -r:System.Drawing.dll !R! !SRC!
 rem Jalankan: bin\StemRptAgent.exe [origin1,origin2]   (default http://localhost:8080,http://127.0.0.1:8080)

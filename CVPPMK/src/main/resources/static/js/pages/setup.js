@@ -6,6 +6,7 @@
 // Kolom berawalan "_" = pembanding saja (tidak dikirim), mis. _ItemGroup: nama referensi yang kodenya bisa beda antar DB;
 // kode tujuannya dicari lewat step.lookups saat upload. Langkah kind "ref" (branch, dimension) hanya sumber pencarian, tidak tampil.
 import { $, $$, esc, isEmpty, onMount, flushMounts, company, showCompanyName } from "../ui.js";
+import { companyTitle } from '../company.js';
 import { xlsxBlob, download } from "../xlsx.js";
 import { readXlsx } from "../xlsx-read.js";
 import { dtwRows, dtwTemplateZip, txtContext } from "../dtw-txt.js";
@@ -824,7 +825,7 @@ export async function startSetupApp() {
     const id = (location.hash.match(/^#\/([a-z0-9-]*)/) || [])[1] || "", page = pages[id] || pages[""];
     document.body.classList.remove("nav-open");
     $$("#nav a[data-id]").forEach(a => a.classList.toggle("active", a.dataset.id === (pages[id] ? id : "")));
-    document.title = `${page.no ? page.no + " " : ""}${page.title} · Setup & Cut Off`;
+    document.title = companyTitle(`${page.no ? page.no + " " : ""}${page.title} · Setup & Cut Off`);
     art.innerHTML = `<nav class="crumbs" aria-label="Breadcrumb"><span>Setup &amp; Cut Off</span>${page.chapter ? `<span>${esc(page.chapter)}</span>` : ""}</nav>
       <h1>${page.no ? `<span class="no">${esc(page.no)}</span>` : ""}${esc(page.title)}</h1>
       <p class="lead">${page.def.lead}</p>

@@ -1,4 +1,5 @@
 import { $, $$, esc, slug, company, showCompanyName, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, revealTab } from "./ui.js";
+import { companyTitle } from './company.js';
 import { xlsxBlob, download } from "./xlsx.js";
 import { PAGES as GENERAL } from "./pages/general.js";
 import { PAGES as MODULES } from "./pages/modules.js";
@@ -103,7 +104,16 @@ function buildNav() {
   $$(".nav-group > button").forEach(b => b.onclick = () => {
     const g = b.parentElement; g.classList.toggle("collapsed"); b.setAttribute("aria-expanded", !g.classList.contains("collapsed"));
   });
+  focusChapter(true);
   paintNav();
+}
+// bab Check List: semua tertutup kecuali bab halaman aktif (closeOthers=false saat pindah halaman: bab lain yang dibuka user dibiarkan)
+function focusChapter(closeOthers) {
+  const cur = (location.hash.match(/^#\/([^?#]+)/) || [])[1];
+  $$("#nav .nav-group:not(.flat)").forEach(g => {
+    const has = !!(cur && g.querySelector(`a[data-id="${CSS.escape(cur)}"]`));
+    if (has || closeOthers) { g.classList.toggle("collapsed", !has); const b = g.querySelector(":scope > button"); if (b) b.setAttribute("aria-expanded", has); }
+  });
 }
 // ikon status & bar progres mengikuti status review manual; menu Belum direview ditandai merah (data-s="none")
 function paintNav() {
@@ -393,7 +403,7 @@ async function route(fresh = false, keepScroll = false) {
   art.innerHTML = head(page) + `<div class="skeleton">${"<div></div>".repeat(6)}</div>`;
   $("#toc-list").innerHTML = ""; $("#toc-meta").innerHTML = "";
   if (!keepScroll) window.scrollTo(0, 0);
-  document.title = `${page.no ? page.no + " " : ""}${page.title} · Project Check List`;
+  document.title = companyTitle(`${page.no ? page.no + " " : ""}${page.title} · Project Check List`);
 
   let html, meta = "";
   resetExports();
@@ -602,7 +612,7 @@ function toggleTheme() {
 
 // ---------- start ----------
 (async () => {
-  applyTheme(store.get("theme"));
+  applyTheme(store.get("theme") === "dark" ? "dark" : "light");   // bawaan terang; gelap hanya bila dipilih
   if (store.get("show-cols")) document.body.classList.add("show-cols");
   let editable;
   [chapters, editable] = await Promise.all([
@@ -657,6 +667,6 @@ function toggleTheme() {
   });
 
   showCompanyName();
-  window.onhashchange = () => route();
+  window.onhashchange = () => { focusChapter(false); route(); };
   route();
 })();

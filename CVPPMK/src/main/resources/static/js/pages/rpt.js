@@ -12,7 +12,7 @@ const FONTS = ["Calibri", "Arial", "Times New Roman", "Courier New", "Verdana", 
 const SIZES = [6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48];
 const DEF_FONT = { n: "Calibri", s: 9, b: false, i: false, u: false, x: false };
 let token = null;
-const AGENT_MIN = "0.7"; // versi agen yang diharapkan UI ini (0.6: /fs/recent, nama hasil unik, op replace; 0.7: Suppress sup/setSectionProps, op find, cloneTo place/gap, /fs/reveal, /rpt/checkFormula)
+const AGENT_MIN = "0.8"; // versi agen yang diharapkan UI ini (0.6: /fs/recent, nama hasil unik, op replace; 0.7: Suppress sup/setSectionProps, op find, cloneTo place/gap, /fs/reveal, /rpt/checkFormula)
 const cmpVer = (a, b) => { const x = String(a).split(".").map(Number), y = String(b).split(".").map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d < 0 ? -1 : 1; } return 0; };
 
 async function ag(path, body) {
@@ -244,7 +244,7 @@ export function rptPage(art, chip) {
       <button class="edit-btn" id="batch" type="button" title="Ubah banyak layout sekaligus (hasil disimpan sebagai salinan _edit.rpt)">Batch…</button>
       <span class="rp-note rp-root" title="${esc(st.root || "")}">${esc(st.root || "belum ada folder")}</span>
       ${d ? `
-      <span style="flex:1"></span><button class="edit-btn" data-a="preview" title="Tampilkan layout dengan data asli (PDF, tidak disimpan ke disk)">Preview</button><button class="edit-btn" data-a="verify" title="Daftarkan kolom baru dari database (isi server dan kredensial sendiri)">Verify Database ${d.verified ? `<span class="rp-ok">✓ ${esc(d.verified)}</span>` : `<span class="rp-wn">⚠ belum</span>`}</button>
+      <span style="flex:1"></span><button class="edit-btn" data-a="preview" title="Tampilkan layout dengan data asli (PDF, tidak disimpan ke disk)">Preview</button><button class="edit-btn" data-a="verify" title="Daftarkan kolom baru dari database (isi server dan kredensial sendiri)">Verify Database ${d.verified ? `<span class="rp-ok">✓ ${esc(d.verified)}</span>` : `<span class="rp-wn">⚠ belum</span>`}</button><button class="edit-btn" data-a="sap" title="Unggah hasil simpan (_edit.rpt) ke SAP Business One lewat DI API. Anda login sendiri; password tidak disimpan.">Kirim ke SAP</button>
       <button class="edit-btn rp-primary" data-a="save" title="Simpan sebagai salinan _edit.rpt (nama unik pada simpan pertama; simpan berikutnya menimpa hasil simpan dokumen ini)">Simpan salinan</button>` : ""}`;
     if (fk && fk.startsWith("#rp-bar") && (!document.activeElement || document.activeElement === document.body)) { const n = $(fk); if (n && !n.disabled) n.focus(); } // elemen yang fokus hilang karena render ulang
   }
@@ -551,13 +551,14 @@ export function rptPage(art, chip) {
   }
   function renderModal() { // fokus: simpan pemicu saat dialog dibuka, pulihkan saat ditutup
     const was = st.modalOpen, pre = document.activeElement; renderModalBody();
-    const now = !!(st.batch || st.prev || st.verify); st.modalOpen = now;
+    const now = !!(st.batch || st.prev || st.verify || st.sap); st.modalOpen = now;
     if (now && !was) { st.trig = pre; st.trigKey = focusKey(pre); const m = $("#rp-modal"); if (m && !m.contains(document.activeElement)) m.querySelector("input:not(:disabled), button:not(:disabled)")?.focus(); }
     else if (!now && was) { const n = st.trigKey && $(st.trigKey), t = st.trig; st.trig = null; st.trigKey = null; if (n && !n.disabled) n.focus(); else if (t && t.isConnected && t.focus) t.focus(); }
   }
   function renderModalBody() {
     if (st.batch) return renderBatch();
     if (st.prev) return renderPrev();
+    if (st.sap) return renderSap();
     const el = $("#rp-modal"), v = st.verify; if (!v) { el.innerHTML = ""; return; }
     const d = doc(), ps = (d.fields && d.fields.params) || [];
     el.innerHTML = `<div class="rp-ov"><div class="rp-dlg" role="dialog" aria-modal="true" aria-label="Verify Database">
@@ -796,8 +797,62 @@ export function rptPage(art, chip) {
     if (a === "pabort") { if (st.prev && st.prev.ctrl) st.prev.ctrl.abort(); }
     if (a === "prun") prevRun();
     if (a === "popen") { if (st.prev && st.prev.url) window.open(st.prev.url, "_blank", "noopener"); }
+    if (a === "sap") return sapOpen(d);
+    if (a === "scancel") { st.sap = null; renderModal(); }
+    if (a === "sconn") sapConnect();
+    if (a === "scheck") sapSend(true);
+    if (a === "ssend") sapSend(false);
     if (a === "vcancel") { st.verify = null; renderModal(); }
     if (a === "vrun") verifyRun();
+  }
+  // ---------- kirim hasil simpan ke SAP (DI API lewat agen; login per permintaan, password hanya di memori dialog) ----------
+  const sapBase = p => bnm(p).replace(/\.rpt$/i, "").replace(/_edit(_\d+)?$/i, "");
+  function sapOpen(d) {
+    if (!d || !token) return;
+    if (!d.outPath || d.dirty) { st.msg = "Simpan dulu hasil edit (tombol Simpan); yang dikirim ke SAP adalah file _edit.rpt hasil simpan."; return renderStatus(); }
+    disarm(); st.sap = { path: d.outPath, server: lsGet("rpt.sserver"), schema: lsGet("rpt.sschema"), user: lsGet("rpt.suser"), pass: "", types: null, type: lsGet("rpt.stype"), name: sapBase(d.outPath), policy: "FAIL", result: null, busy: false, stage: "" };
+    renderModal();
+  }
+  function sapGrab() {
+    const s = st.sap; if (!s) return;
+    const g = id => { const e = $("#" + id); return e ? e.value : null; };
+    const v = (id, k) => { const x = g(id); if (x !== null) s[k] = k === "pass" ? x : x.trim(); };
+    v("s-server", "server"); v("s-schema", "schema"); v("s-user", "user"); v("s-pass", "pass"); v("s-type", "type"); v("s-name", "name"); v("s-policy", "policy");
+  }
+  function sapCreds() { const s = st.sap; return { server: s.server, schema: s.schema, user: s.user, password: s.pass }; }
+  async function sapConnect() {
+    const s = st.sap; sapGrab(); lsSet("rpt.sserver", s.server); lsSet("rpt.sschema", s.schema); lsSet("rpt.suser", s.user);
+    s.busy = true; s.stage = "Login ke SAP dan membaca daftar document type (bisa sampai 1-2 menit lewat VPN)…"; s.result = null; renderModal();
+    try { const r = await ag("/sap/probe", sapCreds()); s.types = r.types || []; s.company = r.company || s.schema; if (!s.types.some(t => t.code === s.type)) s.type = ""; }
+    catch (e) { s.result = { ok: false, message: e.message }; s.types = null; }
+    s.busy = false; s.stage = ""; renderModal();
+  }
+  async function sapSend(dry) {
+    const s = st.sap; sapGrab();
+    if (!s.type) { s.result = { ok: false, message: "Pilih document type tujuan." }; return renderModal(); }
+    if (!dry && !confirm(`Kirim "${s.name}" ke SAP (${s.company || s.schema})?` + (s.policy === "OVERWRITE" ? "\n\nLayout lama dengan nama yang sama akan DITIMPA (isi lama dibackup dulu)." : ""))) return;
+    lsSet("rpt.stype", s.type); s.busy = true; s.stage = dry ? "Memeriksa tujuan di SAP…" : "Mengunggah ke SAP dan membaca balik…"; s.result = null; renderModal();
+    try { s.result = await ag("/sap/upload", { ...sapCreds(), path: s.path, name: s.name, typeCode: s.type, policy: s.policy, dry }); }
+    catch (e) { s.result = { ok: false, message: e.message }; }
+    s.busy = false; s.stage = ""; if (!dry && s.result && s.result.ok) s.pass = ""; renderModal();
+  }
+  function renderSap() {
+    const el = $("#rp-modal"), s = st.sap, dis = s.busy ? "disabled" : "";
+    const opt = (v, t, cur) => `<option value="${esc(v)}" ${v === cur ? "selected" : ""}>${esc(t)}</option>`;
+    el.innerHTML = `<div class="rp-ov"><div class="rp-dlg" role="dialog" aria-modal="true" aria-label="Kirim ke SAP">
+      <h3>Kirim ke SAP</h3><p class="rp-note">Mengunggah <b>${esc(bnm(s.path))}</b> sebagai layout Crystal di SAP Business One. Login memakai akun SAP Anda sendiri; password hanya dikirim ke agen di PC ini, tidak disimpan dan tidak dicatat.</p>
+      <label>Server SAP<input id="s-server" value="${esc(s.server)}" placeholder="NDB@host:30013 (persis seperti di SLD)" ${dis}></label>
+      <label>Company (schema)<input id="s-schema" value="${esc(s.schema)}" ${dis}></label>
+      <label>User SAP<input id="s-user" value="${esc(s.user)}" autocomplete="off" ${dis}></label>
+      <label>Password<input id="s-pass" type="password" autocomplete="off" value="${esc(s.pass)}" ${dis}></label>
+      ${s.types ? `<label>Document type tujuan<select id="s-type" ${dis}>${opt("", "— pilih —", s.type)}${s.types.map(t => opt(t.code, t.name + " (" + t.code + ")", s.type)).join("")}</select></label>
+      <label>Nama layout di SAP<input id="s-name" value="${esc(s.name)}" maxlength="120" ${dis}></label>
+      <label>Jika nama sudah ada<select id="s-policy" ${dis}>${opt("FAIL", "Batalkan (aman)", s.policy)}${opt("RENAME", "Buat baru dengan nama (2), (3)…", s.policy)}${opt("OVERWRITE", "Timpa (isi lama dibackup dulu)", s.policy)}</select></label>` : ""}
+      ${s.result ? `<div class="${s.result.ok ? "callout" : "error"}" role="${s.result.ok ? "status" : "alert"}"><span>${esc(s.result.message || "")}</span></div>` : ""}
+      ${s.busy ? `<p class="rp-note">${esc(s.stage)}</p>` : ""}
+      <div class="row"><button class="edit-btn" data-a="scancel" ${dis}>Tutup</button>${s.types
+        ? `<button class="edit-btn" data-a="scheck" ${dis}>Cek dulu</button><button class="edit-btn rp-primary" data-a="ssend" ${dis}>Kirim</button>`
+        : `<button class="edit-btn rp-primary" data-a="sconn" ${dis}>Hubungkan</button>`}</div></div></div>`;
   }
   async function verifyRun() {
     const v = st.verify, d = doc(), pass = $("#v-pass").value; if ((d.canUndo || d.canRedo) && !confirm("Undo akan direset setelah Verify; lanjutkan?")) return; v.server = $("#v-server").value.trim(); v.user = $("#v-user").value.trim();
@@ -987,8 +1042,8 @@ export function rptPage(art, chip) {
   // dialog modal (batch/Verify/Preview): Esc menutup, Tab berputar di dalam dialog
   art.addEventListener("keydown", e => {
     if (st.prev && e.key === "Escape") { e.preventDefault(); return st.prev.busy ? action("pabort") : prevClose(); }
-    if (!(st.batch || st.verify || st.prev)) return;
-    if (e.key === "Escape") { e.preventDefault(); if (st.batch) return action("bt-close"); if (st.verify && !st.verify.busy) return action("vcancel"); return; }
+    if (!(st.batch || st.verify || st.prev || st.sap)) return;
+    if (e.key === "Escape") { e.preventDefault(); if (st.batch) return action("bt-close"); if (st.verify && !st.verify.busy) return action("vcancel"); if (st.sap && !st.sap.busy) return action("scancel"); return; }
     if (e.key === "Tab") { const q = [...art.querySelectorAll("#rp-modal input:not(:disabled), #rp-modal select:not(:disabled), #rp-modal button:not(:disabled)")].filter(x => x.offsetParent); if (!q.length) return; const i = q.indexOf(document.activeElement); if (e.shiftKey && i <= 0) { e.preventDefault(); q[q.length - 1].focus(); } else if (!e.shiftKey && i === q.length - 1) { e.preventDefault(); q[0].focus(); } }
   });
   // seret field dari Field Explorer ke kanvas

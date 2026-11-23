@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tools · CVPPMK</title>
+<title>Tools</title>
 <link rel="stylesheet" href="css/app.css">
 <style>.hn .chips[role=tablist] { display: none; }</style>
-<script>try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch { }</script>
+<script>try { const t = localStorage.getItem("theme"); document.documentElement.dataset.theme = t === "dark" ? "dark" : "light"; } catch { document.documentElement.dataset.theme = "light"; }</script>
+<script src="js/modnav.js" defer></script>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
 <link rel="apple-touch-icon" href="img/favicon-180.png">
@@ -46,6 +47,7 @@
       <div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">✓</span>Audit SAP</button>
         <ul>
           <li><a href="countdoc.html"><span class="no">1</span><span>Count Document</span></a></li>
+          <li><a href="countdoc-query.html"><span class="no">2</span><span>Daftar Query</span></a></li>
         </ul></div>
     </nav>
   </aside>
@@ -54,6 +56,7 @@
 
 <script type="module">
 import { showCompanyName } from "./js/ui.js";
+import { companyTitle } from "./js/company.js";
 await showCompanyName();
 import { hanaPage } from "./js/pages/hana.js";
 const $ = s => document.querySelector(s);
@@ -70,7 +73,7 @@ const cur = () => (location.hash.match(/^#\/?(backup|restore|pindah|riwayat)/) |
 const mark = () => {
   const t = cur();
   document.querySelectorAll("#nav a[data-id]").forEach(a => a.classList.toggle("active", a.dataset.id === t));
-  document.title = `${TITLES[t]} · Tools CVPPMK`;
+  document.title = companyTitle(`${TITLES[t]} · Tools`);
   const h = $("#pg-title"); if (h) h.textContent = TITLES[t];
   document.body.classList.remove("nav-open");
 };

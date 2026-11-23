@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Crystal RPT Editor · CVPPMK</title>
+<title>Crystal RPT Editor</title>
 <link rel="stylesheet" href="css/app.css">
 <style>
 body.setup-app .content { padding: 0 16px 24px; }
@@ -163,13 +163,15 @@ details > summary { padding: 6px 10px; font-size: 12.5px; font-weight: 650; curs
 @media (max-width: 800px) { .rp-bgrid, .rp-wgrid { grid-template-columns: 1fr; } }
 @media (max-width: 1100px) { .rp { grid-template-columns: 1fr !important; } }
 </style>
-<script>try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch { }</script>
+<script>try { const t = localStorage.getItem("theme"); document.documentElement.dataset.theme = t === "dark" ? "dark" : "light"; } catch { document.documentElement.dataset.theme = "light"; }</script>
+<script src="js/modnav.js" defer></script>
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
 <link rel="apple-touch-icon" href="img/favicon-180.png">
 </head>
 <body class="setup-app">
 <header class="top">
+  <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-label="Buka menu"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg></button>
   <a class="brand" href="index.html"><span class="logo" id="company-logo">NC</span>
     <span><small>Tools</small><span>Crystal RPT Editor</span></span></a>
   <a class="edit-btn back-btn" href="hana.html" title="Kembali ke Tools"><span>Tools</span></a>
@@ -179,12 +181,16 @@ details > summary { padding: 6px 10px; font-size: 12.5px; font-weight: 650; curs
     <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
   </button>
 </header>
+<div class="shell">
+<aside class="sidebar" aria-label="Navigasi modul"></aside>
 <main class="content"><div class="rp-head"><h1>Crystal RPT Editor</h1><p>Edit layout .rpt lewat agen lokal di PC Anda. Hasil selalu disimpan sebagai salinan _edit.rpt (file asli tidak diubah). Verify Database dan Preview dengan data asli tersedia di sini; keduanya butuh driver SAP HANA ODBC 64-bit (HDBODBC) di PC ini.</p></div><article class="article" id="article"></article></main>
+</div>
 <script type="module">
 import { showCompanyName } from "./js/ui.js";
 await showCompanyName();
 import { rptPage } from "./js/pages/rpt.js";
 const $ = s => document.querySelector(s);
+$("#menu-btn").onclick = () => document.body.classList.toggle("nav-open");
 $("#theme-btn").onclick = () => {
   const el = document.documentElement, dark = el.dataset.theme ? el.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   el.dataset.theme = dark ? "light" : "dark";

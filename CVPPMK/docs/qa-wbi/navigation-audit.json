@@ -1,0 +1,58 @@
+﻿[
+    {
+        "page":  "/index.html",
+        "title":  "Ringkasan \u0026 Temuan · Project Check List · PT Warung Begok Indonesia",
+        "company":  "wbi",
+        "schedule":  true,
+        "menus":  1
+    },
+    {
+        "page":  "/schedule.html",
+        "title":  "Ringkasan · Schedule PT Warung Begok Indonesia",
+        "company":  "wbi",
+        "schedule":  true,
+        "menus":  1
+    },
+    {
+        "page":  "/home.html",
+        "title":  "Home · PT Warung Begok Indonesia",
+        "company":  "wbi",
+        "schedule":  true,
+        "menus":  1
+    },
+    {
+        "page":  "/setup.html",
+        "title":  "Urutan Setup · Setup \u0026 Cut Off · PT Warung Begok Indonesia",
+        "company":  "wbi",
+        "schedule":  true,
+        "menus":  1
+    },
+    {
+        "page":  "/countdoc.html",
+        "title":  "Count Document · PT Warung Begok Indonesia",
+        "company":  "wbi",
+        "schedule":  true,
+        "menus":  1
+    },
+    {
+        "page":  "/countdoc-query.html",
+        "title":  "Daftar Query · PT Warung Begok Indonesia",
+        "company":  "wbi",
+        "schedule":  true,
+        "menus":  1
+    },
+    {
+        "page":  "/rpt.html",
+        "title":  "Crystal RPT Editor · PT Warung Begok Indonesia",
+        "company":  "wbi",
+        "schedule":  true,
+        "menus":  1
+    },
+    {
+        "page":  "/hana.html",
+        "title":  "Backup database · Tools · PT Warung Begok Indonesia",
+        "company":  "wbi",
+        "schedule":  true,
+        "menus":  1
+    }
+]

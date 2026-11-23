@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daftar Query</title>
+<link rel="stylesheet" href="css/app.css">
+<style>
+/* Daftar Query (Count Document Tahap A): kelas cq-*; komponen dasar (cbtn, badge, crumbs) dari app.css. Status selalu simbol + teks, bukan hanya warna. */
+.cq-app { font-variant-numeric: tabular-nums; }
+.cq-app [hidden] { display: none !important; }
+.cq-sr { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.cq-lead { margin: 6px 0 16px; color: var(--text-2); font-size: 14px; max-width: 70ch; }
+.cq-fatal { margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--border); border-left: 3px solid var(--danger); border-radius: 0 8px 8px 0; background: var(--danger-soft); color: var(--text); font-size: 14px; }
+.cq { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.cq > * { min-width: 0; }
+/* daftar */
+.cq-list { position: sticky; top: 68px; max-height: calc(100vh - 84px); max-height: calc(100dvh - 84px); overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 10px; }
+.cq-search { width: 100%; box-sizing: border-box; height: 38px; font: inherit; font-size: 14px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); }
+.cq-search:focus, .cq-f input:focus, .cq-f select:focus, .cq-f textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.cq-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.cq-chip { font: inherit; display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 13px; cursor: pointer; }
+.cq-chip b { font-weight: 650; color: var(--muted); }
+.cq-chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); font-weight: 650; }
+.cq-chip[aria-pressed="true"]::before { content: "\2713"; font-weight: 800; }
+.cq-chip:focus-visible, .cq-item:focus-visible, .cq-sortb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cq-count { margin: 4px 2px 8px; font-size: 13px; font-weight: 650; color: var(--text-2); }
+.cq-grp { border-top: 1px solid var(--border); }
+.cq-grp > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 0 4px; font-size: 13px; font-weight: 700; color: var(--text-2); }
+.cq-grp > summary::-webkit-details-marker { display: none; }
+.cq-grp > summary::before { content: "\25B8"; color: var(--muted); margin-right: 6px; }
+.cq-grp[open] > summary::before { content: "\25BE"; }
+.cq-gname { flex: 1; min-width: 0; }
+.cq-gn { font-weight: 600; color: var(--muted); }
+.cq-grp ul { list-style: none; margin: 0 0 6px; padding: 0; }
+.cq-item { width: 100%; text-align: left; font: inherit; display: grid; gap: 3px; padding: 7px 8px; border: 0; border-left: 3px solid transparent; border-radius: 0 6px 6px 0; background: none; color: var(--text); cursor: pointer; min-height: 44px; }
+.cq-item:hover { background: var(--surface-2); }
+.cq-item[aria-current="true"] { background: var(--accent-soft); border-left-color: var(--accent); }
+.cq-il { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+.cq-im { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.cq-none { color: var(--muted); font-size: 13.5px; padding: 8px 4px; margin: 0; }
+.cq-none.err, .cq-err { color: var(--danger); }
+/* pil status */
+.cq-st { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.cq-st i { font-style: normal; font-weight: 800; }
+.cq-st.sm { font-size: 11px; padding: 0 6px; }
+.cq-st[data-s="ok"], .cq-st[data-s="cocok"] { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.cq-st[data-s="gagal"], .cq-st[data-s="perlu_perbaikan"] { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+.cq-st[data-s="lambat"], .cq-st[data-s="terpotong"], .cq-st[data-s="selisih"] { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.cq-st[data-s="belum"].chk { opacity: .75; }
+/* detail */
+.cq-detail { min-width: 0; }
+.cq-back { display: none; margin-bottom: 10px; min-height: 44px; }
+.cq-empty { border: 1px dashed var(--border-strong); border-radius: 8px; padding: 36px 16px; text-align: center; color: var(--muted); }
+.cq-trow { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-start; justify-content: space-between; }
+.cq-tmain { flex: 1 1 280px; min-width: 0; }
+.cq-title h2 { margin: 0; font-size: 21px; line-height: 1.3; display: block; overflow-wrap: anywhere; }
+.cq-meta { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.cq-run { min-height: 40px; padding: 0 22px; justify-content: center; }
+.cq-runline { margin: 10px 0 12px; font-size: 13.5px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cq-params, .cq-card { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 10px 14px 12px; margin: 0 0 12px; min-width: 0; }
+.cq-params legend, .cq-card legend { padding: 0 6px; font-size: 13px; font-weight: 700; color: var(--text-2); }
+.cq-pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; }
+.cq-f { display: grid; gap: 4px; font-size: 13px; color: var(--text-2); min-width: 0; margin: 0 0 8px; }
+.cq-pgrid .cq-f { margin: 0; }
+.cq-f input, .cq-f select, .cq-f textarea { font: inherit; font-size: 14px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); min-width: 0; box-sizing: border-box; width: 100%; }
+.cq-f input, .cq-f select { height: 40px; }
+.cq-f textarea { padding: 8px 10px; resize: vertical; }
+.cq-hint { margin: 8px 0 0; font-size: 12.5px; color: var(--muted); }
+.cq-sqld { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); margin: 0 0 12px; }
+.cq-sqld > summary { cursor: pointer; padding: 0 14px; min-height: 44px; display: flex; align-items: center; font-size: 13px; font-weight: 700; color: var(--text-2); }
+.cq-pre { margin: 0 14px; padding: 10px 12px; max-height: 340px; overflow: auto; border-radius: 6px; background: var(--code-bg, var(--surface-2)); color: var(--text); font: 12.5px/1.5 ui-monospace, Consolas, monospace; white-space: pre; tab-size: 4; }
+.cq-sqld .cq-hint { margin: 6px 14px 10px; }
+.cq-rds { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 10px; }
+.cq-rd { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; cursor: pointer; font-size: 14px; }
+.cq-rd input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.cq-rd i { font-style: normal; font-weight: 800; margin-right: 4px; }
+.cq-rd input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.cq-arow { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.cq-status { margin: 0; font-size: 13px; color: var(--muted); }
+.cq-status.err { color: var(--danger); }
+.cq-loading, .cq-warn { margin: 0 0 10px; font-size: 13.5px; color: var(--text-2); }
+.cq-warn { padding: 8px 12px; border-left: 3px solid var(--warn); background: var(--warn-soft); border-radius: 0 6px 6px 0; }
+.cq-rtool { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 10px; }
+.cq-rtool .cq-search { flex: 1 1 220px; max-width: 360px; width: auto; }
+.cq-rtool .cbtn, .cq-pager .cbtn { min-height: 38px; }
+/* tabel hasil: header menempel di atas, kolom pertama menempel di kiri */
+.cq-twrap { max-height: 60vh; max-height: 60dvh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.cq-twrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+table.cq-t { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 13px; }
+.cq-t th, .cq-t td { padding: 0 10px; height: 32px; border-bottom: 1px solid var(--border); white-space: nowrap; text-align: left; background: var(--surface); color: var(--text); font-weight: 400; max-width: 360px; overflow: hidden; text-overflow: ellipsis; }
+.cq-t th.num, .cq-t td.num { text-align: right; }
+.cq-t thead th { position: sticky; top: 0; z-index: 3; background: var(--surface-2); border-bottom: 1px solid var(--border-strong); padding: 0; }
+.cq-t th:first-child, .cq-t td:first-child { position: sticky; left: 0; z-index: 2; border-right: 1px solid var(--border-strong); }
+.cq-t thead th:first-child { z-index: 4; }
+.cq-t tbody tr:nth-child(even) td { background: var(--bg-soft); }
+.cq-sortb { font: inherit; font-size: 12.5px; font-weight: 700; display: flex; width: 100%; height: 100%; min-height: 36px; align-items: center; justify-content: space-between; gap: 4px; padding: 0 10px; border: 0; background: none; color: var(--text-2); cursor: pointer; text-align: left; }
+.cq-t th.num .cq-sortb { justify-content: flex-end; }
+.cq-t td.cq-none { text-align: left; white-space: normal; }
+.cq-pager { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 10px 0 0; font-size: 13px; color: var(--text-2); }
+.cq-pager select { height: 38px; font: inherit; font-size: 13px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--surface); color: var(--text); padding: 0 6px; }
+.cq-pinfo { flex: 1 1 160px; }
+.cq-bar { display: none; }
+@media (max-width: 860px) {
+  .cq { grid-template-columns: minmax(0, 1fr); }
+  .cq:not(.open) .cq-detail { display: none; }
+  .cq.open .cq-list { display: none; }
+  .cq-list { position: static; max-height: none; overflow: visible; }
+  .cq-back { display: inline-flex; }
+  .cq-run { display: none; }
+  .cq-detail { padding-bottom: 84px; }
+  .cq-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; gap: 10px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border-strong); box-shadow: 0 -4px 16px rgba(0, 0, 0, .12); }
+  .cq-bar[hidden] { display: none !important; }
+  .cq-bar .cbtn { flex: 1; min-height: 48px; justify-content: center; font-size: 15px; align-self: stretch; }
+  .cq-chip, .cq-search { min-height: 44px; }
+  .cq-f input, .cq-f select { height: 44px; }
+  .cq-twrap { max-height: 55dvh; }
+  .cq-pager .cbtn, .cq-rtool .cbtn, .cq-pager select, .cq-arow .cbtn { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) { .cq-app * { transition: none !important; animation: none !important; } }
+</style>
+<script>try { const t = localStorage.getItem("theme"); document.documentElement.dataset.theme = t === "dark" ? "dark" : "light"; } catch { document.documentElement.dataset.theme = "light"; }</script>
+<script src="js/modnav.js" defer></script>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="apple-touch-icon" href="img/favicon-180.png">
+</head>
+<body class="setup-app">
+<!-- Halaman Tools "Daftar Query" (Count Document Tahap A): query bawaan satu per satu, SQL baca-saja, status cek manual. Backend: /api/countdoc/queries|query/run|query-checks. -->
+<header class="top">
+  <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-label="Buka menu">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+  </button>
+  <a class="brand" href="index.html"><span class="logo">PP</span>
+    <span><small>Tools</small><span>CV. Putra Prima Mandiri Kediri</span></span></a>
+  <a class="edit-btn back-btn" href="index.html" title="Kembali ke dokumentasi Project Check List">
+    <svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><path d="M11.5 5L6.5 10l5 5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Dokumentasi</span>
+  </a>
+  <button class="icon-btn" id="theme-btn" type="button" aria-label="Ganti tema terang/gelap">
+    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.5 12.2A7 7 0 0 1 7.8 3.5a7 7 0 1 0 8.7 8.7z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
+  </button>
+</header>
+
+<div class="shell">
+  <aside class="sidebar" aria-label="Menu Tools">
+    <nav id="nav">
+      <div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">⛁</span>Database HANA</button>
+        <ul>
+          <li><a href="hana.html#/backup"><span class="no">1</span><span>Backup</span></a></li>
+          <li><a href="hana.html#/restore"><span class="no">2</span><span>Restore</span></a></li>
+          <li><a href="hana.html#/pindah"><span class="no">3</span><span>Pindahkan file</span></a></li>
+          <li><a href="hana.html#/riwayat"><span class="no">4</span><span>Riwayat</span></a></li>
+        </ul></div>
+      <div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">▤</span>Crystal Report</button>
+        <ul>
+          <li><a href="rpt.html"><span class="no">1</span><span>RPT Editor</span></a></li>
+        </ul></div>
+      <div class="nav-group"><button type="button" aria-expanded="true"><span class="gno">✓</span>Audit SAP</button>
+        <ul>
+          <li><a href="countdoc.html"><span class="no">1</span><span>Count Document</span></a></li>
+          <li><a href="countdoc-query.html" class="active"><span class="no">2</span><span>Daftar Query</span></a></li>
+        </ul></div>
+    </nav>
+  </aside>
+  <main class="content"><article class="article" id="article"></article></main>
+</div>
+
+<script type="module">
+import { countdocQueryPage } from "./js/pages/countdoc-query.js";
+import { showCompanyName } from "./js/ui.js";
+const $ = s => document.querySelector(s);
+$("#theme-btn").onclick = () => {
+  const el = document.documentElement, dark = el.dataset.theme ? el.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  el.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("theme", el.dataset.theme); } catch { }
+};
+$("#menu-btn").onclick = () => document.body.classList.toggle("nav-open");
+document.querySelectorAll("#nav .nav-group > button").forEach(b => b.onclick = e => { const g = e.currentTarget.parentElement; g.classList.toggle("collapsed"); e.currentTarget.setAttribute("aria-expanded", !g.classList.contains("collapsed")); });
+await showCompanyName();
+countdocQueryPage($("#article"));
+</script>
+</body>
+</html>

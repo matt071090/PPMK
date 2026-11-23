@@ -13,6 +13,9 @@ export function loadCompany() {
   }).catch(e => { pending = null; throw e; }));
 }
 export const companyKey = key => company.code && !['theme', 'editor'].includes(key) ? `${company.code}:${key}` : key;
+export function companyTitle(title, name = company.name) {
+  return !name || name === 'No company' || title.endsWith(` · ${name}`) ? title : `${title} · ${name}`;
+}
 export function companyFilename(filename, code = company.code) {
   if (!code) return filename;
   const dot = filename.lastIndexOf('.');

@@ -12,7 +12,7 @@ class ClipItem{public ReportObject Obj;public string Section;public int Dl,Dt,W,
 class PdfRes{public byte[] Bytes;public int Pages;}
 class SkipEx:Exception{public SkipEx(string m):base(m){}}
 class Agent{
- const string Ver="StemRptAgent 0.7"; static readonly DateTime started=DateTime.Now; const int Port=47831;
+ const string Ver="StemRptAgent 0.8"; static readonly DateTime started=DateTime.Now; const int Port=47831;
  static JavaScriptSerializer js=new JavaScriptSerializer{MaxJsonLength=int.MaxValue};
  static Dictionary<string,Doc> docs=new Dictionary<string,Doc>();   // hanya disentuh dari thread worker
  static string token=Guid.NewGuid().ToString("N");
@@ -168,6 +168,17 @@ class Agent{
    string full=b.ContainsKey("path")&&b["path"]!=null?System.IO.Path.GetFullPath(Convert.ToString(b["path"])).TrimEnd('\\'):"";
    if(full==""||!RecentList().Exists(x=>string.Equals(System.IO.Path.GetFullPath(x).TrimEnd('\\'),full,StringComparison.OrdinalIgnoreCase))){Send(c,403,new{error="Folder bukan dari daftar terakhir."});return;}
    SetPicked(full); Send(c,200,new Dictionary<string,object>{{"root",root}});return;}
+  if(p=="/sap/probe"||p=="/sap/upload"){ // kirim ke SAP lewat DI API; login per permintaan, password tidak disimpan/dicatat
+#if HASSAP
+   string pw1=b.ContainsKey("password")&&b["password"]!=null?Convert.ToString(b["password"]):"";
+   try{ SapUp.Hook(); object r; if(p=="/sap/probe") r=SapUp.OnSta<object>(()=>SapUp.Probe(b),120000);
+    else{ string full=Under(Convert.ToString(b.ContainsKey("path")?b["path"]:"")); r=SapUp.OnSta<object>(()=>SapUp.Upload(full,b,Log),180000); }
+    Send(c,200,r); }
+   catch(Exception e){ string m=e.Message; if(pw1!="")m=m.Replace(pw1,"***"); Log("sap gagal: "+m); Send(c,500,new Dictionary<string,object>{{"error",m}}); }
+#else
+   Send(c,501,new Dictionary<string,object>{{"error","Agen ini dibangun tanpa DI API SAP (Interop.SAPbobsCOM.dll dari Data Transfer Workbench tidak ditemukan saat build). Pasang DTW lalu jalankan build.cmd lagi."}});
+#endif
+   return;}
   object o=OnWorker<object>(()=>Route(p,b));
   if(o==null){Send(c,404,new{error="tidak ada: "+p});return;}
   Send(c,200,o);
