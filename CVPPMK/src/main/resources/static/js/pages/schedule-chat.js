@@ -28,8 +28,13 @@ export function chatTime(iso) {
 }
 
 const CSS = `
-.chat-fab{position:fixed;right:16px;bottom:16px;z-index:60;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--shadow-lg)}
-.chat-fab .dot{min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--danger);color:var(--on-danger);font-size:12px;line-height:20px;text-align:center}
+/* Tombol Diskusi menempel di tepi kanan sebagai tab vertikal; konten menyisihkan lajur kanan seukuran tab (body.has-chat-dock), jadi tidak ada kartu/teks/tombol yang tertutup. */
+.chat-fab{position:fixed;right:0;bottom:24px;z-index:60;display:flex;flex-direction:column;align-items:center;gap:8px;width:44px;min-height:104px;padding:12px 0;border-radius:12px 0 0 12px;border:1px solid var(--accent);border-right:0;background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:var(--shadow-lg)}
+.chat-fab .lbl{writing-mode:vertical-rl;font-size:13px;letter-spacing:.02em;line-height:1}
+.chat-fab .dot{position:absolute;top:-9px;left:-9px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--danger);color:var(--on-danger);font-size:12px;line-height:20px;text-align:center;box-shadow:0 0 0 2px var(--bg)}
+body.has-chat-dock .content{padding-right:60px}
+.chat-fab:focus-visible{outline-offset:-5px}
+@media print{.chat-fab{display:none}}
 .chat-panel{position:fixed;z-index:70;right:16px;bottom:16px;width:min(380px,calc(100vw - 32px));height:min(560px,calc(100vh - 32px));display:none;flex-direction:column;background:var(--surface);color:var(--text);border:1px solid var(--border-strong);border-radius:12px;box-shadow:var(--shadow-lg);overflow:hidden}
 .chat-panel.open{display:flex}
 .chat-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface-2)}
@@ -57,7 +62,7 @@ const CSS = `
 .chat-badge .chat-ico,.chat-fab .chat-ico{flex:none}
 .chat-badge.new .chat-ico{color:var(--accent-strong)}
 .chat-badge{gap:6px}
-@media (max-width:600px){.chat-panel{right:0;bottom:0;width:100vw;height:min(78vh,100vh);border-radius:12px 12px 0 0}.chat-fab{right:12px;bottom:12px}}
+@media (max-width:600px){.chat-panel{right:0;bottom:0;width:100vw;height:min(78vh,100vh);border-radius:12px 12px 0 0}.chat-fab{right:0;bottom:16px}body.has-chat-dock .content{padding-right:52px}}
 `;
 
 /**
@@ -73,7 +78,7 @@ export function createChat({ api = 'api/schedule/chat', threads = [], titleOf = 
   const name = () => store.get('editor') || '';
 
   const fab = el('button', 'chat-fab'); fab.type = 'button'; fab.setAttribute('aria-label', 'Buka diskusi');
-  fab.append(chatIcon(), txt('Diskusi'));
+  const fabLabel = el('span', 'lbl'); fabLabel.textContent = 'Diskusi'; fab.append(chatIcon(), fabLabel);
   const fabDot = el('span', 'dot'); fabDot.hidden = true; fab.append(fabDot);
   const panel = el('section', 'chat-panel'); panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', title);
   const head = el('div', 'chat-head'), sel = el('select'); sel.setAttribute('aria-label', 'Pilih topik diskusi');
@@ -88,7 +93,7 @@ export function createChat({ api = 'api/schedule/chat', threads = [], titleOf = 
   const err = el('div', 'chat-err'); err.setAttribute('role', 'alert');
   form.append(nameIn, textIn, row, err);
   panel.append(head, msgs, form);
-  document.body.append(fab, panel);
+  document.body.append(fab, panel); document.body.classList.add('has-chat-dock');
 
   function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
   function txt(s) { return document.createTextNode(s); }
