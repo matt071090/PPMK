@@ -1,4 +1,4 @@
-import { nonBranch, hiddenAddonTable } from "../data-policy.js";
+import { nonBranch, hiddenAddonTable, emptyPreference, saveEmptyPreference } from "../data-policy.js";
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
 import { company } from "../company.js";
@@ -222,6 +222,18 @@ function udfObjects(fields) {
 // o.item(r): isi baris daftar · o.text(r): teks yang dicari · o.detail(r): isi panel kanan · o.dim(r): baris redup (inactive)
 // o.chips: [{ label, test, title }] (chip pertama = semua) · o.select: { label, options: [[nilai, teks]], key(r) }
 // o.checks: [{ label, test }] (dicentang = hanya baris yang lolos test) · o.noun: kata benda untuk hitungan
+// Toggle "Tampilkan field kosong": simpan per browser, semua panel detail dengan kunci sama ikut (juga Excel yang memakai kunci itu).
+document.addEventListener("change", e => {
+  const t = e.target.closest?.("input[data-empty-fields]");
+  if (!t) return;
+  saveEmptyPreference(t.dataset.emptyFields, t.checked);
+  $$(".md-pane").forEach(p => {
+    const box = p.querySelector("input[data-empty-fields]");
+    if (!box || box.dataset.emptyFields !== t.dataset.emptyFields) return;
+    box.checked = t.checked; p.classList.toggle("hide-empty-fields", !t.checked);
+    const note = p.querySelector("[data-empty-note]"); if (note) note.textContent = `${note.dataset.emptyNote} field kosong ${t.checked ? "ditampilkan" : "disembunyikan"}`;
+  });
+});
 function listDetail(id, rows, o) {
   const items = rows.map((r, i) => `<button type="button" class="md-item${o.dim && o.dim(r) ? " off" : ""}" data-i="${i}">${o.item(r)}</button>`).join("");
   const chips = o.chips || [], checks = o.checks || [];
@@ -230,7 +242,14 @@ function listDetail(id, rows, o) {
     const pane = $(".md-pane", box), all = $$(".md-item", box), q = $("input[type=search]", box), cnt = $(".md-count", box);
     const sel = $("select", box), boxes = $$("[data-chk]", box), text = rows.map(r => o.text(r).toLowerCase());
     let chip = chips[0];
-    const show = el => { all.forEach(x => x.classList.toggle("on", x === el)); pane.innerHTML = o.detail(rows[+el.dataset.i]); };
+    // Field kosong di panel detail disembunyikan (catatan jumlah + toggle per browser, kunci fields:<id>); daftar kiri tidak berubah.
+    const prefKey = `fields:${o.prefId || id}`;
+    const decorate = () => {
+      const n = $$("[data-blank]", pane).reduce((a, x) => a + (+x.dataset.blank || 0), 0), shown = emptyPreference(prefKey);
+      pane.classList.toggle("hide-empty-fields", !shown);
+      if (n) pane.insertAdjacentHTML("afterbegin", `<div class="colbar md-emptybar"><span data-empty-note="${n}">${n} field kosong ${shown ? "ditampilkan" : "disembunyikan"}</span><label><input type="checkbox" data-empty-fields="${esc(prefKey)}"${shown ? " checked" : ""}> Tampilkan field kosong</label></div>`);
+    };
+    const show = el => { all.forEach(x => x.classList.toggle("on", x === el)); pane.innerHTML = o.detail(rows[+el.dataset.i]); decorate(); };
     const apply = () => {
       const t = q.value.toLowerCase().trim(), sv = sel ? sel.value : "";
       let n = 0, first = null;
@@ -261,10 +280,10 @@ function listDetail(id, rows, o) {
 }
 // Field terisi tampil sebagai daftar ke bawah; yang kosong dikumpulkan jadi satu baris supaya tidak penuh "belum diisi".
 // pairs: [label, nilai mentah, fmt opsional]
-function fieldList(pairs) {
+export function fieldList(pairs) {
   const filled = pairs.filter(([, v]) => !isEmpty(v)), blank = pairs.filter(([, v]) => isEmpty(v)).map(([l]) => l);
   return (filled.length ? kv(filled.map(([l, v, f]) => [l, f ? f(v) : esc(v)])) : "")
-    + (blank.length ? `<p class="md-blank">Belum diisi: ${blank.map(esc).join(", ")}</p>` : "");
+    + (blank.length ? `<p class="md-blank" data-blank="${blank.length}">Belum diisi: ${blank.map(esc).join(", ")}</p>` : "");
 }
 // kepala panel detail: judul + badge, baris info, lalu isi tambahan
 const mdHead = (title, badges, meta) => `<div class="md-head"><h3>${esc(title)}</h3>${badges.join("")}</div>
@@ -318,7 +337,7 @@ function bpView(t, name, list, groups, ctx) {
   return kpis([[list.length, name + (t === "C" ? " & lead" : "")], [grps.length, "Group"], [list.filter(b => b.frozenFor === "Y").length, "Inactive"],
       ...(!nonBranch() ? [[noBr, "Aktif tanpa branch"]] : [])])
     + listDetail(`bpv-${t}`, list, {
-      noun: name.toLowerCase(), placeholder: "Cari kode / nama / NPWP / telepon…",
+      prefId: "bp", noun: name.toLowerCase(), placeholder: "Cari kode / nama / NPWP / telepon…",
       chips: [{ label: "Semua group" }, ...grps.map(g => ({ label: g.GroupName, test: b => b.GroupCode === g.GroupCode,
         title: `Kode ${g.GroupCode} · Price list: ${g.PriceListName || "–"}${g.Locked === "Y" ? " · dikunci" : ""}` }))],
       checks: [...(!nonBranch() ? [{ label: `Hanya tanpa branch${noBr ? ` (${noBr})` : ""}`, test: bpNoBranch }] : []), { label: "Sembunyikan inactive", test: b => b.frozenFor !== "Y" }],
