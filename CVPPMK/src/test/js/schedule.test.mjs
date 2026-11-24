@@ -315,3 +315,15 @@ test('kategori titik garis waktu: Master Data, Inventory per lokasi, Upload SAP 
   assert.equal(c('tidak-dikenal'), 'go');
   assert.deepEqual(TIMELINE_CATEGORY_ORDER.filter(k => !TIMELINE_CATEGORIES[k]), []);
 });
+test('halaman Schedule: aturan CSS tata letak utama tidak boleh hilang (hero/KPI, daftar PIC, tabel) dan banner Mode lihat sudah dibuang', async () => {
+  const html = await packagedRead('../../main/resources/static/schedule.html', '../static/schedule.html');
+  for (const sel of ['.schedule .hero', '.schedule .countdown', '.schedule .kpi-side', '.schedule .kpi-bar', '.schedule .kpi', '.schedule .progress-line',
+    '.schedule .pic-pop', '.schedule .pic-pop li', '.schedule .pic-pop[hidden]', '.schedule .activity-table', '.schedule .area-table', '.schedule .badge.selesai',
+    '.schedule .chat-badge', '.schedule .pic-fixed', '.schedule .stage', '.schedule .draft-bar', '.schedule .guide'])
+    assert.ok(html.includes(sel), 'CSS hilang: ' + sel);
+  assert.match(html, /\.schedule \.hero \{[^}]*display:grid/);
+  assert.match(html, /\.schedule \.kpi-bar \{[^}]*grid-template-columns:repeat\(4/);
+  assert.match(html, /\.schedule \.pic-pop \{[^}]*position:absolute[^}]*z-index:80/);
+  assert.doesNotMatch(source, /lock-note|unlock-form|unlock-pw|Mode lihat\./);
+  assert.doesNotMatch(html, /\.unlock|#unlock-msg|\.lock-note/);
+});

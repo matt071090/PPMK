@@ -49,10 +49,12 @@ const sections={
   udf:()=>({fields:table(['TableID','Field','Descr','TypeID','SizeID','Dflt','NotNull'],[...Array.from({length:80},(_,i)=>['OITM',`U_Operasi${i+1}`,`Pengaturan operasi ${i+1}`,'A',30,'','N']),...(addonProfile?[['@STEM_MPLAN','U_Breed','Jenis Farm','A',10,'','N'],['@STEM_REPORTWEB','U_Url','Alamat Laporan','A',100,'','N']]:[])]),addon_udf:table(['TableID','AliasID'],[['OWHS','STEM_Type']])}),
   'saved-queries':()=>({categories:table(['CatName','QueryCount','IsSystem'],[['Produksi',65,'N'],['Belum digunakan',0,'N'],['SAP_DASHBOARD_STOCK',5,'Y']]),queries:table(['CatName','QName','Len','Created','LastRun','IsSystem'],Array.from({length:66},(_,i)=>['Produksi',`Laporan produksi ${i+1}`,i===65?0:120,'2026-11-01','2026-11-20','N']))}),
   warehouses:()=>({warehouses:table(['WhsCode','WhsName','BPLName','Inactive','BinActivat','BalInvntAc'],[['UTAMA','Gudang utama',mode==='wbi'?null:'CV-KOMERSIAL','N','N','110100']])}),
-  users:()=>({users:table(['USER_CODE','U_NAME','SUPERUSER','Locked','Branches'],mode==='wbi'?[['WBI-ACC-STF1','Rizky','N','N',null],['PUR-MGR','Fenny','Y','N',null],['Workflow','Workflow','Y','N',null],['WBI-PARE','Gerai Pare','N','N',null],['LOCKED','Terkunci','N','Y',null]]:[['FIN01','Tim Keuangan','N','N','CV-KOMERSIAL']])}),
+  users:()=>({users:table(['USER_CODE','U_NAME','SUPERUSER','Locked','Branches'],mode==='wbi'?wbiUsers:[['FIN01','Tim Keuangan','N','N','CV-KOMERSIAL']])}),
   'business-partners':()=>({bp:table(['CardCode','CardName','CardType','GroupCode','frozenFor','Branches'],[['C001','Pelanggan Retail','C',100,'N',null]]),groups:table(['GroupCode','GroupName','GroupType'],[[100,'Pelanggan Retail','C']])}),
   'sp-validation':()=>({addon_procs:table(['Name'],[['SBO_SP_TransactionNotification'],['SBO_SP_PostTransactionNotice']]),addon_funcs:table(['Name'],[['GetItemResourceCost']])})
 };
+// 28 user SAP seperti data asli WBI: sebagian superuser/terkunci (tidak jadi saran PIC), sisanya jadi saran
+const wbiUsers=Array.from({length:28},(_,i)=>i===0?['WBI-ACC-STF1','Rizky','N','N',null]:i<5?[['PUR-MGR','Fenny'],['Workflow','Workflow'],['manager','Manager'],['B1i','B1i']][i-1].concat(['Y','N',null]):i===5?['LOCKED','Terkunci','N','Y',null]:[`WBI-U${String(i).padStart(2,'0')}`,`User ${i}`,'N','N',null]);
 const table=(columns=[],rows=[])=>({columns,rows,ms:1});
 function reply(res,data,status=200){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
 const server=http.createServer(async(req,res)=>{
