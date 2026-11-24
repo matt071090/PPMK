@@ -57,7 +57,6 @@
           "ST_PLCATEGORY",
           "ST_PLCONFIG",
           "ST_PRICEH",
-          "ST_VOUCHERTYPE",
           "ST_CCCONFIG",
           "ST_CC",
           "ST_IREAPCOMP",

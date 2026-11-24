@@ -1,7 +1,7 @@
 // 4.4 Stored procedure di company ini + breakdown SBO_SP_TransactionNotification / SBO_SP_PostTransactionNotice per object.
 // Sumber: DB di config aplikasi (sql/sp-validation). Cara breakdown: sp-parse.js. Penjelasan bahasa awam (opsional): sp-rules.js.
 import { $, $$, esc, rowsOf, section, searchable, onMount, OBJECTS as SAP_OBJECTS } from "../ui.js";
-import { hiddenAddonTable } from '../data-policy.js';
+import { hiddenAddonTable, retiredAddonTable, retiredPreference } from '../data-policy.js';
 import { excludedAddonProc } from './addon-data.js';
 import { parseSp } from "./sp-parse.js";
 import { OBJECTS as NOTES, MODULES } from "./sp-rules.js";
@@ -30,7 +30,7 @@ function build(d) {
     if (!defs[name] || defs[name].length < TEMPLATE_LEN) continue;
     const res = parseSp(defs[name], key);
     for (const r of res.rules) for (const t of r.types) {
-      if(hiddenAddonTable(t))continue;
+      if(hiddenAddonTable(t)||(retiredAddonTable(t)&&!retiredPreference()))continue;
       const o = objs.get(t) || objs.set(t, { type: t, rules: [], blocks: [] }).get(t);
       o.rules.push({ ...r, type: t });
     }

@@ -1,4 +1,4 @@
-import { nonBranch, hiddenAddonTable, emptyPreference, saveEmptyPreference } from "../data-policy.js";
+import { nonBranch, hiddenAddonTable, emptyPreference, saveEmptyPreference, retiredAddonTable, retiredAddonField, retiredPreference, retiredNotice, retiredBadge } from "../data-policy.js";
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
 import { company } from "../company.js";
@@ -731,14 +731,18 @@ export const PAGES = {
     tables: ["OUDO", "UDO1"],
     render(d) {
       const counts = new Map((addonState.objects || []).map(o => [o.code, o.rowCount]));
-      const u = rowsOf(d.udo).filter(r=>!hiddenAddonTable(r.TableName)&&!hiddenAddonTable(r.Code)).map(r => ({ ...r, Rows: counts.get(r.Code) }));
-      const filled = u.filter(r => r.Rows === null || r.Rows === undefined || +r.Rows > 0);
+      const all = rowsOf(d.udo).filter(r=>!hiddenAddonTable(r.TableName)&&!hiddenAddonTable(r.Code)).map(r => ({ ...r, Rows: counts.get(r.Code) }));
+      // UDO dicabut (Cut off 2027): disembunyikan, tidak ikut hitungan; tampil bertanda hanya bila toggle menyala
+      const isRet = r => retiredAddonTable(r.TableName) || retiredAddonTable(r.Code), nRet = all.filter(isRet).length, showRet = retiredPreference();
+      const u = showRet ? all : all.filter(r => !isRet(r)), live = nRet ? all.filter(r => !isRet(r)) : all;
+      const filled = live.filter(r => r.Rows === null || r.Rows === undefined || +r.Rows > 0);
+      const codeCol = nRet && showRet ? { key: "Code", label: "Kode", fmt: (v, r) => val(v) + (isRet(r) ? ` ${retiredBadge}` : "") } : { key: "Code", label: "Kode" };
       return kpis([[filled.length, "UDO ditampilkan"], [filled.filter(x => x.TYPE === "3").length, "Tipe Document"], [filled.filter(x => x.TYPE === "1").length, "Tipe Master Data"]])
-        + section("list", "Daftar UDO", searchable("udo-t", [{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
+        + section("list", "Daftar UDO", retiredNotice(nRet, showRet) + searchable("udo-t", [codeCol, { key: "Name", label: "Nama" },
           { key: "TYPE", label: "Tipe", fmt: codedCell(UDO_TYPE) }, { key: "TableName", label: "Tabel header", fmt: v => `<code>@${esc(v)}</code>` },
           { key: "ChildTables", label: "Tabel baris", fmt: v => isEmpty(v) ? "" : v.split(", ").map(t => `<code>@${esc(t)}</code>`).join(" ") },
           { key: "MngSeries", label: "Series", fmt: badgeYN }, { key: "CanCancel", label: "Cancel", fmt: badgeYN }, { key: "CanLog", label: "Log", fmt: badgeYN },
-          { key: "_menu", label: "Menu 7 Addon", fmt: (_, r) => udoMenu(r) }], u, { emptyRow: r => r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }),
+          { key: "_menu", label: "Menu 7 Addon", fmt: (_, r) => udoMenu(r) }], u, { emptyRow: r => !isRet(r) && r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }),
           { lead: "UDO Master Data otomatis jadi menu di bab 7 Addon. UDO Document bisa dijadikan menu kalau isinya lebih cocok dicek sebagai master data (mode dev); sub kategorinya diatur di Setup › Mapping Add-on." });
     }
   },
@@ -749,10 +753,13 @@ export const PAGES = {
     tables: ["OUTB", "CUFD", "OUDO", "UDO1"],
     render(d) {
       const rowCounts = new Map(rowsOf(d.addon_rows).map(r => [String(r.Name).replace(/^@/, ""), r.Rows]));
-      const t = rowsOf(d.udt).filter(r=>!hiddenAddonTable(r.TableName)).map(x => ({ ...x, Rows: rowCounts.get(x.TableName), Pemakai: x.UdoCode ? `UDO ${x.UdoCode}` : x.UdoChildOf ? `UDO ${x.UdoChildOf} (baris)` : "" }));
-      return section("list", "Daftar UDT", searchable("udt-t", [{ key: "TableName", label: "Tabel", fmt: v => `<code>@${esc(v)}</code>` },
+      const all = rowsOf(d.udt).filter(r=>!hiddenAddonTable(r.TableName)).map(x => ({ ...x, Rows: rowCounts.get(x.TableName), Pemakai: x.UdoCode ? `UDO ${x.UdoCode}` : x.UdoChildOf ? `UDO ${x.UdoChildOf} (baris)` : "" }));
+      const isRet = r => retiredAddonTable(r.TableName), nRet = all.filter(isRet).length, showRet = retiredPreference();
+      const t = showRet ? all : all.filter(r => !isRet(r));
+      const tblCol = nRet && showRet ? { key: "TableName", label: "Tabel", fmt: (v, r) => `<code>@${esc(v)}</code>` + (isRet(r) ? ` ${retiredBadge}` : "") } : { key: "TableName", label: "Tabel", fmt: v => `<code>@${esc(v)}</code>` };
+      return section("list", "Daftar UDT", retiredNotice(nRet, showRet) + searchable("udt-t", [tblCol,
         { key: "Descr", label: "Deskripsi" }, { key: "ObjectType", label: "Tipe", fmt: codedCell(UDT_TYPE) },
-        { key: "Rows", label: "Baris data", num: 1 }, { key: "FieldCount", label: "Jumlah field", num: 1 }, { key: "Pemakai", label: "Dipakai oleh" }], t, { emptyRow: r => r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }));
+        { key: "Rows", label: "Baris data", num: 1 }, { key: "FieldCount", label: "Jumlah field", num: 1 }, { key: "Pemakai", label: "Dipakai oleh" }], t, { emptyRow: r => !isRet(r) && r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }));
     }
   },
 
@@ -762,9 +769,13 @@ export const PAGES = {
     menu: "Tools › Customization Tools › User-Defined Fields - Management",
     tables: ["CUFD"],
     render(d) {
-      const objs = udfObjects(rowsOf(d.fields).filter(r=>!hiddenAddonTable(r.TableID)));
+      const base = rowsOf(d.fields).filter(r=>!hiddenAddonTable(r.TableID));
+      // UDF dicabut (Cut off 2027): hanya field yang tercantum di rule company; UDF lain tetap tampil dan dihitung
+      const isRet = r => retiredAddonTable(r.TableID) || retiredAddonField(r.TableID, r.Field), showRet = retiredPreference();
+      const nRet = new Set(base.filter(isRet).map(r => String(r.Field).toUpperCase())).size;
+      const objs = udfObjects(showRet ? base : base.filter(r => !isRet(r)));
       const cats = UDF_CATS.filter(c => objs.some(o => o.cat === c)).concat(objs.some(o => !UDF_CATS.includes(o.cat)) ? ["Lainnya"] : []);
-      const cols = [{ key: "Field", label: "Title" }, { key: "Descr", label: "Description" }, { key: "TypeID", label: "Type", fmt: codedCell(UDF_TYPE) },
+      const cols = [nRet && showRet ? { key: "Field", label: "Title", fmt: (v, r) => val(v) + (isRet(r) ? ` ${retiredBadge}` : "") } : { key: "Field", label: "Title" }, { key: "Descr", label: "Description" }, { key: "TypeID", label: "Type", fmt: codedCell(UDF_TYPE) },
         { key: "SizeID", label: "Panjang", num: 1 }, { key: "Dflt", label: "Dflt" }, { key: "NotNull", label: "Mand.", fmt: badgeYN },
         { key: "RTable", label: "Linked Table", fmt: (v, r) => v ? `<code>@${esc(v)}</code>` : r.RelUDO ? `UDO ${esc(r.RelUDO)}` : "" }];
       onMount(() => {
@@ -779,8 +790,9 @@ export const PAGES = {
           <p class="sec-lead" style="margin:6px 14px 12px">Berlaku di tabel: ${o.tables.map(t => `<code>${esc(t)}</code>`).join(" ")}</p>
         </details>`).join(""), { level: 3 })).join("");
       const flat = objs.flatMap(o => o.fields.map(f => ({ ...f, Cat: UDF_CATS.includes(o.cat) ? o.cat : "Lainnya", Obj: o.name, Tables: o.tables.length })));
-      return kpis([[flat.length, "UDF"], [objs.length, "Object"], [cats.length, "Kategori"]])
-        + section("tree", "UDF per Kategori", `<div class="toolbar"><input type="search" id="udf-q" placeholder="Cari object / field / deskripsi…"></div><div id="udf-tree">${tree}</div>`,
+      const live = nRet && showRet ? flat.filter(f => !isRet(f)) : flat;
+      return kpis([[live.length, "UDF"], [objs.length, "Object"], [cats.length, "Kategori"]])
+        + section("tree", "UDF per Kategori", retiredNotice(nRet, showRet) + `<div class="toolbar"><input type="search" id="udf-q" placeholder="Cari object / field / deskripsi…"></div><div id="udf-tree">${tree}</div>`,
           { lead: "Klik object untuk melihat UDF-nya. Tabel salinan (arsip, snapshot) ikut dihitung sebagai tabel tempat object berlaku." })
         + section("fields", "Daftar Lengkap", searchable("udf-t", [{ key: "Cat", label: "Kategori" }, { key: "Obj", label: "Object" }, ...cols,
             { key: "Tables", label: "Jumlah tabel", num: 1 }], flat, { filterKey: "Cat", filterLabel: "kategori", limit: 300 }),

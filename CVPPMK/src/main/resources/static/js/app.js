@@ -1,4 +1,4 @@
-import { loadCapabilities, nonBranch, emptyPreference, saveEmptyPreference, addonHasData, reviewableMenus } from "./data-policy.js";
+import { loadCapabilities, nonBranch, emptyPreference, saveEmptyPreference, addonHasData, reviewableMenus, retiredAddonObject, retiredPreference, saveRetiredPreference } from "./data-policy.js";
 import { $, $$, esc, slug, company, showCompanyName, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, exportColsOf, exportSheetCols, revealTab } from "./ui.js";
 import { companyTitle, loadCompany } from './company.js';
 import { xlsxBlob, download } from "./xlsx.js";
@@ -72,7 +72,7 @@ const queryErrors = res => Object.entries(res.results).filter(([, v]) => v.error
 // ---------- sidebar ----------
 const HOME_ICON = `<svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true" style="vertical-align:-2px"><path d="M3 9.5L10 4l7 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-5V17H4a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>`;
 const navItem = p => `<li><a href="#/${p.id}" data-id="${p.id}" class="${p.status === "todo" ? "todo" : ""}"${p.addon ? ` title="${esc(p.addon)}"` : ""}>
-  ${p.no ? `<span class="no">${esc(p.no)}</span>` : ""}<span class="t">${esc(p.title)}</span>${p.status ? `<span class="nav-st" data-dot="${p.id}"></span>` : ""}</a></li>`;
+  ${p.no ? `<span class="no">${esc(p.no)}</span>` : ""}<span class="t">${esc(p.title)}</span>${p.retired ? `<span class="badge retired">Dicabut</span>` : ""}${p.status ? `<span class="nav-st" data-dot="${p.id}"></span>` : ""}</a></li>`;
 // bab Addon: item dikelompokkan per sub kategori (urutan sudah dari addonPages), tiap sub kategori bisa dilipat
 function navSubcats(list) {
   const cats = [...new Set(list.map(p => p.cat))];
@@ -82,10 +82,11 @@ function navSubcats(list) {
       <ul>${items.map(navItem).join("")}</ul></li>`; }).join("");
 }
 function buildNav() {
+  const nRetired = addonState.objects ? addonState.objects.filter(o => o.shown && retiredAddonObject(o)).length : 0;
   $("#nav").innerHTML = `
     <div class="progress-box"><div class="lbl"><span>Menu sudah sesuai</span><b id="rv-count"></b></div>
       <div class="bar"><div id="rv-ok"></div><div id="rv-nok"></div></div></div>
-    ${addonState.objects ? `<div class="empty-menu-toggle"><label><input type="checkbox" id="addon-show-empty" ${emptyPreference("addon-menu") ? "checked" : ""}> Tampilkan yang kosong</label><small>${addonState.objects.filter(o => o.shown && !addonHasData(o)).length} menu Addon kosong${emptyPreference("addon-menu") ? "" : " disembunyikan"}</small></div>` : ""}
+    ${addonState.objects ? `<div class="empty-menu-toggle"><label><input type="checkbox" id="addon-show-empty" ${emptyPreference("addon-menu") ? "checked" : ""}> Tampilkan yang kosong</label><small>${addonState.objects.filter(o => o.shown && !addonHasData(o) && !retiredAddonObject(o)).length} menu Addon kosong${emptyPreference("addon-menu") ? "" : " disembunyikan"}</small></div>` : ""}${nRetired ? `<div class="empty-menu-toggle"><label><input type="checkbox" id="addon-show-retired" ${retiredPreference() ? "checked" : ""}> Tampilkan yang dicabut</label><small>${nRetired} item dicabut (Cut off 2027) ${retiredPreference() ? "ditampilkan" : "disembunyikan"}</small></div>` : ""}
     ${chapters.map(ch => {
       const flat = ch.pages.length === 1;
       if (flat) { // bab satu halaman: tampil sebagai satu tautan saja
@@ -106,6 +107,8 @@ function buildNav() {
   $$(".nav-group > button").forEach(b => b.onclick = () => {
     const g = b.parentElement; g.classList.toggle("collapsed"); b.setAttribute("aria-expanded", !g.classList.contains("collapsed"));
   });
+  const retiredToggle = $("#addon-show-retired");
+  if (retiredToggle) retiredToggle.onchange = () => { saveRetiredPreference(retiredToggle.checked); location.reload(); };
   const emptyToggle = $("#addon-show-empty");
   if (emptyToggle) emptyToggle.onchange = () => {
     saveEmptyPreference("addon-menu", emptyToggle.checked); location.reload();
@@ -338,6 +341,11 @@ document.addEventListener("click", e => {
   saveRemarks(r, true);
 });
 
+// toggle "Tampilkan yang dicabut" di catatan halaman 5.1/5.2/5.3: preferensi yang sama dengan sidebar, halaman dimuat ulang
+document.addEventListener("change", e => {
+  if (!e.target.matches("[data-retired-toggle]")) return;
+  saveRetiredPreference(e.target.checked); location.reload();
+});
 document.addEventListener("change", e => {
   const box = e.target.closest(".rv-box"); if (!box) return;
   if (e.target.name === "rv-status") setPageReview(box.dataset.page, { action: "status", value: e.target.value });
@@ -456,7 +464,7 @@ function renderTodo(page) {
 
 // ---------- halaman Ringkasan ----------
 async function renderSummary(fresh) {
-  const ids = pages.filter(p => PAGES[p.id] && !PAGES[p.id].static && !p.empty).map(p => p.id);
+  const ids = pages.filter(p => PAGES[p.id] && !PAGES[p.id].static && !p.empty && !p.retired).map(p => p.id);
   const results = await Promise.allSettled(ids.map(id => load(id, fresh)));
   const by = Object.fromEntries(ids.map((id, i) => [id, results[i].status === "fulfilled" ? dataOf(results[i].value) : null]));
   const n = (id, key) => by[id] ? rowsOf(by[id][key]).length : "–";
@@ -642,7 +650,7 @@ function toggleTheme() {
       const { objects } = Object.assign(addonState, await getJson("api/addon/objects"));
       addonCh.pages = addonPages(objects);
       addonCh.pages.forEach(p => { PAGES[p.id] = addonPage(objects.find(o => o.code === p.addon)); });
-      if (!addonCh.pages.length) { addonCh.pages = [{ id: "addon", title: addonCh.title }]; PAGES.addon = addonEmptyPage(null, objects.filter(o => o.shown && !addonHasData(o)).length); }
+      if (!addonCh.pages.length) { addonCh.pages = [{ id: "addon", title: addonCh.title }]; PAGES.addon = addonEmptyPage(null, objects.filter(o => o.shown && !addonHasData(o) && !retiredAddonObject(o)).length); }
     } catch (e) { addonCh.pages = [{ id: "addon", title: addonCh.title }]; PAGES.addon = addonEmptyPage(e.message); }
   }
   // halaman bertanda onlyIfData (mis. UoM) hanya tampil kalau hasil query itu lebih dari 1 baris (bukan cuma "Manual")

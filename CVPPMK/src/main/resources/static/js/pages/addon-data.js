@@ -2,7 +2,7 @@
 // Dibandingkan dengan isi DB oleh addon-sections.js. Ubah di sini kalau addon berubah, bukan di halaman.
 // level: w = dibaca langsung di jalur utama, o = opsional / fitur tertentu. Format baris sama dengan breeding-data.js.
 import { company } from '../company.js';
-import { hiddenAddonTable } from '../data-policy.js';
+import { hiddenAddonTable, retiredAddonTable, retiredAddonField } from '../data-policy.js';
 import * as B from "./breeding-data.js";
 
 const STEM = {
@@ -93,8 +93,8 @@ export function activeAddons() {
   if(!company.addonCatalogs.length)return ADDONS;
   const known=new Map(STEM.TABLES.map(row=>[row[0],row]));
   return company.addonCatalogs.map(c=>({id:c.id,name:c.name,
-    PARAMS:c.base==='stem'?STEM.PARAMS:[],UDFS:c.base==='stem'?STEM.UDFS:[],PROCS:c.base==='stem'?STEM.PROCS:[],
-    TABLES:(c.tables||[]).filter(name=>!hiddenAddonTable(name)).map(name=>known.get(name)||[name,c.name,true,c.name,''])}));
+    PARAMS:c.base==='stem'?STEM.PARAMS:[],UDFS:c.base==='stem'?STEM.UDFS.filter(([tbl,alias])=>!retiredAddonField(tbl,'U_'+alias)):[],PROCS:c.base==='stem'?STEM.PROCS:[],
+    TABLES:(c.tables||[]).filter(name=>!hiddenAddonTable(name)&&!retiredAddonTable(name)).map(name=>known.get(name)||[name,c.name,true,c.name,''])}));
 }
 export const excludedAddonParam = key => company.addonCatalogs.length>0 && B.PARAMS.some(row=>row[0]===String(key).toUpperCase()) && !STEM.PARAMS.some(row=>row[0]===String(key).toUpperCase());
 export const addonHeading = () => company.addonCatalogs.length ? 'Kebutuhan add-on '+activeAddons().map(a=>a.name).join(', ') : 'Kebutuhan addon STEM dan Farm Breeding';
