@@ -243,6 +243,9 @@ export const TEMPLATES = [
 
   // Field dicocokkan ke $metadata SL entity Users (2026-10-18). Sheet Branch / Authorization Group / Authorization = koleksi
   // UserBranchAssignment, UserGroupByUser, UserPermission di dalam user yang sama.
+  // Catatan (2026-11-24, cut off WBI): PATCH UserPermission dengan ID standar General Authorization (OUSR.ALLOWENCES) dijawab
+  // 204 tapi TIDAK tersimpan (/-5002). ID standar harus lewat DI API SBObob.SetSystemPermission; UserPermission SL hanya
+  // untuk ID user-defined (CDPM/USR3, 10001+).
   { no: "23", title: "User & Authorization", entity: "Users",
     note: "Satu user per baris di sheet User. Branch, authorization group, dan izin per menu bisa lebih dari satu: satu baris per item. "
       + "File ini berisi password awal, jangan disebar; minta user mengganti password saat login pertama.",
@@ -262,7 +265,7 @@ export const TEMPLATES = [
       F("Authorization Group", "GroupId", { req: 1, ref: "authgroups", note: "Koleksi UserGroupByUser. Grup otorisasi dari Administration › Authorizations › Authorization Groups; satu baris per grup." })] },
     { name: "Authorization", fields: [
       F("Kode User", "UserCode", { req: 1, sample: "BUDI", parent: 1, note: "Sama dengan Kode User di sheet User." }),
-      F("ID Izin", "PermissionID", { req: 1, noSample: 1, note: "Koleksi UserPermission. ID izin per menu / dokumen dari General Authorizations. Opsional: isi hanya untuk izin yang tidak cukup diatur lewat authorization group." }),
+      F("ID Izin", "PermissionID", { req: 1, noSample: 1, note: "Koleksi UserPermission, hanya untuk ID izin user-defined (add-on, 10001 ke atas). Izin standar General Authorizations tidak tersimpan lewat Service Layer; diimport terpisah lewat DI API (SetSystemPermission). Opsional: isi hanya untuk izin yang tidak cukup diatur lewat authorization group." }),
       F("Izin", "Permission", { req: 1, sample: "Read Only", enum: { Full: "boper_Full", "Read Only": "boper_ReadOnly", "No Authorization": "boper_None" },
         note: "Full, Read Only, atau No Authorization." })] }] },
   // Field dicocokkan ke aksi SeriesService_AddSeries / UpdateSeries (entity Series). Nama kolom sama dengan query langkah
