@@ -261,7 +261,7 @@ function mount() {
   }
   let names = scheduleTabs([]);
   const chatThreads = [];
-  let chat = null, reviewPages = null, RV = null, editable = false, lockConfigured = true;
+  let chat = null, reviewPages = null, RV = null, editable = false;
   let picUsers = [];
   async function loadPicUsers() {
     picUsers = await loadCompanyPicUsers();
@@ -366,9 +366,8 @@ function mount() {
       update();
     });
     const rules = doc.data.rules.filter((rule,i)=>tab==='ringkasan'||i===0&&tab==='master');
-    const lockNote = editable ? '' : `<div class="callout warn lock-note"><b>Mode lihat.</b> PIC dan status bisa diubah lalu Simpan; tanggal dan catatan hanya admin. Diskusi bisa dipakai semua. ${lockConfigured ? `<form id="unlock-form" class="unlock"><label class="sr-only" for="unlock-pw">Password admin</label><input id="unlock-pw" class="control" type="password" autocomplete="current-password" placeholder="Password admin (sama dengan Setup)" maxlength="200"><button class="control secondary" type="submit">Buka kunci</button><span id="unlock-msg" role="alert"></span></form>` : ''}</div>`;
     $('#chat-head-slot').innerHTML = `<span data-chat-slot="${tab==='ringkasan'?'umum':'tab:'+tab}"></span>`;
-    let html = lockNote + (rules.length>1 ? `<div class="callout info rules-note"><ul>${rules.map(rule=>`<li>${esc(rule)}</li>`).join('')}</ul></div>` : rules.map(rule=>`<p class="callout info">${esc(rule)}</p>`).join(''));
+    let html = (rules.length>1 ? `<div class="callout info rules-note"><ul>${rules.map(rule=>`<li>${esc(rule)}</li>`).join('')}</ul></div>` : rules.map(rule=>`<p class="callout info">${esc(rule)}</p>`).join(''));
     if (tab === 'ringkasan') {
       const days = countdown(doc.data.project.goLiveDate);
       const counts={selesai:0,proses:0,belum:0,telat:0}; all.forEach(it=>{ counts[effectiveStatus(it.status,it.endDate)]++; });
@@ -458,19 +457,8 @@ function mount() {
       if (!response.ok || typeof a.editable !== 'boolean') throw new Error('Akses admin belum diketahui');
       editable = a.editable;
       fixedPicIds = Array.isArray(a.fixedPicIds) ? a.fixedPicIds.filter(id => typeof id === 'string') : null;
-      if (!editable) { const s = await (await fetch('api/setup-access', { cache: 'no-store' })).json().catch(() => ({})); lockConfigured = s.configured !== false; }
     } catch { editable = false; /* fail closed: PIC/status remain available; admin fields stay locked */ }
   }
-  view.addEventListener('submit', async e => {
-    if (e.target.id !== 'unlock-form') return;
-    e.preventDefault(); const msg = $('#unlock-msg'), pw = $('#unlock-pw').value;
-    if (!pw) { msg.textContent = 'Isi password dulu.'; return; }
-    try {
-      const r = await fetch('api/setup-access/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
-      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.message || 'Password salah.'); }
-      await loadAccess(); render(); message(editable ? 'Mode admin aktif.' : '');
-    } catch (ex) { msg.textContent = ex.message || 'Gagal membuka kunci.'; }
-  });
   function mountChatSlots() {
     if (!chat) return;
     document.querySelectorAll('[data-chat-slot]').forEach(slot => slot.replaceWith(chat.badge(slot.dataset.chatSlot, threadTitle(slot.dataset.chatSlot), !slot.dataset.chatSlot.startsWith('item:'))));
