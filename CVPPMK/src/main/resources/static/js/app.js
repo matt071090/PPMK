@@ -1,4 +1,4 @@
-import { loadCapabilities, nonBranch, emptyPreference, saveEmptyPreference, addonHasData, reviewableMenus, retiredAddonObject, retiredPreference, saveRetiredPreference } from "./data-policy.js";
+import { loadCapabilities, nonBranch, emptyPreference, saveEmptyPreference, addonHasData, reviewableMenus, retiredAddonObject, retiredPreference, saveRetiredPreference, stdEmptyPreference, saveStdEmptyPreference, hidesPage, stdEmptyPage, resetBlockTally, blockNotice } from "./data-policy.js";
 import { $, $$, esc, slug, company, showCompanyName, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, exportColsOf, exportSheetCols, revealTab } from "./ui.js";
 import { companyTitle, loadCompany } from './company.js';
 import { xlsxBlob, download } from "./xlsx.js";
@@ -12,6 +12,7 @@ const PAGES = { ...GENERAL, ...MODULES, ...UPLOAD };
 extendPages(PAGES);   // section Addon STEM / Farm Breeding di halaman UDT, UDF, Validasi SP
 
 let chapters = [], pages = [];          // pages: daftar datar semua halaman, urut sesuai sidebar
+let stdEmptyCount = 0;                  // jumlah menu SAP standar 0 baris yang terdaftar hideWhenEmpty (config company)
 const cache = new Map();                // id halaman -> Promise data API
 const store = {
   get: k => { try { return localStorage.getItem(k); } catch { return null; } },
@@ -86,7 +87,7 @@ function buildNav() {
   $("#nav").innerHTML = `
     <div class="progress-box"><div class="lbl"><span>Menu sudah sesuai</span><b id="rv-count"></b></div>
       <div class="bar"><div id="rv-ok"></div><div id="rv-nok"></div></div></div>
-    ${addonState.objects ? `<div class="empty-menu-toggle"><label><input type="checkbox" id="addon-show-empty" ${emptyPreference("addon-menu") ? "checked" : ""}> Tampilkan yang kosong</label><small>${addonState.objects.filter(o => o.shown && !addonHasData(o) && !retiredAddonObject(o)).length} menu Addon kosong${emptyPreference("addon-menu") ? "" : " disembunyikan"}</small></div>` : ""}${nRetired ? `<div class="empty-menu-toggle"><label><input type="checkbox" id="addon-show-retired" ${retiredPreference() ? "checked" : ""}> Tampilkan yang dicabut</label><small>${nRetired} item dicabut (Cut off 2027) ${retiredPreference() ? "ditampilkan" : "disembunyikan"}</small></div>` : ""}
+    ${addonState.objects ? `<div class="empty-menu-toggle"><label><input type="checkbox" id="addon-show-empty" ${emptyPreference("addon-menu") ? "checked" : ""}> Tampilkan yang kosong</label><small>${addonState.objects.filter(o => o.shown && !addonHasData(o) && !retiredAddonObject(o)).length} menu Addon kosong${emptyPreference("addon-menu") ? "" : " disembunyikan"}</small></div>` : ""}${stdEmptyCount ?`<div class="empty-menu-toggle"><label><input type="checkbox" id="std-show-empty" ${stdEmptyPreference() ? "checked" : ""}> Tampilkan yang kosong</label><small>${stdEmptyCount} menu SAP standar kosong ${stdEmptyPreference() ? "ditampilkan" : "disembunyikan"}</small></div>` : ""}${nRetired ? `<div class="empty-menu-toggle"><label><input type="checkbox" id="addon-show-retired" ${retiredPreference() ? "checked" : ""}> Tampilkan yang dicabut</label><small>${nRetired} item dicabut (Cut off 2027) ${retiredPreference() ? "ditampilkan" : "disembunyikan"}</small></div>` : ""}
     ${chapters.map(ch => {
       const flat = ch.pages.length === 1;
       if (flat) { // bab satu halaman: tampil sebagai satu tautan saja
@@ -109,6 +110,8 @@ function buildNav() {
   });
   const retiredToggle = $("#addon-show-retired");
   if (retiredToggle) retiredToggle.onchange = () => { saveRetiredPreference(retiredToggle.checked); location.reload(); };
+  const stdToggle = $("#std-show-empty");
+  if (stdToggle) stdToggle.onchange = () => { saveStdEmptyPreference(stdToggle.checked); location.reload(); };
   const emptyToggle = $("#addon-show-empty");
   if (emptyToggle) emptyToggle.onchange = () => {
     saveEmptyPreference("addon-menu", emptyToggle.checked); location.reload();
@@ -346,6 +349,11 @@ document.addEventListener("change", e => {
   if (!e.target.matches("[data-retired-toggle]")) return;
   saveRetiredPreference(e.target.checked); location.reload();
 });
+// toggle "Tampilkan yang kosong" di catatan blok kosong sebuah halaman: preferensi yang sama dengan sidebar, halaman dimuat ulang
+document.addEventListener("change", e => {
+  if (!e.target.matches("[data-std-toggle]")) return;
+  saveStdEmptyPreference(e.target.checked); location.reload();
+});
 document.addEventListener("change", e => {
   const box = e.target.closest(".rv-box"); if (!box) return;
   if (e.target.name === "rv-status") setPageReview(box.dataset.page, { action: "status", value: e.target.value });
@@ -428,8 +436,10 @@ async function route(fresh = false, keepScroll = false) {
     else {
       const res = await load(id, fresh);
       const def = PAGES[id], d = dataOf(res), errs = queryErrors(res);
+      resetBlockTally();
+      const found = findings(id, pageChecks(def, d)), body = def.render(d);   // temuan dan render mencatat blok kosong yang disembunyikan
       html = (errs.length ? `<div class="error">Query gagal: ${errs.map(([k, v]) => `<b>${esc(k)}</b> – ${esc(v.error)}`).join("<br>")}</div>` : "")
-        + findings(id, pageChecks(def, d)) + def.render(d);
+        + blockNotice() + found + body;
       meta = `<span>Diperbarui ${esc(res.generatedAt.replace("T", " "))}</span><span>Query ${queryMs(res)} ms</span>`;
     }
   } catch (e) {
@@ -658,6 +668,15 @@ function toggleTheme() {
   const hide = new Set((await Promise.all(optional.map(p => load(p.id).then(res => rowsOf(dataOf(res)[p.onlyIfData]).length > 1 ? null : p.id, () => null))))
     .filter(Boolean));
   chapters = chapters.map(c => ({ ...c, pages: c.pages.filter(p => !hide.has(p.id)) })).filter(c => c.pages.length);
+  // halaman terdaftar hideWhenEmpty (config company) yang datanya termuat dan 0 baris: hilang dari sidebar, tidak dihitung sebagai menu
+  // yang direview dan tidak jadi temuan. Gagal memuat = bukan kosong: halaman tetap tampil dan menampilkan galatnya.
+  const stdListed = chapters.flatMap(c => c.pages).filter(p => PAGES[p.id] && !PAGES[p.id].static && hidesPage(p.id));
+  if (stdListed.length) {
+    const emptied = new Set((await Promise.all(stdListed.map(p => load(p.id).then(res => stdEmptyPage(p.id, dataOf(res)) ? p.id : null, () => null)))).filter(Boolean));
+    stdEmptyCount = emptied.size;
+    const showStd = stdEmptyPreference();
+    if (emptied.size) chapters = chapters.map(c => ({ ...c, pages: c.pages.flatMap(p => !emptied.has(p.id) ? [p] : showStd ? [{ ...p, status: null, empty: true }] : []) })).filter(c => c.pages.length);
+  }
   pages = chapters.flatMap(c => c.pages);
   buildNav(); buildIndex();
 

@@ -1,4 +1,4 @@
-import { nonBranch, hiddenAddonTable, emptyPreference, saveEmptyPreference, retiredAddonTable, retiredAddonField, retiredPreference, retiredNotice, retiredBadge } from "../data-policy.js";
+import { nonBranch, blockHidden, hiddenAddonTable, emptyPreference, saveEmptyPreference, retiredAddonTable, retiredAddonField, retiredPreference, retiredNotice, retiredBadge } from "../data-policy.js";
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
 import { company } from "../company.js";
@@ -15,6 +15,7 @@ function assetReadiness(d) {
   const guard = (k, title, q, why, fn) => {
     if (d[k] && d[k].error) add("danger", title, "query gagal", why, `<div class="error">${esc(d[k].error)}</div>`, q);
     else if (!d[k]) add("danger", title, "query tidak ada hasilnya", why, "", q);
+    else if (blockHidden("fixed-asset", k, d[k], title)) return;   // 0 baris dan terdaftar hideWhenEmpty (config company)
     else fn(R(k));
   };
   guard("classes", "Asset Class", "01_classes.sql", "Setiap aset butuh asset class dengan depreciation area Main Area dan account determination. Kode class dipakai kolom Asset Class di file aset.", rows => {
@@ -323,8 +324,8 @@ function bpDetail(b, ctx) {
     ["Payment Terms", fieldList([["Payment Terms", b.PymntGroup], ["Price List", b.PriceList],
       ["Total Discount %", +b.Discount ? b.Discount : null, money], ["Credit Limit", +b.CreditLine ? b.CreditLine : null, money],
       ["Commitment Limit", +b.DebtLine ? b.DebtLine : null, money]])],
-    ["Payment Run", fieldList([["House Bank", b.HouseBank], ["House Bank Account", b.HousBnkAct], ["Default Payment Method", b.PymCode],
-      ["Payment Methods", b.PymMethods, v => tags(v)]])],
+    ...(ctx.payRunOff ? [] : [["Payment Run", fieldList([["House Bank", b.HouseBank], ["House Bank Account", b.HousBnkAct], ["Default Payment Method", b.PymCode],
+      ["Payment Methods", b.PymMethods, v => tags(v)]])]]),
     ["Accounting", fieldList([[b.CardType === "S" ? "Accounts Payable" : "Accounts Receivable", b.DebPayAcct, v => acctPair(v, b.DebPayName)],
       ["Down Payment Clearing Account", b.DpmClear, v => acctPair(v, b.DpmClearName)]])],
     ...(ctx.udf.length ? [["UDF", fieldList(ctx.udf.map(u => [u.label, b[u.col] === "-" ? null : b[u.col]]))]] : [])
@@ -511,6 +512,7 @@ export const PAGES = {
     render(d) {
       const types = Object.fromEntries(rowsOf(d.dep_types).map(t => [t.Code, t]));
       const deprType = v => { const t = types[v]; return t ? `${esc(v)}<span class="raw">${esc(DPR_METH[t.DprMeth] || t.DprMeth)}</span>` : val(v); };
+      const noAssets = blockHidden("fixed-asset", "assets", d.assets, "Fixed Asset Master Data");
       return assetReadiness(d) + section("classes", "Asset Class", table([{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
           { key: "BPLName", label: "Branch" },
           { key: "AssetType", label: "Asset Type", fmt: codedCell(ASSET_TYPE) }, { key: "DprAreaID", label: "Depreciation Area" },
@@ -519,12 +521,12 @@ export const PAGES = {
           { key: "UseLife", label: "Masa manfaat (bulan)", num: 1 }, { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.classes)], rowsOf(d.classes), { keep: ["AcctDtn"] }),
           { no: "2.13.1", lead: "Satu kelas bisa punya beberapa depreciation area (mis. komersial dan fiskal). Setiap kelas terikat ke satu branch: prefix T- = CV-TRADING, K- = CV-KOMERSIAL. "
             + "Kolom Depreciation Type ikut menampilkan metode penyusutannya." })
-        + section("assets", "Fixed Asset Master Data", table([{ key: "ItemCode", label: "Kode Aset" }, { key: "ItemName", label: "Nama" },
+        + (noAssets ? "" : section("assets", "Fixed Asset Master Data", table([{ key: "ItemCode", label: "Kode Aset" }, { key: "ItemName", label: "Nama" },
           { key: "AssetClass", label: "Asset Class" }, { key: "ItmsGrpNam", label: "Item Group" }, { key: "DprArea", label: "Depreciation Area" },
           { key: "DprStart", label: "Mulai penyusutan" }, { key: "UsefulLife", label: "Masa manfaat (bulan)", num: 1 },
           { key: "DprType", label: "Depreciation Type", fmt: deprType }], rowsOf(d.assets), { keep: ["DprArea", "DprStart", "UsefulLife"] }),
           { no: "2.13.2", lead: "Item tipe Fixed Asset beserta parameter penyusutannya (satu baris per depreciation area). Nilai perolehan masuk lewat dokumen Asset Capitalization. "
-            + "Upload aset: Setup tahap E, langkah Fixed Asset Master Data (template T25) lalu Asset Capitalization (T26)." });
+            + "Upload aset: Setup tahap E, langkah Fixed Asset Master Data (template T25) lalu Asset Capitalization (T26)." }));
     }
   },
 
@@ -632,26 +634,32 @@ export const PAGES = {
     checks(d) {
       const noBranch = rowsOf(d.bp).filter(bpNoBranch).length;
       const out = noBranch ? [["warn", `${noBranch} BP aktif belum di-assign ke branch mana pun, sehingga tidak bisa dipakai di dokumen.`]] : [];
-      if (!rowsOf(d.shipping).length) out.push(["info", "Belum ada shipping type."]);
+      if (!rowsOf(d.shipping).length && !blockHidden("business-partners", "shipping", d.shipping, "Shipping Type")) out.push(["info", "Belum ada shipping type."]);
       return out;
     },
     render(d) {
       const bp = rowsOf(d.bp).map(b => ({ ...b, Type: BP_CARD[b.CardType] || b.CardType })), groups = rowsOf(d.groups);
       const byCode = rows => rows.reduce((m, r) => (m.get(r.CardCode) || m.set(r.CardCode, []).get(r.CardCode)).push(r) && m, new Map());
-      const ctx = { contacts: byCode(rowsOf(d.contacts)), addresses: byCode(rowsOf(d.addresses)), udf: d.bp?.udf || [],
+      // Sheet Excel yang 0 baris dan terdaftar hideWhenEmpty tidak diikutkan. Branch Assignment kosong hanya wajar di company tanpa branch;
+      // di company dengan branch, kosongnya adalah masalah dan sheet tetap ada.
+      const sheetNames = Object.fromEntries(Object.entries({ xl_general: "General", xl_contacts: "Contact Persons", xl_addresses: "Addresses",
+        xl_payment_terms: "Payment Terms", xl_bank_accounts: "Bank Accounts", xl_payment_run: "Payment Run",
+        xl_accounting_general: "Accounting - General", xl_accounting_tax: "Accounting - Tax", xl_wtax_codes: "WTax Codes",
+        xl_branch_assignment: "Branch Assignment" })
+        .filter(([k, name]) => (k === "xl_branch_assignment" && !nonBranch()) || !blockHidden("business-partners", k, d[k], `Excel ${name}`)));
+      // tab Payment Run di detail BP: disembunyikan hanya kalau tidak ada satu pun BP yang mengisinya (data CRD2 dan kolom OCRD sama-sama kosong)
+      const payRunOff = !sheetNames.xl_payment_run && bp.every(b => ["HouseBank", "HousBnkAct", "PymCode", "PymMethods"].every(k => isEmpty(b[k])));
+      const ctx = { payRunOff, contacts: byCode(rowsOf(d.contacts)), addresses: byCode(rowsOf(d.addresses)), udf: d.bp?.udf || [],
         branches: [...new Set(bp.flatMap(b => String(b.Branches || "").split("|")).filter(Boolean))] };
       const tab = (t, name) => {
         const list = bp.filter(b => (b.CardType === "L" ? "C" : b.CardType) === t); // lead memakai customer group
         return bpView(t, name, list, groups, ctx);
       };
       // Excel BP Master Data: satu file, satu sheet per query xl_* (sql/business-partners/1x_xl_*.sql), mengikuti tab layar BP Master Data
-      const xlsx = exportSheets(sqlSheets(d, { xl_general: "General", xl_contacts: "Contact Persons", xl_addresses: "Addresses",
-        xl_payment_terms: "Payment Terms", xl_bank_accounts: "Bank Accounts", xl_payment_run: "Payment Run",
-        xl_accounting_general: "Accounting - General", xl_accounting_tax: "Accounting - Tax", xl_wtax_codes: "WTax Codes",
-        xl_branch_assignment: "Branch Assignment" }), "BP Master Data", { prefKey: "fields:bp" });
+      const xlsx = exportSheets(sqlSheets(d, sheetNames), "BP Master Data", { prefKey: "fields:bp" });
       // Shipping Type hanya dipakai di BP (tab General), jadi ditampilkan di halaman ini
       const ships = rowsOf(d.shipping).map(x => ({ ...x, Used: bp.filter(b => b.ShipType === x.TrnspName).length }));
-      const shipping = section("shipping", "Shipping Type", table([{ key: "TrnspCode", label: "Kode", num: 1 }, { key: "TrnspName", label: "Shipping Type" },
+      const shipping = blockHidden("business-partners", "shipping", d.shipping, "Shipping Type") ? "" : section("shipping", "Shipping Type", table([{ key: "TrnspCode", label: "Kode", num: 1 }, { key: "TrnspName", label: "Shipping Type" },
           { key: "WebSite", label: "Website" }, { key: "Active", label: "Aktif", fmt: badgeYN },
           { key: "Used", label: "Dipakai BP", num: 1, fmt: v => v ? num(v) : `<span class="muted">0</span>` }, ...udfCols(d.shipping)], ships, { noExport: true }),
         { lead: "Administration › Setup › General › Shipping Types. Cara pengiriman default BP (tab General), ikut terbawa ke dokumen." });

@@ -50,3 +50,34 @@ export const RETIRED_LABEL = 'Dicabut (Cut off 2027)';
 // Catatan di atas daftar: jumlah item dicabut + toggle yang sama dengan sidebar. n = 0 (company tanpa rule) tidak menampilkan apa pun.
 export const retiredNotice = (n, show = retiredPreference()) => n ? `<p class="sec-lead retired-note"><label><input type="checkbox" data-retired-toggle${show ? ' checked' : ''}> Tampilkan yang dicabut</label> <span class="muted">· ${n} item dicabut (Cut off 2027) ${show ? 'ditampilkan' : 'disembunyikan'}</span></p>` : '';
 export const retiredBadge = '<span class="badge retired">Dicabut</span>';
+
+// Halaman/blok SAP standar yang kosong disembunyikan: "tidak ada data = tidak masuk web". Berbasis config company (hideWhenEmpty,
+// allowlist eksplisit; halaman inti seperti COA, Item, Warehouse tidak pernah masuk daftar). Entri "id-halaman" = satu menu,
+// "id-halaman/id-blok" = satu blok di dalam halaman (id blok = kunci hasil query). Tanpa config (CV) tidak ada yang disembunyikan.
+// Hanya disembunyikan kalau datanya termuat tanpa galat dan 0 baris; data yang gagal dimuat tetap tampil beserta galatnya.
+const hideListed = key => (company.hideWhenEmpty || []).includes(key);
+export const stdEmptyPreference = () => emptyPreference('std-empty');
+export const saveStdEmptyPreference = show => saveEmptyPreference('std-empty', show);
+export const resultEmpty = r => !!r && !r.error && Array.isArray(r.rows) && r.rows.length === 0;
+export const pageEmpty = (results, keys) => {
+  const list = keys ? keys.map(k => (results || {})[k]) : Object.values(results || {});
+  return list.length > 0 && list.every(resultEmpty);
+};
+export const hidesPage = id => hideListed(id);
+// Halaman terdaftar yang seluruh datanya termuat dan 0 baris (belum memperhitungkan toggle "Tampilkan yang kosong").
+export const stdEmptyPage = (id, results) => hideListed(id) && pageEmpty(results);
+// Blok di dalam halaman. Dicatat per render supaya catatan "N blok kosong disembunyikan" tahu apa yang disembunyikan; idempotent per blok.
+const tally = { hidden: new Map(), shown: new Map() };
+export const resetBlockTally = () => { tally.hidden.clear(); tally.shown.clear(); };
+export function blockHidden(pageId, blockId, result, label = blockId) {
+  if (!hideListed(`${pageId}/${blockId}`) || !resultEmpty(result)) return false;
+  const show = stdEmptyPreference();
+  (show ? tally.shown : tally.hidden).set(blockId, label);
+  return !show;
+}
+const escText = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+export function blockNotice() {
+  const show = tally.shown.size > 0, labels = [...(show ? tally.shown : tally.hidden).values()];
+  if (!labels.length) return '';
+  return `<p class="sec-lead retired-note std-empty-note"><label><input type="checkbox" data-std-toggle${show ? ' checked' : ''}> Tampilkan yang kosong</label> <span class="muted">· ${labels.length} blok kosong ${show ? 'ditampilkan' : 'disembunyikan'}: ${escText(labels.join(', '))}</span></p>`;
+}

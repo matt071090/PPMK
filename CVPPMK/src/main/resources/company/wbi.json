@@ -20,6 +20,20 @@
       "WBI-GRH"
     ]
   },
+  "hideWhenEmpty": [
+    "payment-methods",
+    "freight",
+    "landed-cost",
+    "business-partners/shipping",
+    "business-partners/xl_bank_accounts",
+    "business-partners/xl_payment_run",
+    "business-partners/xl_branch_assignment",
+    "fixed-asset/assets",
+    "fixed-asset/locations",
+    "fixed-asset/dimensions",
+    "fixed-asset/projects",
+    "fixed-asset/sp_notif"
+  ],
   "addons": {
     "mapping": "addon-mapping-wbi.json",
     "catalogs": [
