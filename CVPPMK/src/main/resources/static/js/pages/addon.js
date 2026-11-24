@@ -72,7 +72,7 @@ export function addonPage(o) {
           const keys = new Set(visible.map(h => h[key]));
           kids.forEach((k, i) => { sheets[i + 1].rows = k.rows.filter(r => keys.has(r[linkKey(k.t)])); });
         };
-        body = exportSheets(sheets, objTitle(o))
+        body = exportSheets(sheets, objTitle(o), { prefKey: `cols:ad-${o.code}` })
           + expandList(`ad-${o.code}`, cols, rows, { expand: detail, lazy: true, noExport: true, onFilter, emptyRow, searchText: h => JSON.stringify([h, ...kids.map(k => childOf(k, h))]), placeholder: "Cari kode / nama / isi child…" });
       }
       return branchNotice(allRows.length - branchRows.length) + info + kpis

@@ -572,7 +572,7 @@ export const PAGES = {
     render(d) {
       const items = rowsOf(d.items), udf = d.items?.udf || [], yes = c => items.filter(i => i[c] === "Y").length;
       const groups = [...new Set(items.map(i => i["Item Group"]).filter(Boolean))].sort();
-      return exportButton(autoCols(d.items), items, "Item")
+      return exportButton(autoCols(d.items), items, "Item", { prefKey: "fields:item-v" })
         + kpis([[items.length, "Total item"], [yes("Inventory Item"), "Inventory item"], [yes("Sales Item"), "Sales item"],
           [yes("Purchasing Item"), "Purchase item"], [udf.length, "UDF item"]])
         + section("list", "Daftar Item", listDetail("item-v", items, {
@@ -648,7 +648,7 @@ export const PAGES = {
       const xlsx = exportSheets(sqlSheets(d, { xl_general: "General", xl_contacts: "Contact Persons", xl_addresses: "Addresses",
         xl_payment_terms: "Payment Terms", xl_bank_accounts: "Bank Accounts", xl_payment_run: "Payment Run",
         xl_accounting_general: "Accounting - General", xl_accounting_tax: "Accounting - Tax", xl_wtax_codes: "WTax Codes",
-        xl_branch_assignment: "Branch Assignment" }), "BP Master Data");
+        xl_branch_assignment: "Branch Assignment" }), "BP Master Data", { prefKey: "fields:bp" });
       // Shipping Type hanya dipakai di BP (tab General), jadi ditampilkan di halaman ini
       const ships = rowsOf(d.shipping).map(x => ({ ...x, Used: bp.filter(b => b.ShipType === x.TrnspName).length }));
       const shipping = section("shipping", "Shipping Type", table([{ key: "TrnspCode", label: "Kode", num: 1 }, { key: "TrnspName", label: "Shipping Type" },

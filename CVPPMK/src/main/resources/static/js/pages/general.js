@@ -755,8 +755,8 @@ sap.sld.password=[PASSWORD]</pre></div>`) + users;
         ...(!nonBranch() ? [{ key: "Branches", label: "Branch", fmt: v => tags(v) }] : []), { key: "LastLogin", label: "Login terakhir" }, ...udfCols(d.users)];
       // Excel: branch bisa lebih dari satu per user, jadi dipisah ke sheet "Branch Assignment" (sql/users/02_branches.sql)
       const xlsx = exportSheets([{ name: "Users", cols: cols.filter(c => c.key !== "Branches"), rows: rowsOf(d.users) },
-        ...(!nonBranch() ? sqlSheets(d, { branches: "Branch Assignment" }) : [])], "User");
-      return section("users", "User SAP B1", xlsx + table(cols, rowsOf(d.users), { noExport: true, keep: ["Branches"] }));
+        ...(!nonBranch() ? sqlSheets(d, { branches: "Branch Assignment" }) : [])], "User", { prefKey: "cols:users" });
+      return section("users", "User SAP B1", xlsx + table(cols, rowsOf(d.users), { noExport: true, keep: ["Branches"], prefId: "users" }));
     }
   },
 

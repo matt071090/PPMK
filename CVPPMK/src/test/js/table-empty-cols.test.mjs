@@ -1,6 +1,7 @@
 // Kolom yang kosong di SEMUA baris disembunyikan (layar + Excel milik tabel), bisa dinyalakan lagi lewat toggle per tabel.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { blankHtml, emptyColumnKeys, colPrefKey } from '../../main/resources/static/js/table-cols.js';
 
 // ---- logika murni
@@ -89,10 +90,39 @@ test('tabel berhalaman: kolom kosong ditentukan dari seluruh data, bukan halaman
   assert.deepEqual(UI.exportColsOf(UI.exportOf('pg-t')).map(c => c.key), ['Code', 'Name', 'Phone', 'Qty']);
   assert.equal(UI.exportOf('pg-t').rows.length, 40);
 });
-test('export lepas (exportButton/exportSheets, sheet query apa adanya) tetap memuat semua kolom', () => {
+const newest = () => { const ids = [...Array(300).keys()].map(i => 'x' + (i + 1)).filter(k => UI.exportOf(k)); return UI.exportOf(ids.at(-1)); };
+test('export lepas: kolom kosong di semua baris tidak ikut Excel, toggle halaman menyalakan kembali (Item)', () => {
   store.clear();
-  UI.exportButton(cols, rows, 'Item');
-  const id = [...Array(50).keys()].map(i => `x${i + 1}`).find(k => UI.exportOf(k) && UI.exportOf(k).pref == null && UI.exportOf(k).cols === cols);
-  assert.ok(id);
-  assert.deepEqual(UI.exportColsOf(UI.exportOf(id)).map(c => c.key), cols.map(c => c.key));
+  UI.exportButton(cols, rows, 'Item', { prefKey: 'fields:item-v' });
+  const x = newest();
+  assert.equal(x.cols, cols);
+  assert.deepEqual(UI.exportColsOf(x).map(c => c.key), ['Code', 'Name', 'Phone', 'Qty']);
+  assert.deepEqual(UI.exportRows(UI.exportColsOf(x), [])[0], ['Kode', 'Nama', 'Telepon', 'Jumlah']);
+  store.set('show-empty:fields:item-v', '1');                      // toggle 'Tampilkan field kosong' menyala
+  assert.deepEqual(UI.exportColsOf(x).map(c => c.key), cols.map(c => c.key));
+});
+test('export lepas tanpa kunci toggle tetap lengkap (tidak ada jalan menyalakan kembali)', () => {
+  store.clear();
+  UI.exportButton(cols, rows, 'Lain');
+  assert.deepEqual(UI.exportColsOf(newest()).map(c => c.key), cols.map(c => c.key));
+});
+test('exportSheets: tiap sheet menghitung kolom kosongnya sendiri; kolom pertama dan keep tetap; toggle menyalakan semua', () => {
+  store.clear();
+  const sheetA = { name: 'General', cols, rows };
+  const sheetB = { name: 'Alamat', cols: [{ key: 'Code', label: 'Kode' }, { key: 'Street', label: 'Jalan' }, { key: 'Zip', label: 'Pos' }], rows: [{ Code: 'A', Street: 'x', Zip: null }] };
+  UI.exportSheets([sheetA, sheetB], 'BP Master Data', { prefKey: 'fields:bp' });
+  let x = newest();
+  assert.deepEqual(UI.exportSheetCols(x, sheetA).map(c => c.key), ['Code', 'Name', 'Phone', 'Qty']);
+  assert.deepEqual(UI.exportSheetCols(x, sheetB).map(c => c.key), ['Code', 'Street']);
+  UI.exportSheets([sheetA], 'BP', { prefKey: 'fields:bp', keep: ['Npwp'] });
+  x = newest();
+  assert.deepEqual(UI.exportSheetCols(x, sheetA).map(c => c.key), ['Code', 'Name', 'Npwp', 'Phone', 'Qty']);
+  store.set('show-empty:fields:bp', '1');
+  assert.deepEqual(UI.exportSheetCols(x, sheetB).map(c => c.key), ['Code', 'Street', 'Zip']);
+});
+test('export tabel Users/Addon memakai kunci toggle tabelnya (cols:users, cols:ad-<kode>)', () => {
+  const g = readFileSync(new URL('../../main/resources/static/js/pages/general.js', import.meta.url), 'utf8');
+  const a = readFileSync(new URL('../../main/resources/static/js/pages/addon.js', import.meta.url), 'utf8');
+  assert.match(g, /prefKey: "cols:users"/); assert.match(g, /prefId: "users"/);
+  assert.ok(a.includes("exportSheets(sheets, objTitle(o), { prefKey:")); assert.ok(a.includes("cols:ad-"));
 });

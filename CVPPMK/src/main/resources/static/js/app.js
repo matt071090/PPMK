@@ -1,5 +1,5 @@
 import { loadCapabilities, nonBranch, emptyPreference, saveEmptyPreference, addonHasData, reviewableMenus } from "./data-policy.js";
-import { $, $$, esc, slug, company, showCompanyName, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, exportColsOf, revealTab } from "./ui.js";
+import { $, $$, esc, slug, company, showCompanyName, callouts, flushMounts, rowsOf, table, resetExports, exportOf, exportRows, exportColsOf, exportSheetCols, revealTab } from "./ui.js";
 import { companyTitle, loadCompany } from './company.js';
 import { xlsxBlob, download } from "./xlsx.js";
 import { PAGES as GENERAL } from "./pages/general.js";
@@ -510,7 +510,7 @@ function exportTitle(btn) {
 function exportExcel(buttons) {
   const page = pages.find(p => p.id === current);
   const sheets = buttons.map(b => ({ b, x: exportOf(b.dataset.export) })).filter(s => s.x)
-    .flatMap(({ b, x }) => x.sheets ? x.sheets.map(s => ({ name: s.name, rows: exportRows(exportColsOf(s), s.rows) }))
+    .flatMap(({ b, x }) => x.sheets ? x.sheets.map(s => ({ name: s.name, rows: exportRows(exportSheetCols(x, s), s.rows) }))
       : [{ name: exportTitle(b), rows: exportRows(exportColsOf(x), x.rows) }]);
   if (!sheets.length) return;
   const base = `${page.no ? page.no + " " : ""}${page.title}`;

@@ -155,14 +155,17 @@ export function cellText(html) {
 }
 // Sel persis seperti yang dirender tabel (dipakai juga untuk menentukan kolom kosong).
 const cellHtml = (c, r) => c.fmt ? c.fmt(r[c.key], r) : val(r[c.key]);
-// Kolom Excel = kolom yang tampil di layar: kolom kosong di semua baris tidak ikut, kecuali toggle "Tampilkan kolom kosong" tabel itu menyala.
-// x: entri registri export. Hanya export milik tabel (membawa pref + emptyKeys) yang mengikuti; export lepas
-// (exportButton/exportSheets: sheet query apa adanya, dipakai sebagai template) tetap memuat semua kolom.
+// Kolom Excel = kolom yang tampil di layar: kolom kosong di semua baris tidak ikut, kecuali toggle "Tampilkan kolom/field kosong" menyala.
+// x: entri registri export. Tabel membawa pref + emptyKeys (keputusan dari seluruh data). Export lepas (exportButton/exportSheets)
+// membawa prefKey toggle halamannya (mis. fields:item-v) dan kolom kosongnya dihitung dari barisnya sendiri; tanpa prefKey tetap lengkap.
+// Tidak ada export yang dibaca ulang sebagai template upload (Setup hanya membaca template T-nomor miliknya), jadi semuanya ikut aturan ini.
 export function exportColsOf(x) {
-  if (x.pref == null || emptyPreference(`cols:${x.pref}`)) return x.cols;
-  const hide = new Set(x.emptyKeys || []);
+  const key = x.prefKey ?? (x.pref != null ? `cols:${x.pref}` : null);
+  if (key == null || emptyPreference(key)) return x.cols;
+  const hide = new Set(x.emptyKeys || emptyColumnKeys(x.cols, x.rows, cellHtml, x.keep));
   return x.cols.filter(c => !hide.has(c.key));
 }
+export const exportSheetCols = (x, sheet) => exportColsOf({ ...sheet, prefKey: x.prefKey, keep: x.keep });
 // Baris tabel -> baris Excel. Kolom angka diekspor sebagai angka dari nilai mentahnya.
 export function exportRows(cols, rows) {
   return [cols.map(c => c.label), ...rows.map(r => cols.map(c => {
@@ -176,16 +179,16 @@ const exportBtn = id => `<button type="button" class="xbtn" data-export="${id}" 
   <svg width="13" height="13" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0l-4-4m4 4l4-4M4 16h12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>Excel</button>`;
 
 // Tombol Excel saja (tanpa tabel), untuk tampilan yang bukan tabel. title = nama sheet.
-export function exportButton(cols, rows, title) {
+export function exportButton(cols, rows, title, { prefKey, keep } = {}) {
   const id = `x${++exportSeq}`;
-  exportsReg.set(id, { cols, rows });
+  exportsReg.set(id, { cols, rows, prefKey, keep });
   return `<div class="xbar">${exportBtn(id).replace("<button ", `<button data-title="${esc(title || "")}" `)}</div>`;
 }
 
 // Tombol Excel satu file berisi beberapa sheet. sheets: [{ name, cols, rows }].
-export function exportSheets(sheets, title) {
+export function exportSheets(sheets, title, { prefKey, keep } = {}) {
   const id = `x${++exportSeq}`;
-  exportsReg.set(id, { sheets });
+  exportsReg.set(id, { sheets, prefKey, keep });
   return `<div class="xbar">${exportBtn(id).replace("<button ", `<button data-title="${esc(title || "")}" `).replace("Excel</button>", `Excel (${sheets.length} sheet)</button>`)}</div>`;
 }
 // Satu sheet per file SQL halaman, kolom apa adanya dari query (autoCols). names: { keyHasilQuery: "Nama sheet" }
