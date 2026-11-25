@@ -223,7 +223,7 @@ function udfObjects(fields) {
 // ---------- tampilan master data: daftar kiri + detail kanan (dipakai BP & Item) ----------
 // o.item(r): isi baris daftar · o.text(r): teks yang dicari · o.detail(r): isi panel kanan · o.dim(r): baris redup (inactive)
 // o.chips: [{ label, test, title }] (chip pertama = semua) · o.select: { label, options: [[nilai, teks]], key(r) }
-// o.pageSize: bila diisi, daftar kiri dipaging sebesar itu (Export Excel tetap memuat semua baris)
+// o.pageSize: bila diisi, daftar kiri dipaging sebesar itu; o.pageSizes: pilihan di pager bawah (0 = Semua), pilihan diingat per sesi tab (Export Excel tetap memuat semua baris)
 // o.checks: [{ label, test }] (dicentang = hanya baris yang lolos test) · o.noun: kata benda untuk hitungan
 // Toggle "Tampilkan field kosong": simpan per browser, semua panel detail dengan kunci sama ikut (juga Excel yang memakai kunci itu).
 document.addEventListener("change", e => {
@@ -243,9 +243,11 @@ function listDetail(id, rows, o) {
   onMount(() => {
     const box = $(`#${id}`); if (!box) return;
     const pane = $(".md-pane", box), all = $$(".md-item", box), q = $("input[type=search]", box), cnt = $(".md-count", box);
-    const sel = $("select", box), boxes = $$("[data-chk]", box), text = rows.map(r => o.text(r).toLowerCase());
+    const sel = $(".toolbar select", box), boxes = $$("[data-chk]", box), text = rows.map(r => o.text(r).toLowerCase());
     let chip = chips[0], page = 1;
-    const pagers = $$(".md-pager", box), size = +o.pageSize || 0;
+    const pagers = $$(".md-pager", box), sizes = o.pageSizes || [o.pageSize || 0], sizeKey = `page-size:${id}`;
+    let size = o.pageSize ? +o.pageSize : 0;            // 0 = Semua (tanpa paging)
+    try { const v = sessionStorage.getItem(sizeKey); if (v !== null && sizes.includes(+v)) size = +v; } catch (e) { /* tanpa penyimpanan: pakai default */ }
     // Field kosong di panel detail disembunyikan (catatan jumlah + toggle per browser, kunci fields:<id>); daftar kiri tidak berubah.
     const prefKey = `fields:${o.prefId || id}`;
     const decorate = () => {
@@ -269,11 +271,13 @@ function listDetail(id, rows, o) {
       all.forEach((x, i) => { x.hidden = !vis.has(i); });
       cnt.textContent = `${hit.length.toLocaleString("id-ID")} dari ${all.length.toLocaleString("id-ID")} ${o.noun}`;
       pagers.forEach(pager => {
-        pager.hidden = !size || w.pages < 2;
-        pager.innerHTML = `<span role="status">Menampilkan ${w.from.toLocaleString("id-ID")}-${w.to.toLocaleString("id-ID")} dari ${hit.length.toLocaleString("id-ID")} ${esc(o.noun)}</span>
-          <div><button type="button" class="cbtn" data-pg="-1"${w.page === 1 ? " disabled" : ""} aria-label="Halaman sebelumnya">Sebelumnya</button>
+        const bottom = pager.classList.contains("md-pager-bottom"), nav = size && w.pages > 1;
+        pager.hidden = !bottom && !nav;                    // pager bawah selalu ada (memuat pilihan ukuran halaman)
+        pager.innerHTML = `<span role="status">Menampilkan ${w.from.toLocaleString("id-ID")}-${w.to.toLocaleString("id-ID")} dari ${hit.length.toLocaleString("id-ID")} ${esc(o.noun)}</span>`
+          + (bottom && sizes.length > 1 ? `<label class="md-psize">Tampilkan <select data-psize aria-label="Jumlah ${esc(o.noun)} per halaman">${sizes.map(n => `<option value="${n}"${n === size ? " selected" : ""}>${n ? n : "Semua"}</option>`).join("")}</select></label>` : "")
+          + (nav ? `<div><button type="button" class="cbtn" data-pg="-1"${w.page === 1 ? " disabled" : ""} aria-label="Halaman sebelumnya">Sebelumnya</button>
           <span>Halaman ${w.page} dari ${w.pages}</span>
-          <button type="button" class="cbtn" data-pg="1"${w.page === w.pages ? " disabled" : ""} aria-label="Halaman berikutnya">Berikutnya</button></div>`;
+          <button type="button" class="cbtn" data-pg="1"${w.page === w.pages ? " disabled" : ""} aria-label="Halaman berikutnya">Berikutnya</button></div>` : "");
       });
       // item terpilih tetap tampil di panel detail selama masih lolos filter, juga bila berada di halaman lain
       const cur = all.find(x => x.classList.contains("on"));
@@ -281,6 +285,11 @@ function listDetail(id, rows, o) {
       else if (!cur || !hit.includes(all.indexOf(cur))) show(all[hit[(w.from || 1) - 1]]);
     };
     pagers.forEach(pager => pager.onclick = e => { const b = e.target.closest("[data-pg]"); if (!b || b.disabled) return; page += +b.dataset.pg; apply(true); $(".md-list", box).scrollTop = 0; });
+    pagers.forEach(pager => pager.onchange = e => {
+      if (!e.target.matches("[data-psize]")) return;
+      size = +e.target.value; try { sessionStorage.setItem(sizeKey, String(size)); } catch (err) { /* abaikan */ }
+      apply(); $(".md-list", box).scrollTop = 0; $("[data-psize]", box)?.focus();
+    });
     $$(".chip", box).forEach((c, i) => c.onclick = () => { chip = chips[i]; $$(".chip", box).forEach(x => x.setAttribute("aria-pressed", x === c)); apply(); });
     $(".md-list", box).onclick = e => { const el = e.target.closest(".md-item"); if (el) show(el); };
     q.oninput = () => apply(); if (sel) sel.onchange = () => apply(); boxes.forEach(b => b.onchange = () => apply());
@@ -308,7 +317,7 @@ export function fieldList(pairs) {
 const mdHead = (title, badges, meta) => `<div class="md-head"><h3>${esc(title)}</h3>${badges.join("")}</div>
   <div class="md-meta">${meta.filter(Boolean).join(" · ")}</div>`;
 
-const ITEM_PAGE_SIZE = 50; // ukuran halaman daftar item (hanya company dengan aturan "item-paging", mis. WBI)
+const ITEM_PAGE_SIZE = 10, ITEM_PAGE_SIZES = [10, 25, 50, 100, 0]; // default + pilihan ukuran halaman daftar item, 0 = Semua (hanya aturan "item-paging", mis. WBI)
 
 // ---------- Business Partner ----------
 const BP_BIZ = { C: "Company", I: "Private", G: "Government", E: "Employee" };
@@ -598,7 +607,7 @@ export const PAGES = {
         + kpis([[items.length, "Total item"], [yes("Inventory Item"), "Inventory item"], [yes("Sales Item"), "Sales item"],
           [yes("Purchasing Item"), "Purchase item"], [udf.length, "UDF item"]])
         + section("list", "Daftar Item", listDetail("item-v", items, {
-            noun: "item", pageSize: company.rules.includes("item-paging") ? ITEM_PAGE_SIZE : 0, placeholder: "Cari kode / nama / foreign name…",
+            noun: "item", pageSize: company.rules.includes("item-paging") ? ITEM_PAGE_SIZE : 0, pageSizes: ITEM_PAGE_SIZES, placeholder: "Cari kode / nama / foreign name…",
             chips: [{ label: "Semua item" }, { label: "Inventory item", test: i => i["Inventory Item"] === "Y" },
               { label: "Sales item", test: i => i["Sales Item"] === "Y" }, { label: "Purchase item", test: i => i["Purchasing Item"] === "Y" },
               { label: "Non-inventory", test: i => i["Inventory Item"] !== "Y" }],

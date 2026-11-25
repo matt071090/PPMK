@@ -1,4 +1,4 @@
-// Daftar Item (Master Data > 3.2 Item) dipaging 50 per halaman hanya untuk company dengan aturan "item-paging" (WBI). CV tidak berubah.
+// Daftar Item (Master Data > 3.2 Item) dipaging (default 10, pilihan 10/25/50/100/Semua) hanya untuk company dengan aturan "item-paging" (WBI). CV tidak berubah.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -36,7 +36,8 @@ test('WBI: daftar item punya pager; CV tidak', () => {
   assert.ok(!render().includes('md-pager'));
 });
 test('listDetail: ukuran halaman satu konstanta, Export Excel tetap memuat semua item, reset ke halaman 1 saat filter berubah', () => {
-  assert.match(src, /const ITEM_PAGE_SIZE = 50;/);
+  assert.match(src, /const ITEM_PAGE_SIZE = 10, ITEM_PAGE_SIZES = \[10, 25, 50, 100, 0\];/);
+  assert.match(src, /data-psize/);                                              // dropdown 'Tampilkan' di pager bawah
   assert.match(src, /exportButton\(autoCols\(d\.items\), items, "Item"/);        // semua item, bukan halaman aktif
   assert.match(src, /pageWindow\(hit, keep === true \? page : 1, size\)/);       // hanya tombol halaman yang menjaga page
   assert.match(src, /q\.oninput = \(\) => apply\(\);/);                          // cari/filter -> apply() tanpa keep = halaman 1

@@ -22,15 +22,25 @@ const total = await box.locator('.md-item').count();
 const shot = async n => { await box.scrollIntoViewIfNeeded(); await page.evaluate(() => document.querySelector('#item-v').scrollIntoView()); await page.screenshot({ path: `${SHOTS}/${n}.png` }); };
 const out = {};
 out.total = total; out.p1Visible = await visible(); out.p1Count = await count(); out.p1Pager = (await pager()).replace(/\s+/g, ' ');
-assert.equal(out.p1Visible, 50);
+assert.equal(out.p1Visible, 10);   // default 10 per halaman
 const firstName = await box.locator('.md-item:not([hidden]) .md-name').first().innerText();
-await shot('1-halaman-1');
+await shot('1-default-10');
 await box.locator('[data-pg="1"]').first().click();
 out.p2Visible = await visible(); out.p2Pager = (await pager()).replace(/\s+/g, ' ');
 out.selectedStillShown = await box.locator('.md-pane h3').first().innerText();   // detail item terpilih (dari halaman 1) tetap
 assert.equal(out.selectedStillShown.trim(), firstName.trim());
 assert.notEqual(await box.locator('.md-item:not([hidden]) .md-name').first().innerText(), firstName);
 await shot('2-halaman-2');
+await box.locator('select[data-psize]').selectOption('25');
+out.size25 = [await visible(), (await pager()).replace(/\s+/g, ' ')]; assert.equal(out.size25[0], 25); assert.match(out.size25[1], /Halaman 1 dari/);
+await shot('5-pilih-25');
+await box.locator('select[data-psize]').selectOption('0');
+out.sizeAll = [await visible(), await box.locator('.md-pager-bottom').innerText()]; assert.equal(out.sizeAll[0], 2352);
+await page.evaluate(() => { document.querySelector('#item-v .md-list').scrollTop = 99999; });
+await shot('6-pilih-semua');
+await box.locator('select[data-psize]').selectOption('10');
+assert.equal(await visible(), 10);
+await box.locator('[data-pg="1"]').first().click();
 await box.locator('[data-pg="-1"]').first().click();
 assert.match(await pager(), /Halaman 1 dari/);
 // cari -> halaman 1, hitungan benar
