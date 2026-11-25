@@ -317,7 +317,10 @@ export function fieldList(pairs) {
 const mdHead = (title, badges, meta) => `<div class="md-head"><h3>${esc(title)}</h3>${badges.join("")}</div>
   <div class="md-meta">${meta.filter(Boolean).join(" · ")}</div>`;
 
-const ITEM_PAGE_SIZE = 10, ITEM_PAGE_SIZES = [10, 25, 50, 100, 0]; // default + pilihan ukuran halaman daftar item, 0 = Semua (hanya aturan "item-paging", mis. WBI)
+const ITEM_PAGE_SIZE = 10, ITEM_PAGE_SIZES = [10, 25, 50, 100, 0];
+// Opsi paging daftar kiri master data: hanya company yang punya aturan `rule` (mis. WBI) dan hanya bila baris > 25 (daftar pendek tidak dipaging).
+const listPaging = (rule, n) => company.rules.includes(rule) && n > 25 ? { pageSize: ITEM_PAGE_SIZE, pageSizes: ITEM_PAGE_SIZES } : {};
+// // default + pilihan ukuran halaman daftar item, 0 = Semua (hanya aturan "item-paging", mis. WBI)
 
 // ---------- Business Partner ----------
 const BP_BIZ = { C: "Company", I: "Private", G: "Government", E: "Employee" };
@@ -367,7 +370,7 @@ function bpView(t, name, list, groups, ctx) {
   return kpis([[list.length, name + (t === "C" ? " & lead" : "")], [grps.length, "Group"], [list.filter(b => b.frozenFor === "Y").length, "Inactive"],
       ...(!nonBranch() ? [[noBr, "Aktif tanpa branch"]] : [])])
     + listDetail(`bpv-${t}`, list, {
-      prefId: "bp", noun: name.toLowerCase(), placeholder: "Cari kode / nama / NPWP / telepon…",
+      prefId: "bp", ...listPaging("bp-paging", list.length), noun: name.toLowerCase(), placeholder: "Cari kode / nama / NPWP / telepon…",
       chips: [{ label: "Semua group" }, ...grps.map(g => ({ label: g.GroupName, test: b => b.GroupCode === g.GroupCode,
         title: `Kode ${g.GroupCode} · Price list: ${g.PriceListName || "–"}${g.Locked === "Y" ? " · dikunci" : ""}` }))],
       checks: [...(!nonBranch() ? [{ label: `Hanya tanpa branch${noBr ? ` (${noBr})` : ""}`, test: bpNoBranch }] : []), { label: "Sembunyikan inactive", test: b => b.frozenFor !== "Y" }],
@@ -607,7 +610,7 @@ export const PAGES = {
         + kpis([[items.length, "Total item"], [yes("Inventory Item"), "Inventory item"], [yes("Sales Item"), "Sales item"],
           [yes("Purchasing Item"), "Purchase item"], [udf.length, "UDF item"]])
         + section("list", "Daftar Item", listDetail("item-v", items, {
-            noun: "item", pageSize: company.rules.includes("item-paging") ? ITEM_PAGE_SIZE : 0, pageSizes: ITEM_PAGE_SIZES, placeholder: "Cari kode / nama / foreign name…",
+            noun: "item", ...listPaging("item-paging", items.length), placeholder: "Cari kode / nama / foreign name…",
             chips: [{ label: "Semua item" }, { label: "Inventory item", test: i => i["Inventory Item"] === "Y" },
               { label: "Sales item", test: i => i["Sales Item"] === "Y" }, { label: "Purchase item", test: i => i["Purchasing Item"] === "Y" },
               { label: "Non-inventory", test: i => i["Inventory Item"] !== "Y" }],

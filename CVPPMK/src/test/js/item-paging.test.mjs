@@ -42,3 +42,16 @@ test('listDetail: ukuran halaman satu konstanta, Export Excel tetap memuat semua
   assert.match(src, /pageWindow\(hit, keep === true \? page : 1, size\)/);       // hanya tombol halaman yang menjaga page
   assert.match(src, /q\.oninput = \(\) => apply\(\);/);                          // cari/filter -> apply() tanpa keep = halaman 1
 });
+
+test('daftar pendek (<=25 baris) tidak dipaging, walau aturan aktif', () => {
+  company.rules = cfg.rules;
+  const few = items.slice(0, 25), cols = ['Item No.', 'Description', 'Item Group', 'Status', 'Inventory Item'];
+  const html = PAGES.items.render({ items: { columns: cols, rows: few.map(i => cols.map(c => i[c])), udf: [] } });
+  assert.ok(!html.includes('md-pager'));
+  company.rules = [];
+});
+test('Business Partner (Customer & Vendor) memakai paging yang sama lewat aturan bp-paging, hanya WBI', () => {
+  assert.ok(cfg.rules.includes('bp-paging'));
+  assert.match(src, /prefId: "bp", \.\.\.listPaging\("bp-paging", list\.length\)/);
+  assert.match(src, /const listPaging = \(rule, n\) => company\.rules\.includes\(rule\) && n > 25/);
+});
