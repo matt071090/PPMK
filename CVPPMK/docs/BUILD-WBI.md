@@ -1,6 +1,8 @@
 # Build CV PPMK dan WBI
 
-> **Keputusan 24 November 2026:** tujuan dan sumber hanya `WBI` di `192.168.40.181` yaitu **LIVE**. Upload Setup menulis ke LIVE melalui Service Layer. Port SL 50000 masih **asumsi** dan dapat diganti lewat `WBI_SL_URL`. Server hanya terjangkau lewat jaringan/VPN kantor (PC: VPN PPMK, rute `192.168.40.0/24`). User dan password hanya lewat lingkungan; host/port dapat dioverride bila alamat server berubah.
+> **Pembaruan 25 November 2026:** TUJUAN (dibaca Check List, SL) = `WBI_CUTOFF` di `192.168.40.197`; ASAL (sumber Setup & Cut Off) = `WBI` di `192.168.40.181`, dipasang sebagai koneksi `conn:wbi-181` (`setup.sources`). Isi env `WBI_SOURCE_USER`/`WBI_SOURCE_PASSWORD` untuk sumber. Retail memakai sumber = tujuan saja (pembatasan kode). Teks di bawah yang menyebut `WBI`/`192.168.40.181` sebagai tujuan adalah keputusan lama.
+>
+> **Keputusan 24 November 2026 (lama):** tujuan dan sumber hanya `WBI` di `192.168.40.181` yaitu **LIVE**. Upload Setup menulis ke LIVE melalui Service Layer. Port SL 50000 masih **asumsi** dan dapat diganti lewat `WBI_SL_URL`. Server hanya terjangkau lewat jaringan/VPN kantor (PC: VPN PPMK, rute `192.168.40.0/24`). User dan password hanya lewat lingkungan; host/port dapat dioverride bila alamat server berubah.
 
 Semua perubahan WBI ada di branch lokal `wbi/main`, berasal dari `main` (`ab74c0c`). Branch `main` tidak diubah dan tidak ada push.
 
@@ -27,7 +29,10 @@ Endpoint HANA default `192.168.40.181:30015`, schema/CompanyDB/sumber `WBI` (LIV
 
 | Variabel | Isi oleh Fakhri |
 |---|---|
-| `WBI_HANA_HOST` | Opsional: override host HANA default `192.168.40.181` |
+| `WBI_HANA_HOST` | Opsional: override host HANA tujuan, default `192.168.40.197` (schema `WBI_CUTOFF`) |
+| `WBI_SOURCE_USER` | User HANA untuk sumber `192.168.40.181`/`WBI` (wajib agar sumber bisa dibaca) |
+| `WBI_SOURCE_PASSWORD` | Rahasia user sumber, hanya lewat lingkungan |
+| `WBI_SOURCE_HOST` / `WBI_SOURCE_PORT` / `WBI_SOURCE_DB` | Opsional: override sumber, default `192.168.40.181` / `30015` / `WBI` |
 | `WBI_HANA_PORT` | Opsional: override port HANA default `30015` |
 | `WBI_HANA_USER` | User HANA dari lingkungan; tanpa default di profil |
 | `WBI_HANA_PASSWORD` | Rahasia JDBC, melalui lingkungan proses |
