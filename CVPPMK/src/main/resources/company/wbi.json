@@ -20,7 +20,7 @@
       "WBI-GRH"
     ]
   },
-  "rules": ["idtku-default", "series-prefix"],
+  "rules": ["idtku-default", "series-prefix", "item-paging"],
   "hideWhenEmpty": [
     "payment-methods",
     "freight",

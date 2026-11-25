@@ -9,7 +9,7 @@ const cfg=JSON.parse(readFileSync(new URL('../../main/resources/company/wbi.json
 const wbi=()=>{company.rules=cfg.rules;};const cv=()=>{company.rules=[];};
 const tbl=(columns,rows=[])=>({columns,rows});
 
-test('config WBI mengaktifkan dua aturan, CV tidak punya',()=>{assert.deepEqual(cfg.rules,['idtku-default','series-prefix']);cv();assert.deepEqual(company.rules,[]);});
+test('config WBI mengaktifkan tiga aturan, CV tidak punya',()=>{assert.deepEqual(cfg.rules,['idtku-default','series-prefix','item-paging']);cv();assert.deepEqual(company.rules,[]);});
 
 // ---- ID TKU
 const compD=tku=>({company:{...tbl(['Street','City','Phone1','E_Mail','AliasName','TaxIdNum','U_STEM_IDTKU','RevOffice'],[['Jl A','Kota','1','a@b.c','ALS','01.234',tku,'KPP']]),udf:[{col:'U_STEM_IDTKU'}]}});

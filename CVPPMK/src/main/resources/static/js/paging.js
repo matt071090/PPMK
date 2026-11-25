@@ -1,7 +1,11 @@
 // Shared client-side paging. Filter first; export keeps that entire filtered set.
 export const PAGE_SIZES = [25, 50, 100];
 export function pageSlice(rows, page = 1, size = 25) {
-  size = PAGE_SIZES.includes(+size) ? +size : 25;
+  return pageWindow(rows, page, PAGE_SIZES.includes(+size) ? +size : 25);
+}
+// Sama, tetapi ukuran halaman bebas (dipakai daftar kiri master data, mis. 50 item).
+export function pageWindow(rows, page = 1, size = 50) {
+  size = Math.max(1, Math.trunc(+size) || 50);
   const pages = Math.max(1, Math.ceil(rows.length / size));
   page = Math.min(pages, Math.max(1, Math.trunc(+page) || 1));
   const start = (page - 1) * size;
