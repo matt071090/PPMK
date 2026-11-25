@@ -245,7 +245,7 @@ function listDetail(id, rows, o) {
     const pane = $(".md-pane", box), all = $$(".md-item", box), q = $("input[type=search]", box), cnt = $(".md-count", box);
     const sel = $("select", box), boxes = $$("[data-chk]", box), text = rows.map(r => o.text(r).toLowerCase());
     let chip = chips[0], page = 1;
-    const pager = $(".md-pager", box), size = +o.pageSize || 0;
+    const pagers = $$(".md-pager", box), size = +o.pageSize || 0;
     // Field kosong di panel detail disembunyikan (catatan jumlah + toggle per browser, kunci fields:<id>); daftar kiri tidak berubah.
     const prefKey = `fields:${o.prefId || id}`;
     const decorate = () => {
@@ -268,19 +268,19 @@ function listDetail(id, rows, o) {
       const vis = new Set(w.rows);
       all.forEach((x, i) => { x.hidden = !vis.has(i); });
       cnt.textContent = `${hit.length.toLocaleString("id-ID")} dari ${all.length.toLocaleString("id-ID")} ${o.noun}`;
-      if (pager) {
+      pagers.forEach(pager => {
         pager.hidden = !size || w.pages < 2;
         pager.innerHTML = `<span role="status">Menampilkan ${w.from.toLocaleString("id-ID")}-${w.to.toLocaleString("id-ID")} dari ${hit.length.toLocaleString("id-ID")} ${esc(o.noun)}</span>
           <div><button type="button" class="cbtn" data-pg="-1"${w.page === 1 ? " disabled" : ""} aria-label="Halaman sebelumnya">Sebelumnya</button>
           <span>Halaman ${w.page} dari ${w.pages}</span>
           <button type="button" class="cbtn" data-pg="1"${w.page === w.pages ? " disabled" : ""} aria-label="Halaman berikutnya">Berikutnya</button></div>`;
-      }
+      });
       // item terpilih tetap tampil di panel detail selama masih lolos filter, juga bila berada di halaman lain
       const cur = all.find(x => x.classList.contains("on"));
       if (!hit.length) { all.forEach(x => x.classList.remove("on")); pane.innerHTML = `<p class="md-blank">Tidak ada ${o.noun} yang cocok dengan filter.</p>`; }
       else if (!cur || !hit.includes(all.indexOf(cur))) show(all[hit[(w.from || 1) - 1]]);
     };
-    if (pager) pager.onclick = e => { const b = e.target.closest("[data-pg]"); if (!b || b.disabled) return; page += +b.dataset.pg; apply(true); $(".md-list", box).scrollTop = 0; };
+    pagers.forEach(pager => pager.onclick = e => { const b = e.target.closest("[data-pg]"); if (!b || b.disabled) return; page += +b.dataset.pg; apply(true); $(".md-list", box).scrollTop = 0; });
     $$(".chip", box).forEach((c, i) => c.onclick = () => { chip = chips[i]; $$(".chip", box).forEach(x => x.setAttribute("aria-pressed", x === c)); apply(); });
     $(".md-list", box).onclick = e => { const el = e.target.closest(".md-item"); if (el) show(el); };
     q.oninput = () => apply(); if (sel) sel.onchange = () => apply(); boxes.forEach(b => b.onchange = () => apply());
@@ -291,9 +291,10 @@ function listDetail(id, rows, o) {
     <div class="toolbar"><input type="search" placeholder="${esc(o.placeholder || "Cari…")}" aria-label="Cari ${esc(o.noun)}">
       ${o.select ? `<select aria-label="${esc(o.select.label)}"><option value="">Semua ${esc(o.select.label.toLowerCase())}</option>${o.select.options.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("")}</select>` : ""}
       ${checks.map((c, j) => `<label><input type="checkbox" data-chk="${j}"> ${esc(c.label)}</label>`).join("")}
-      <span class="md-count muted"></span></div>${o.pageSize ? `
-    <nav class="md-pager" aria-label="Halaman daftar ${esc(o.noun)}" hidden></nav>` : ""}
-    <div class="md-split"><div class="md-list" aria-label="Daftar ${esc(o.noun)}">${items}</div><div class="md-pane" aria-live="polite"></div></div>
+      <span class="md-count muted"></span></div>
+    <div class="md-split">${o.pageSize
+      ? `<div class="md-left"><nav class="md-pager" aria-label="Halaman daftar ${esc(o.noun)}" hidden></nav><div class="md-list" aria-label="Daftar ${esc(o.noun)}">${items}</div><nav class="md-pager md-pager-bottom" aria-label="Halaman daftar ${esc(o.noun)} (bawah)" hidden></nav></div>`
+      : `<div class="md-list" aria-label="Daftar ${esc(o.noun)}">${items}</div>`}<div class="md-pane" aria-live="polite"></div></div>
   </div>`;
 }
 // Field terisi tampil sebagai daftar ke bawah; yang kosong dikumpulkan jadi satu baris supaya tidak penuh "belum diisi".

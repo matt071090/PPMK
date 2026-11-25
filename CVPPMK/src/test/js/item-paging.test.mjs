@@ -31,6 +31,7 @@ const render = () => PAGES.items.render({ items: { columns: ['Item No.', 'Descri
 test('WBI: daftar item punya pager; CV tidak', () => {
   company.rules = cfg.rules;
   assert.match(render(), /<nav class="md-pager"[^>]*aria-label="Halaman daftar item"/);
+  assert.match(render(), /md-pager-bottom/);   // pager kedua di bawah daftar, satu kolom sticky dengan daftar
   company.rules = [];
   assert.ok(!render().includes('md-pager'));
 });
