@@ -14,6 +14,7 @@ const legacyAddon=process.env.PREVIEW_LEGACY_ADDON==='1';
 const addonProfile=process.env.PREVIEW_ADDON_PROFILE==='1';
 const addonMapping=profile.addons?JSON.parse(await readFile(path.join(resources,profile.addons.mapping),'utf8')):null;
 if(profile.addons){company.addonCatalogs=profile.addons.catalogs;company.addonRules=addonMapping.rules;}
+if(profile.rules?.length)company.rules=profile.rules;
 if(profile.hideWhenEmpty?.length)company.hideWhenEmpty=profile.hideWhenEmpty;   // seperti CompanyProfile.java: kunci hanya ada bila terisi
 const legacyMapping=JSON.parse(await readFile(path.resolve(resources,'../../../addon-mapping.json'),'utf8'));
 const seed=JSON.parse(await readFile(path.join(resources,'schedule',mode==='wbi'?'default-wbi.json':'default.json'),'utf8'));

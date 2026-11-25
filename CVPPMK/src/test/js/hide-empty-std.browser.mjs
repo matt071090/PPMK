@@ -55,7 +55,7 @@ try {
   const ids = await navIds(page), sum = await text(page), rvNew = await rv(page), sb = await nav(page);
   ok('sidebar: Payment Methods, Freight, Landed Cost hilang saat 0 baris', () => { for (const id of ['payment-methods', 'freight', 'landed-cost']) assert.ok(!ids.includes(id), id); });
   ok('sidebar: halaman inti 0 baris tetap tampil (Payment Terms, Item Group)', () => { for (const id of ['payment-terms', 'item-groups', 'coa', 'business-partners', 'fixed-asset', 'warehouses']) assert.ok(ids.includes(id), id); });
-  ok('sidebar: hitungan terpisah "3 menu SAP standar kosong disembunyikan" + toggle', () => { assert.match(sb, /Tampilkan yang kosong/); assert.match(sb, /3 menu SAP standar kosong disembunyikan/); });
+  ok('sidebar: hitungan terpisah "3 menu SAP standar kosong disembunyikan" + toggle', () => { assert.match(sb, /Tampilkan menu SAP standar kosong/); assert.match(sb, /Tampilkan menu Add-on kosong/); assert.match(sb, /3 menu SAP standar kosong disembunyikan/); });
   const den = s => +s.split('/')[1];
   ok('Menu sudah sesuai: penyebut berkurang 3 (menu tersembunyi tidak dihitung)', () => assert.equal(den(rvNew), den(beforeRv) - 3, `${beforeRv} -> ${rvNew}`));
   ok('Ringkasan: INFO "belum ada" untuk halaman/blok tersembunyi hilang, tidak ada tautan ke halaman tersembunyi', () => {

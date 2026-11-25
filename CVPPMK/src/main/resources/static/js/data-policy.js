@@ -79,5 +79,5 @@ const escText = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<
 export function blockNotice() {
   const show = tally.shown.size > 0, labels = [...(show ? tally.shown : tally.hidden).values()];
   if (!labels.length) return '';
-  return `<p class="sec-lead retired-note std-empty-note"><label><input type="checkbox" data-std-toggle${show ? ' checked' : ''}> Tampilkan yang kosong</label> <span class="muted">· ${labels.length} blok kosong ${show ? 'ditampilkan' : 'disembunyikan'}: ${escText(labels.join(', '))}</span></p>`;
+  return `<p class="sec-lead retired-note std-empty-note"><label><input type="checkbox" data-std-toggle${show ? ' checked' : ''}> Tampilkan blok SAP standar kosong</label> <span class="muted">· ${labels.length} blok kosong ${show ? 'ditampilkan' : 'disembunyikan'}: ${escText(labels.join(', '))}</span></p>`;
 }

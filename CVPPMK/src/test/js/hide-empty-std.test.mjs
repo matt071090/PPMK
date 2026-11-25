@@ -86,7 +86,7 @@ test('WBI BP: Shipping Type, sheet Bank Accounts/Payment Run/Branch Assignment 0
   assert.deepEqual(sheetNames(),['General','Contact Persons','Addresses','Payment Terms','Accounting - General','Accounting - Tax','WTax Codes']);
   const note=policy.blockNotice();
   assert.match(note,/4 blok kosong disembunyikan: Shipping Type, Excel Bank Accounts, Excel Payment Run, Excel Branch Assignment/);
-  assert.match(note,/Tampilkan yang kosong/);assert.match(note,/data-std-toggle/);assert.ok(!note.includes(' checked'));
+  assert.match(note,/Tampilkan blok SAP standar kosong/);assert.match(note,/data-std-toggle/);assert.ok(!note.includes(' checked'));
 });
 test('WBI BP: company dengan branch tetap memuat sheet Branch Assignment 0 baris (kosongnya masalah, bukan "belum dipakai")',()=>{
   wbi({branch:true});render('business-partners',bpD());

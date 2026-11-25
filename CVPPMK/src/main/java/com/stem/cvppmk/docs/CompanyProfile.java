@@ -40,6 +40,9 @@ final class CompanyProfile {
         List<String> hide=new ArrayList<>();
         for(JsonNode key:config.path("hideWhenEmpty")) if(key.isTextual()&&key.asText().matches("[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)?"))hide.add(key.asText());
         if(!hide.isEmpty())out.put("hideWhenEmpty",hide);
+        List<String> rules=new ArrayList<>();
+        for(JsonNode key:config.path("rules")) if(key.isTextual()&&key.asText().matches("[a-z0-9-]+"))rules.add(key.asText());
+        if(!rules.isEmpty())out.put("rules",rules);
         out.put("picGroup",group);out.put("picSource",source);out.put("picUsersFile",usersFile);
         out.put("picExcludedCodes",config.path("pic").path("excludedCodes").isArray()?config.path("pic").path("excludedCodes"):Collections.emptyList());
     }
