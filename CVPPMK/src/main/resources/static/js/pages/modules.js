@@ -1,7 +1,8 @@
-import { nonBranch, hiddenAddonTable, emptyPreference, saveEmptyPreference } from "../data-policy.js";
+import { nonBranch, blockHidden, hiddenAddonTable, emptyPreference, saveEmptyPreference, retiredAddonTable, retiredAddonField, retiredPreference, retiredNotice, retiredBadge } from "../data-policy.js";
 // Bab 2-5: Keuangan, Master Data, Kontrol Dokumen, Add-on & Kustomisasi.
 // Diambil dari pola blueprint modul (01.02-08.01): hanya bagian yang bisa dibaca dari database, narasi proses tetap di Word.
 import { company } from "../company.js";
+import { pageWindow } from "../paging.js";
 import { mainTable, tableName, tableModule } from "../sap-tables.js";
 import { $, $$, onMount, esc, val, badgeYN, coded, rowsOf, isEmpty, section, callouts, kv, settings, table, tabs, searchable, tags, udfCols, expandList, exportButton, exportSheets, sqlSheets, autoCols, VALUATION, GL_METHOD } from "../ui.js";
 import { SP_PAGE } from "./sp-validation.js";
@@ -15,6 +16,7 @@ function assetReadiness(d) {
   const guard = (k, title, q, why, fn) => {
     if (d[k] && d[k].error) add("danger", title, "query gagal", why, `<div class="error">${esc(d[k].error)}</div>`, q);
     else if (!d[k]) add("danger", title, "query tidak ada hasilnya", why, "", q);
+    else if (blockHidden("fixed-asset", k, d[k], title)) return;   // 0 baris dan terdaftar hideWhenEmpty (config company)
     else fn(R(k));
   };
   guard("classes", "Asset Class", "01_classes.sql", "Setiap aset butuh asset class dengan depreciation area Main Area dan account determination. Kode class dipakai kolom Asset Class di file aset.", rows => {
@@ -221,6 +223,7 @@ function udfObjects(fields) {
 // ---------- tampilan master data: daftar kiri + detail kanan (dipakai BP & Item) ----------
 // o.item(r): isi baris daftar · o.text(r): teks yang dicari · o.detail(r): isi panel kanan · o.dim(r): baris redup (inactive)
 // o.chips: [{ label, test, title }] (chip pertama = semua) · o.select: { label, options: [[nilai, teks]], key(r) }
+// o.pageSize: bila diisi, daftar kiri dipaging sebesar itu; o.pageSizes: pilihan di pager bawah (0 = Semua), pilihan diingat per sesi tab (Export Excel tetap memuat semua baris)
 // o.checks: [{ label, test }] (dicentang = hanya baris yang lolos test) · o.noun: kata benda untuk hitungan
 // Toggle "Tampilkan field kosong": simpan per browser, semua panel detail dengan kunci sama ikut (juga Excel yang memakai kunci itu).
 document.addEventListener("change", e => {
@@ -240,8 +243,11 @@ function listDetail(id, rows, o) {
   onMount(() => {
     const box = $(`#${id}`); if (!box) return;
     const pane = $(".md-pane", box), all = $$(".md-item", box), q = $("input[type=search]", box), cnt = $(".md-count", box);
-    const sel = $("select", box), boxes = $$("[data-chk]", box), text = rows.map(r => o.text(r).toLowerCase());
-    let chip = chips[0];
+    const sel = $(".toolbar select", box), boxes = $$("[data-chk]", box), text = rows.map(r => o.text(r).toLowerCase());
+    let chip = chips[0], page = 1;
+    const pagers = $$(".md-pager", box), sizes = o.pageSizes || [o.pageSize || 0], sizeKey = `page-size:${id}`;
+    let size = o.pageSize ? +o.pageSize : 0;            // 0 = Semua (tanpa paging)
+    try { const v = sessionStorage.getItem(sizeKey); if (v !== null && sizes.includes(+v)) size = +v; } catch (e) { /* tanpa penyimpanan: pakai default */ }
     // Field kosong di panel detail disembunyikan (catatan jumlah + toggle per browser, kunci fields:<id>); daftar kiri tidak berubah.
     const prefKey = `fields:${o.prefId || id}`;
     const decorate = () => {
@@ -250,23 +256,43 @@ function listDetail(id, rows, o) {
       if (n) pane.insertAdjacentHTML("afterbegin", `<div class="colbar md-emptybar"><span data-empty-note="${n}">${n} field kosong ${shown ? "ditampilkan" : "disembunyikan"}</span><label><input type="checkbox" data-empty-fields="${esc(prefKey)}"${shown ? " checked" : ""}> Tampilkan field kosong</label></div>`);
     };
     const show = el => { all.forEach(x => x.classList.toggle("on", x === el)); pane.innerHTML = o.detail(rows[+el.dataset.i]); decorate(); };
-    const apply = () => {
+    // keep=true: hanya ganti halaman (filter tidak berubah); selain itu kembali ke halaman 1
+    const apply = keep => {
       const t = q.value.toLowerCase().trim(), sv = sel ? sel.value : "";
-      let n = 0, first = null;
+      const hit = [];
       all.forEach((x, i) => {
         const r = rows[i];
-        const ok = text[i].includes(t) && (!chip || !chip.test || chip.test(r)) && (!sv || String(o.select.key(r)) === sv)
-          && boxes.every((b, j) => !b.checked || checks[j].test(r));
-        x.hidden = !ok; if (ok) { n++; first = first || x; }
+        if (text[i].includes(t) && (!chip || !chip.test || chip.test(r)) && (!sv || String(o.select.key(r)) === sv)
+          && boxes.every((b, j) => !b.checked || checks[j].test(r))) hit.push(i);
       });
-      cnt.textContent = `${n.toLocaleString("id-ID")} dari ${all.length.toLocaleString("id-ID")} ${o.noun}`;
+      const w = size ? pageWindow(hit, keep === true ? page : 1, size) : { rows: hit, page: 1, pages: 1, from: hit.length ? 1 : 0, to: hit.length };
+      page = w.page;
+      const vis = new Set(w.rows);
+      all.forEach((x, i) => { x.hidden = !vis.has(i); });
+      cnt.textContent = `${hit.length.toLocaleString("id-ID")} dari ${all.length.toLocaleString("id-ID")} ${o.noun}`;
+      pagers.forEach(pager => {
+        const bottom = pager.classList.contains("md-pager-bottom"), nav = size && w.pages > 1;
+        pager.hidden = !bottom && !nav;                    // pager bawah selalu ada (memuat pilihan ukuran halaman)
+        pager.innerHTML = `<span role="status">Menampilkan ${w.from.toLocaleString("id-ID")}-${w.to.toLocaleString("id-ID")} dari ${hit.length.toLocaleString("id-ID")} ${esc(o.noun)}</span>`
+          + (bottom && sizes.length > 1 ? `<label class="md-psize">Tampilkan <select data-psize aria-label="Jumlah ${esc(o.noun)} per halaman">${sizes.map(n => `<option value="${n}"${n === size ? " selected" : ""}>${n ? n : "Semua"}</option>`).join("")}</select></label>` : "")
+          + (nav ? `<div><button type="button" class="cbtn" data-pg="-1"${w.page === 1 ? " disabled" : ""} aria-label="Halaman sebelumnya">Sebelumnya</button>
+          <span>Halaman ${w.page} dari ${w.pages}</span>
+          <button type="button" class="cbtn" data-pg="1"${w.page === w.pages ? " disabled" : ""} aria-label="Halaman berikutnya">Berikutnya</button></div>` : "");
+      });
+      // item terpilih tetap tampil di panel detail selama masih lolos filter, juga bila berada di halaman lain
       const cur = all.find(x => x.classList.contains("on"));
-      if (!first) pane.innerHTML = `<p class="md-blank">Tidak ada ${o.noun} yang cocok dengan filter.</p>`;
-      else if (!cur || cur.hidden) show(first);
+      if (!hit.length) { all.forEach(x => x.classList.remove("on")); pane.innerHTML = `<p class="md-blank">Tidak ada ${o.noun} yang cocok dengan filter.</p>`; }
+      else if (!cur || !hit.includes(all.indexOf(cur))) show(all[hit[(w.from || 1) - 1]]);
     };
+    pagers.forEach(pager => pager.onclick = e => { const b = e.target.closest("[data-pg]"); if (!b || b.disabled) return; page += +b.dataset.pg; apply(true); $(".md-list", box).scrollTop = 0; });
+    pagers.forEach(pager => pager.onchange = e => {
+      if (!e.target.matches("[data-psize]")) return;
+      size = +e.target.value; try { sessionStorage.setItem(sizeKey, String(size)); } catch (err) { /* abaikan */ }
+      apply(); $(".md-list", box).scrollTop = 0; $("[data-psize]", box)?.focus();
+    });
     $$(".chip", box).forEach((c, i) => c.onclick = () => { chip = chips[i]; $$(".chip", box).forEach(x => x.setAttribute("aria-pressed", x === c)); apply(); });
     $(".md-list", box).onclick = e => { const el = e.target.closest(".md-item"); if (el) show(el); };
-    q.oninput = apply; if (sel) sel.onchange = apply; boxes.forEach(b => b.onchange = apply);
+    q.oninput = () => apply(); if (sel) sel.onchange = () => apply(); boxes.forEach(b => b.onchange = () => apply());
     apply();
   });
   return `<div class="md-view" id="${id}">
@@ -275,7 +301,9 @@ function listDetail(id, rows, o) {
       ${o.select ? `<select aria-label="${esc(o.select.label)}"><option value="">Semua ${esc(o.select.label.toLowerCase())}</option>${o.select.options.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join("")}</select>` : ""}
       ${checks.map((c, j) => `<label><input type="checkbox" data-chk="${j}"> ${esc(c.label)}</label>`).join("")}
       <span class="md-count muted"></span></div>
-    <div class="md-split"><div class="md-list" aria-label="Daftar ${esc(o.noun)}">${items}</div><div class="md-pane" aria-live="polite"></div></div>
+    <div class="md-split">${o.pageSize
+      ? `<div class="md-left"><nav class="md-pager" aria-label="Halaman daftar ${esc(o.noun)}" hidden></nav><div class="md-list" aria-label="Daftar ${esc(o.noun)}">${items}</div><nav class="md-pager md-pager-bottom" aria-label="Halaman daftar ${esc(o.noun)} (bawah)" hidden></nav></div>`
+      : `<div class="md-list" aria-label="Daftar ${esc(o.noun)}">${items}</div>`}<div class="md-pane" aria-live="polite"></div></div>
   </div>`;
 }
 // Field terisi tampil sebagai daftar ke bawah; yang kosong dikumpulkan jadi satu baris supaya tidak penuh "belum diisi".
@@ -288,6 +316,11 @@ export function fieldList(pairs) {
 // kepala panel detail: judul + badge, baris info, lalu isi tambahan
 const mdHead = (title, badges, meta) => `<div class="md-head"><h3>${esc(title)}</h3>${badges.join("")}</div>
   <div class="md-meta">${meta.filter(Boolean).join(" · ")}</div>`;
+
+const ITEM_PAGE_SIZE = 10, ITEM_PAGE_SIZES = [10, 25, 50, 100, 0];
+// Opsi paging daftar kiri master data: hanya company yang punya aturan `rule` (mis. WBI) dan hanya bila baris > 25 (daftar pendek tidak dipaging).
+const listPaging = (rule, n) => company.rules.includes(rule) && n > 25 ? { pageSize: ITEM_PAGE_SIZE, pageSizes: ITEM_PAGE_SIZES } : {};
+// // default + pilihan ukuran halaman daftar item, 0 = Semua (hanya aturan "item-paging", mis. WBI)
 
 // ---------- Business Partner ----------
 const BP_BIZ = { C: "Company", I: "Private", G: "Government", E: "Employee" };
@@ -323,8 +356,8 @@ function bpDetail(b, ctx) {
     ["Payment Terms", fieldList([["Payment Terms", b.PymntGroup], ["Price List", b.PriceList],
       ["Total Discount %", +b.Discount ? b.Discount : null, money], ["Credit Limit", +b.CreditLine ? b.CreditLine : null, money],
       ["Commitment Limit", +b.DebtLine ? b.DebtLine : null, money]])],
-    ["Payment Run", fieldList([["House Bank", b.HouseBank], ["House Bank Account", b.HousBnkAct], ["Default Payment Method", b.PymCode],
-      ["Payment Methods", b.PymMethods, v => tags(v)]])],
+    ...(ctx.payRunOff ? [] : [["Payment Run", fieldList([["House Bank", b.HouseBank], ["House Bank Account", b.HousBnkAct], ["Default Payment Method", b.PymCode],
+      ["Payment Methods", b.PymMethods, v => tags(v)]])]]),
     ["Accounting", fieldList([[b.CardType === "S" ? "Accounts Payable" : "Accounts Receivable", b.DebPayAcct, v => acctPair(v, b.DebPayName)],
       ["Down Payment Clearing Account", b.DpmClear, v => acctPair(v, b.DpmClearName)]])],
     ...(ctx.udf.length ? [["UDF", fieldList(ctx.udf.map(u => [u.label, b[u.col] === "-" ? null : b[u.col]]))]] : [])
@@ -337,7 +370,7 @@ function bpView(t, name, list, groups, ctx) {
   return kpis([[list.length, name + (t === "C" ? " & lead" : "")], [grps.length, "Group"], [list.filter(b => b.frozenFor === "Y").length, "Inactive"],
       ...(!nonBranch() ? [[noBr, "Aktif tanpa branch"]] : [])])
     + listDetail(`bpv-${t}`, list, {
-      prefId: "bp", noun: name.toLowerCase(), placeholder: "Cari kode / nama / NPWP / telepon…",
+      prefId: "bp", ...listPaging("bp-paging", list.length), noun: name.toLowerCase(), placeholder: "Cari kode / nama / NPWP / telepon…",
       chips: [{ label: "Semua group" }, ...grps.map(g => ({ label: g.GroupName, test: b => b.GroupCode === g.GroupCode,
         title: `Kode ${g.GroupCode} · Price list: ${g.PriceListName || "–"}${g.Locked === "Y" ? " · dikunci" : ""}` }))],
       checks: [...(!nonBranch() ? [{ label: `Hanya tanpa branch${noBr ? ` (${noBr})` : ""}`, test: bpNoBranch }] : []), { label: "Sembunyikan inactive", test: b => b.frozenFor !== "Y" }],
@@ -511,6 +544,7 @@ export const PAGES = {
     render(d) {
       const types = Object.fromEntries(rowsOf(d.dep_types).map(t => [t.Code, t]));
       const deprType = v => { const t = types[v]; return t ? `${esc(v)}<span class="raw">${esc(DPR_METH[t.DprMeth] || t.DprMeth)}</span>` : val(v); };
+      const noAssets = blockHidden("fixed-asset", "assets", d.assets, "Fixed Asset Master Data");
       return assetReadiness(d) + section("classes", "Asset Class", table([{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
           { key: "BPLName", label: "Branch" },
           { key: "AssetType", label: "Asset Type", fmt: codedCell(ASSET_TYPE) }, { key: "DprAreaID", label: "Depreciation Area" },
@@ -519,12 +553,12 @@ export const PAGES = {
           { key: "UseLife", label: "Masa manfaat (bulan)", num: 1 }, { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.classes)], rowsOf(d.classes), { keep: ["AcctDtn"] }),
           { no: "2.13.1", lead: "Satu kelas bisa punya beberapa depreciation area (mis. komersial dan fiskal). Setiap kelas terikat ke satu branch: prefix T- = CV-TRADING, K- = CV-KOMERSIAL. "
             + "Kolom Depreciation Type ikut menampilkan metode penyusutannya." })
-        + section("assets", "Fixed Asset Master Data", table([{ key: "ItemCode", label: "Kode Aset" }, { key: "ItemName", label: "Nama" },
+        + (noAssets ? "" : section("assets", "Fixed Asset Master Data", table([{ key: "ItemCode", label: "Kode Aset" }, { key: "ItemName", label: "Nama" },
           { key: "AssetClass", label: "Asset Class" }, { key: "ItmsGrpNam", label: "Item Group" }, { key: "DprArea", label: "Depreciation Area" },
           { key: "DprStart", label: "Mulai penyusutan" }, { key: "UsefulLife", label: "Masa manfaat (bulan)", num: 1 },
           { key: "DprType", label: "Depreciation Type", fmt: deprType }], rowsOf(d.assets), { keep: ["DprArea", "DprStart", "UsefulLife"] }),
           { no: "2.13.2", lead: "Item tipe Fixed Asset beserta parameter penyusutannya (satu baris per depreciation area). Nilai perolehan masuk lewat dokumen Asset Capitalization. "
-            + "Upload aset: Setup tahap E, langkah Fixed Asset Master Data (template T25) lalu Asset Capitalization (T26)." });
+            + "Upload aset: Setup tahap E, langkah Fixed Asset Master Data (template T25) lalu Asset Capitalization (T26)." }));
     }
   },
 
@@ -576,7 +610,7 @@ export const PAGES = {
         + kpis([[items.length, "Total item"], [yes("Inventory Item"), "Inventory item"], [yes("Sales Item"), "Sales item"],
           [yes("Purchasing Item"), "Purchase item"], [udf.length, "UDF item"]])
         + section("list", "Daftar Item", listDetail("item-v", items, {
-            noun: "item", placeholder: "Cari kode / nama / foreign name…",
+            noun: "item", ...listPaging("item-paging", items.length), placeholder: "Cari kode / nama / foreign name…",
             chips: [{ label: "Semua item" }, { label: "Inventory item", test: i => i["Inventory Item"] === "Y" },
               { label: "Sales item", test: i => i["Sales Item"] === "Y" }, { label: "Purchase item", test: i => i["Purchasing Item"] === "Y" },
               { label: "Non-inventory", test: i => i["Inventory Item"] !== "Y" }],
@@ -632,26 +666,32 @@ export const PAGES = {
     checks(d) {
       const noBranch = rowsOf(d.bp).filter(bpNoBranch).length;
       const out = noBranch ? [["warn", `${noBranch} BP aktif belum di-assign ke branch mana pun, sehingga tidak bisa dipakai di dokumen.`]] : [];
-      if (!rowsOf(d.shipping).length) out.push(["info", "Belum ada shipping type."]);
+      if (!rowsOf(d.shipping).length && !blockHidden("business-partners", "shipping", d.shipping, "Shipping Type")) out.push(["info", "Belum ada shipping type."]);
       return out;
     },
     render(d) {
       const bp = rowsOf(d.bp).map(b => ({ ...b, Type: BP_CARD[b.CardType] || b.CardType })), groups = rowsOf(d.groups);
       const byCode = rows => rows.reduce((m, r) => (m.get(r.CardCode) || m.set(r.CardCode, []).get(r.CardCode)).push(r) && m, new Map());
-      const ctx = { contacts: byCode(rowsOf(d.contacts)), addresses: byCode(rowsOf(d.addresses)), udf: d.bp?.udf || [],
+      // Sheet Excel yang 0 baris dan terdaftar hideWhenEmpty tidak diikutkan. Branch Assignment kosong hanya wajar di company tanpa branch;
+      // di company dengan branch, kosongnya adalah masalah dan sheet tetap ada.
+      const sheetNames = Object.fromEntries(Object.entries({ xl_general: "General", xl_contacts: "Contact Persons", xl_addresses: "Addresses",
+        xl_payment_terms: "Payment Terms", xl_bank_accounts: "Bank Accounts", xl_payment_run: "Payment Run",
+        xl_accounting_general: "Accounting - General", xl_accounting_tax: "Accounting - Tax", xl_wtax_codes: "WTax Codes",
+        xl_branch_assignment: "Branch Assignment" })
+        .filter(([k, name]) => (k === "xl_branch_assignment" && !nonBranch()) || !blockHidden("business-partners", k, d[k], `Excel ${name}`)));
+      // tab Payment Run di detail BP: disembunyikan hanya kalau tidak ada satu pun BP yang mengisinya (data CRD2 dan kolom OCRD sama-sama kosong)
+      const payRunOff = !sheetNames.xl_payment_run && bp.every(b => ["HouseBank", "HousBnkAct", "PymCode", "PymMethods"].every(k => isEmpty(b[k])));
+      const ctx = { payRunOff, contacts: byCode(rowsOf(d.contacts)), addresses: byCode(rowsOf(d.addresses)), udf: d.bp?.udf || [],
         branches: [...new Set(bp.flatMap(b => String(b.Branches || "").split("|")).filter(Boolean))] };
       const tab = (t, name) => {
         const list = bp.filter(b => (b.CardType === "L" ? "C" : b.CardType) === t); // lead memakai customer group
         return bpView(t, name, list, groups, ctx);
       };
       // Excel BP Master Data: satu file, satu sheet per query xl_* (sql/business-partners/1x_xl_*.sql), mengikuti tab layar BP Master Data
-      const xlsx = exportSheets(sqlSheets(d, { xl_general: "General", xl_contacts: "Contact Persons", xl_addresses: "Addresses",
-        xl_payment_terms: "Payment Terms", xl_bank_accounts: "Bank Accounts", xl_payment_run: "Payment Run",
-        xl_accounting_general: "Accounting - General", xl_accounting_tax: "Accounting - Tax", xl_wtax_codes: "WTax Codes",
-        xl_branch_assignment: "Branch Assignment" }), "BP Master Data", { prefKey: "fields:bp" });
+      const xlsx = exportSheets(sqlSheets(d, sheetNames), "BP Master Data", { prefKey: "fields:bp" });
       // Shipping Type hanya dipakai di BP (tab General), jadi ditampilkan di halaman ini
       const ships = rowsOf(d.shipping).map(x => ({ ...x, Used: bp.filter(b => b.ShipType === x.TrnspName).length }));
-      const shipping = section("shipping", "Shipping Type", table([{ key: "TrnspCode", label: "Kode", num: 1 }, { key: "TrnspName", label: "Shipping Type" },
+      const shipping = blockHidden("business-partners", "shipping", d.shipping, "Shipping Type") ? "" : section("shipping", "Shipping Type", table([{ key: "TrnspCode", label: "Kode", num: 1 }, { key: "TrnspName", label: "Shipping Type" },
           { key: "WebSite", label: "Website" }, { key: "Active", label: "Aktif", fmt: badgeYN },
           { key: "Used", label: "Dipakai BP", num: 1, fmt: v => v ? num(v) : `<span class="muted">0</span>` }, ...udfCols(d.shipping)], ships, { noExport: true }),
         { lead: "Administration › Setup › General › Shipping Types. Cara pengiriman default BP (tab General), ikut terbawa ke dokumen." });
@@ -731,14 +771,18 @@ export const PAGES = {
     tables: ["OUDO", "UDO1"],
     render(d) {
       const counts = new Map((addonState.objects || []).map(o => [o.code, o.rowCount]));
-      const u = rowsOf(d.udo).filter(r=>!hiddenAddonTable(r.TableName)&&!hiddenAddonTable(r.Code)).map(r => ({ ...r, Rows: counts.get(r.Code) }));
-      const filled = u.filter(r => r.Rows === null || r.Rows === undefined || +r.Rows > 0);
+      const all = rowsOf(d.udo).filter(r=>!hiddenAddonTable(r.TableName)&&!hiddenAddonTable(r.Code)).map(r => ({ ...r, Rows: counts.get(r.Code) }));
+      // UDO dicabut (Cut off 2027): disembunyikan, tidak ikut hitungan; tampil bertanda hanya bila toggle menyala
+      const isRet = r => retiredAddonTable(r.TableName) || retiredAddonTable(r.Code), nRet = all.filter(isRet).length, showRet = retiredPreference();
+      const u = showRet ? all : all.filter(r => !isRet(r)), live = nRet ? all.filter(r => !isRet(r)) : all;
+      const filled = live.filter(r => r.Rows === null || r.Rows === undefined || +r.Rows > 0);
+      const codeCol = nRet && showRet ? { key: "Code", label: "Kode", fmt: (v, r) => val(v) + (isRet(r) ? ` ${retiredBadge}` : "") } : { key: "Code", label: "Kode" };
       return kpis([[filled.length, "UDO ditampilkan"], [filled.filter(x => x.TYPE === "3").length, "Tipe Document"], [filled.filter(x => x.TYPE === "1").length, "Tipe Master Data"]])
-        + section("list", "Daftar UDO", searchable("udo-t", [{ key: "Code", label: "Kode" }, { key: "Name", label: "Nama" },
+        + section("list", "Daftar UDO", retiredNotice(nRet, showRet) + searchable("udo-t", [codeCol, { key: "Name", label: "Nama" },
           { key: "TYPE", label: "Tipe", fmt: codedCell(UDO_TYPE) }, { key: "TableName", label: "Tabel header", fmt: v => `<code>@${esc(v)}</code>` },
           { key: "ChildTables", label: "Tabel baris", fmt: v => isEmpty(v) ? "" : v.split(", ").map(t => `<code>@${esc(t)}</code>`).join(" ") },
           { key: "MngSeries", label: "Series", fmt: badgeYN }, { key: "CanCancel", label: "Cancel", fmt: badgeYN }, { key: "CanLog", label: "Log", fmt: badgeYN },
-          { key: "_menu", label: "Menu 7 Addon", fmt: (_, r) => udoMenu(r) }], u, { emptyRow: r => r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }),
+          { key: "_menu", label: "Menu 7 Addon", fmt: (_, r) => udoMenu(r) }], u, { emptyRow: r => !isRet(r) && r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }),
           { lead: "UDO Master Data otomatis jadi menu di bab 7 Addon. UDO Document bisa dijadikan menu kalau isinya lebih cocok dicek sebagai master data (mode dev); sub kategorinya diatur di Setup › Mapping Add-on." });
     }
   },
@@ -749,10 +793,13 @@ export const PAGES = {
     tables: ["OUTB", "CUFD", "OUDO", "UDO1"],
     render(d) {
       const rowCounts = new Map(rowsOf(d.addon_rows).map(r => [String(r.Name).replace(/^@/, ""), r.Rows]));
-      const t = rowsOf(d.udt).filter(r=>!hiddenAddonTable(r.TableName)).map(x => ({ ...x, Rows: rowCounts.get(x.TableName), Pemakai: x.UdoCode ? `UDO ${x.UdoCode}` : x.UdoChildOf ? `UDO ${x.UdoChildOf} (baris)` : "" }));
-      return section("list", "Daftar UDT", searchable("udt-t", [{ key: "TableName", label: "Tabel", fmt: v => `<code>@${esc(v)}</code>` },
+      const all = rowsOf(d.udt).filter(r=>!hiddenAddonTable(r.TableName)).map(x => ({ ...x, Rows: rowCounts.get(x.TableName), Pemakai: x.UdoCode ? `UDO ${x.UdoCode}` : x.UdoChildOf ? `UDO ${x.UdoChildOf} (baris)` : "" }));
+      const isRet = r => retiredAddonTable(r.TableName), nRet = all.filter(isRet).length, showRet = retiredPreference();
+      const t = showRet ? all : all.filter(r => !isRet(r));
+      const tblCol = nRet && showRet ? { key: "TableName", label: "Tabel", fmt: (v, r) => `<code>@${esc(v)}</code>` + (isRet(r) ? ` ${retiredBadge}` : "") } : { key: "TableName", label: "Tabel", fmt: v => `<code>@${esc(v)}</code>` };
+      return section("list", "Daftar UDT", retiredNotice(nRet, showRet) + searchable("udt-t", [tblCol,
         { key: "Descr", label: "Deskripsi" }, { key: "ObjectType", label: "Tipe", fmt: codedCell(UDT_TYPE) },
-        { key: "Rows", label: "Baris data", num: 1 }, { key: "FieldCount", label: "Jumlah field", num: 1 }, { key: "Pemakai", label: "Dipakai oleh" }], t, { emptyRow: r => r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }));
+        { key: "Rows", label: "Baris data", num: 1 }, { key: "FieldCount", label: "Jumlah field", num: 1 }, { key: "Pemakai", label: "Dipakai oleh" }], t, { emptyRow: r => !isRet(r) && r.Rows !== null && r.Rows !== undefined && +r.Rows === 0 }));
     }
   },
 
@@ -762,9 +809,13 @@ export const PAGES = {
     menu: "Tools › Customization Tools › User-Defined Fields - Management",
     tables: ["CUFD"],
     render(d) {
-      const objs = udfObjects(rowsOf(d.fields).filter(r=>!hiddenAddonTable(r.TableID)));
+      const base = rowsOf(d.fields).filter(r=>!hiddenAddonTable(r.TableID));
+      // UDF dicabut (Cut off 2027): hanya field yang tercantum di rule company; UDF lain tetap tampil dan dihitung
+      const isRet = r => retiredAddonTable(r.TableID) || retiredAddonField(r.TableID, r.Field), showRet = retiredPreference();
+      const nRet = new Set(base.filter(isRet).map(r => String(r.Field).toUpperCase())).size;
+      const objs = udfObjects(showRet ? base : base.filter(r => !isRet(r)));
       const cats = UDF_CATS.filter(c => objs.some(o => o.cat === c)).concat(objs.some(o => !UDF_CATS.includes(o.cat)) ? ["Lainnya"] : []);
-      const cols = [{ key: "Field", label: "Title" }, { key: "Descr", label: "Description" }, { key: "TypeID", label: "Type", fmt: codedCell(UDF_TYPE) },
+      const cols = [nRet && showRet ? { key: "Field", label: "Title", fmt: (v, r) => val(v) + (isRet(r) ? ` ${retiredBadge}` : "") } : { key: "Field", label: "Title" }, { key: "Descr", label: "Description" }, { key: "TypeID", label: "Type", fmt: codedCell(UDF_TYPE) },
         { key: "SizeID", label: "Panjang", num: 1 }, { key: "Dflt", label: "Dflt" }, { key: "NotNull", label: "Mand.", fmt: badgeYN },
         { key: "RTable", label: "Linked Table", fmt: (v, r) => v ? `<code>@${esc(v)}</code>` : r.RelUDO ? `UDO ${esc(r.RelUDO)}` : "" }];
       onMount(() => {
@@ -779,8 +830,9 @@ export const PAGES = {
           <p class="sec-lead" style="margin:6px 14px 12px">Berlaku di tabel: ${o.tables.map(t => `<code>${esc(t)}</code>`).join(" ")}</p>
         </details>`).join(""), { level: 3 })).join("");
       const flat = objs.flatMap(o => o.fields.map(f => ({ ...f, Cat: UDF_CATS.includes(o.cat) ? o.cat : "Lainnya", Obj: o.name, Tables: o.tables.length })));
-      return kpis([[flat.length, "UDF"], [objs.length, "Object"], [cats.length, "Kategori"]])
-        + section("tree", "UDF per Kategori", `<div class="toolbar"><input type="search" id="udf-q" placeholder="Cari object / field / deskripsi…"></div><div id="udf-tree">${tree}</div>`,
+      const live = nRet && showRet ? flat.filter(f => !isRet(f)) : flat;
+      return kpis([[live.length, "UDF"], [objs.length, "Object"], [cats.length, "Kategori"]])
+        + section("tree", "UDF per Kategori", retiredNotice(nRet, showRet) + `<div class="toolbar"><input type="search" id="udf-q" placeholder="Cari object / field / deskripsi…"></div><div id="udf-tree">${tree}</div>`,
           { lead: "Klik object untuk melihat UDF-nya. Tabel salinan (arsip, snapshot) ikut dihitung sebagai tabel tempat object berlaku." })
         + section("fields", "Daftar Lengkap", searchable("udf-t", [{ key: "Cat", label: "Kategori" }, { key: "Obj", label: "Object" }, ...cols,
             { key: "Tables", label: "Jumlah tabel", num: 1 }], flat, { filterKey: "Cat", filterLabel: "kategori", limit: 300 }),

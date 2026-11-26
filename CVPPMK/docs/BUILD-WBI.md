@@ -1,5 +1,9 @@
 # Build CV PPMK dan WBI
 
+> **Pembaruan 25 November 2026:** TUJUAN (dibaca Check List, SL) = `WBI_CUTOFF` di `192.168.40.197`; ASAL (sumber Setup & Cut Off) = `WBI` di `192.168.40.181`, dipasang sebagai koneksi `conn:wbi-181` (`setup.sources`). Isi env `WBI_SOURCE_USER`/`WBI_SOURCE_PASSWORD` untuk sumber. Retail memakai sumber = tujuan saja (pembatasan kode). Teks di bawah yang menyebut `WBI`/`192.168.40.181` sebagai tujuan adalah keputusan lama.
+>
+> **Keputusan 24 November 2026 (lama):** tujuan dan sumber hanya `WBI` di `192.168.40.181` yaitu **LIVE**. Upload Setup menulis ke LIVE melalui Service Layer. Port SL 50000 masih **asumsi** dan dapat diganti lewat `WBI_SL_URL`. Server hanya terjangkau lewat jaringan/VPN kantor (PC: VPN PPMK, rute `192.168.40.0/24`). User dan password hanya lewat lingkungan; host/port dapat dioverride bila alamat server berubah.
+
 Semua perubahan WBI ada di branch lokal `wbi/main`, berasal dari `main` (`ab74c0c`). Branch `main` tidak diubah dan tidak ada push.
 
 ## Dua WAR
@@ -21,20 +25,23 @@ Pada branch WBI, build tanpa `-Pwbi` juga tetap menghasilkan `cvppmk.war` dengan
 
 ## Konfigurasi WBI di lingkungan proses Tomcat
 
-Endpoint HANA `192.168.20.135:30015`, schema `WBI_TEST`, dan SL `https://192.168.20.135:50000/b1s/v1`/company `WBI_TEST` sudah dikonfirmasi Fakhri. Host/port non-rahasia menjadi default profil dan dapat dioverride lewat lingkungan. User JDBC harus akun baca saja yang disediakan Fakhri, bukan DBADMIN. Semua kredensial wajib dari lingkungan, termasuk user SL. Worker hanya memverifikasi SL Login/GET; worker tidak pernah membuka JDBC.
+Endpoint HANA default `192.168.40.181:30015`, schema/CompanyDB/sumber `WBI` (LIVE), dan SL default `https://192.168.40.181:50000/b1s/v1` (port 50000 asumsi). Semua kredensial wajib dari lingkungan, tanpa default user HANA/SL di profil. Worker tidak membuka koneksi SAP/HANA/SL pada perubahan ini.
 
 | Variabel | Isi oleh Fakhri |
 |---|---|
-| `WBI_HANA_HOST` | Opsional: override host HANA default `192.168.20.135` |
+| `WBI_HANA_HOST` | Opsional: override host HANA tujuan, default `192.168.40.197` (schema `WBI_CUTOFF`) |
+| `WBI_SOURCE_USER` | User HANA untuk sumber `192.168.40.181`/`WBI` (wajib agar sumber bisa dibaca) |
+| `WBI_SOURCE_PASSWORD` | Rahasia user sumber, hanya lewat lingkungan |
+| `WBI_SOURCE_HOST` / `WBI_SOURCE_PORT` / `WBI_SOURCE_DB` | Opsional: override sumber, default `192.168.40.181` / `30015` / `WBI` |
 | `WBI_HANA_PORT` | Opsional: override port HANA default `30015` |
-| `WBI_HANA_USER` | User JDBC baca; berbeda dari user SAP |
+| `WBI_HANA_USER` | User HANA dari lingkungan; tanpa default di profil |
 | `WBI_HANA_PASSWORD` | Rahasia JDBC, melalui lingkungan proses |
-| `WBI_SL_USER` | User SAP untuk SL; Fakhri menetapkan `manager` |
+| `WBI_SL_USER` | User SAP untuk SL dari lingkungan; tanpa default di profil |
 | `WBI_SL_PASSWORD` | Rahasia user SAP, melalui lingkungan proses |
 | `WBI_SETUP_PASSWORD` | Rahasia untuk membuka menu Setup |
 | `WBI_DATA_DIR` | Opsional: direktori induk data; default `${catalina.base}/data` |
-| `WBI_SL_URL` | Opsional: override URL SL yang sudah dikonfirmasi |
-| `WBI_SL_TRUST_ALL_CERTS` | Default false; gunakan sertifikat CA tepercaya, atau true hanya bila QA mengizinkan sertifikat sendiri |
+| `WBI_SL_URL` | Opsional: override URL SL bila alamat server berubah; port default masih asumsi |
+| `WBI_SL_TRUST_ALL_CERTS` | Default false; gunakan sertifikat CA tepercaya, atau true hanya bila administrator mengizinkan sertifikat sendiri |
 
 Jangan menaruh nilai rahasia dalam repo, perintah yang disalin ke laporan, atau log. `.env*`, `secrets/`, dan `application-*-local.properties` diabaikan Git. Bila memakai konfigurasi eksternal, arahkan Spring ke berkas lokal yang diabaikan Git melalui `SPRING_CONFIG_ADDITIONAL_LOCATION`; jangan membundelnya ke WAR WBI. Kredensial belum diisi berarti aplikasi belum siap dijalankan ke SAP.
 
@@ -53,10 +60,8 @@ Pada JDK 25, Mockito/Byte Buddy bawaan Boot 2.7 membutuhkan `mvn '-Dnet.bytebudd
 
 Fixture preview hanya melayani file lokal dan API palsu di 127.0.0.1, tanpa proxy SAP/JDBC. Akses SAP nyata dan pengujian posting bukan bagian tes ini.
 
-## Sumber dan tujuan QA
+## Sumber dan tujuan LIVE
 
-Keputusan Fakhri terbaru: **sumber = tujuan = WBI_TEST**. `setup.source-dbs=WBI_TEST` dan `setup.source.allow-target=true` menampilkan company tujuan sebagai sumber yang sah. Penjaga kesamaan DB baca dengan CompanyDB SL tetap berlaku. Datasource Hikari WBI memakai `read-only=true`; jalur baca Setup menegaskan `Connection.setReadOnly(true)`, koneksi sumber terpisah juga read-only, dan seluruh query katalog Retail hanya SELECT. SQL/JDBC tidak dipakai untuk menulis master; penulisan aplikasi hanya lewat SL setelah kunci Setup dibuka. Fakhri/koordinator yang menjalankan aplikasi dan QA nyata.
+Keputusan Fakhri terbaru: **sumber = tujuan = WBI (LIVE)**. `setup.source-dbs=WBI` dan `setup.source.allow-target=true` menampilkan company tujuan sebagai sumber yang sah. Penjaga kesamaan DB baca dengan CompanyDB SL tetap berlaku. Datasource Hikari WBI memakai `read-only=true`; jalur baca Setup menegaskan `Connection.setReadOnly(true)`, koneksi sumber terpisah juga read-only, dan seluruh query katalog Retail hanya SELECT. SQL/JDBC tidak dipakai untuk menulis master; penulisan aplikasi hanya lewat SL setelah kunci Setup dibuka. Koneksi nyata dan deployment Tomcat belum diuji pada perubahan ini.
 
 Tier G pada WBI diganti Retail (11 langkah dalam 8 kelompok); default CV tetap Farm Breeding. Tabel Retail harus ada dan berisi data. Karena sumber sama dengan tujuan, hasil normal adalah Sama, tanpa baris yang perlu di-upload. Tidak dibuat uploader saldo awal baru: saldo inventory/AP/AR/GL diisi user sendiri. Transaksi/log/buffer tidak dimigrasi.
-
-`WBI_KARTON` di `192.168.40.181:30015` hanya calon sumber nanti, **tidak dikonfigurasi aktif dan tidak dihubungi worker**. Mengaktifkannya perlu keputusan sumber baru, akun baca saja terpisah, dan verifikasi ulang mapping/dependensi.

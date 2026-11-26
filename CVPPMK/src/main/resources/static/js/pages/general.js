@@ -1,4 +1,5 @@
 import { nonBranch } from "../data-policy.js";
+import { company } from "../company.js";
 // Bab 1: General Parameter. Urutan dan nomor mengikuti blueprint "01.01 General Parameters".
 import {
   $, $$, esc, val, YN, badgeYN, coded, rowsOf, isEmpty, onMount, section, kv, settings, table, searchable, tags, udfCols, hasUdf, exportSheets, sqlSheets,
@@ -308,13 +309,19 @@ const GS = GS_TABS.map(([id, title, lead, rows]) => {
 // ---------- pemeriksaan otomatis ----------
 // UDF ID TKU hanya dicek/ditampilkan kalau terdaftar di CUFD (OADM); kalau belum ada, baris jadi "na"
 const IDTKU = "U_STEM_IDTKU";
-const companyAccounting = r => hasUdf(r, IDTKU) ? COMPANY_ACCOUNTING
+// Aturan khusus company (config "rules"): CV tidak memakainya, perilakunya tetap seperti semula.
+const rule = id => company.rules.includes(id);
+const IDTKU_DEFAULT = "000000"; // SP memakai nilai ini bila ID TKU kosong
+const idtkuRow = x => ({ ...x, type: "html", fmt: c => isEmpty(c.U_STEM_IDTKU) ? `<span class="vv">${IDTKU_DEFAULT}</span><span class="raw">memakai bawaan ${IDTKU_DEFAULT}</span>` : `<span class="vv">${esc(c.U_STEM_IDTKU)}</span>` });
+const companyAccounting = r => hasUdf(r, IDTKU) ? (rule("idtku-default") ? COMPANY_ACCOUNTING.map(x => x.col === `OADM.${IDTKU}` ? idtkuRow(x) : x) : COMPANY_ACCOUNTING)
   : COMPANY_ACCOUNTING.map(x => x.col === `OADM.${IDTKU}` ? { ...x, type: "na", note: "UDF belum dibuat di DB ini (CUFD OADM)" } : x);
 function checkCompany(c, r) {
   const out = [];
   const missing = [["Alamat (Street)", c.Street], ["Kota", c.City], ["Telepon", c.Phone1], ["Email", c.E_Mail],
     ["Nama alias", c.AliasName]].filter(([, v]) => isEmpty(v)).map(([k]) => k);
-  const tax = [["NPWP", c.TaxIdNum], ...hasUdf(r, IDTKU) ? [["ID TKU", c.U_STEM_IDTKU]] : [], ["Tax Office", c.RevOffice]].filter(([, v]) => isEmpty(v)).map(([k]) => k);
+  const tkuDefault = rule("idtku-default"); // ID TKU kosong bukan temuan: SP memakai bawaan 000000
+  const tax = [["NPWP", c.TaxIdNum], ...hasUdf(r, IDTKU) && !tkuDefault ? [["ID TKU", c.U_STEM_IDTKU]] : [], ["Tax Office", c.RevOffice]].filter(([, v]) => isEmpty(v)).map(([k]) => k);
+  if (tkuDefault && hasUdf(r, IDTKU) && isEmpty(c.U_STEM_IDTKU)) out.push(["info", `ID TKU kosong, memakai bawaan ${IDTKU_DEFAULT} (sesuai SP). Isi hanya bila perlu nilai lain.`]);
   if (tax.length) out.push(["warn", `Accounting Data belum lengkap: ${tax.join(", ")}. Data ini dipakai untuk faktur pajak / CoreTax.`]);
   if (missing.length) out.push(["warn", `Company Details belum lengkap: ${missing.join(", ")}.`]);
   return out;
@@ -341,10 +348,10 @@ function checkSeries(series) {
   const issues = new Map(); // Series -> [pesan]
   const add = (s, msg) => issues.set(s.Series, [...(issues.get(s.Series) || []), msg]);
   // range hanya dibandingkan antar series dengan objek + sub-tipe yang sama (BP Customer vs Vendor punya penomoran sendiri),
-  // series manual tidak punya range jadi tidak ikut dicek
+  // series manual tidak punya range jadi tidak ikut dicek; bila aturan series-prefix aktif, prefix/suffix yang berbeda berarti nomor tidak bentrok
   const byObj = {};
   series.filter(s => s.IsManual !== "Y" && !isEmpty(s.InitialNum))
-    .forEach(s => (byObj[`${s.ObjectCode}|${s.DocSubType}`] ||= []).push(s));
+    .forEach(s => (byObj[`${s.ObjectCode}|${s.DocSubType}${rule("series-prefix") ? `|${s.Prefix || ""}|${s.Suffix || ""}` : ""}`] ||= []).push(s));
   for (const list of Object.values(byObj)) {
     for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
       const a = list[i], b = list[j];
@@ -578,6 +585,7 @@ export const PAGES = {
           ${kpi(slp.length, "Sales employee / buyer")}${kpi(slp.filter(s => s.Employee).length, "Terhubung ke employee")}</div>`
         + section("employees", "Employee Master Data", emp.length ? searchable("emp-t", [{ key: "empID", label: "ID", num: 1 }, { key: "Name", label: "Nama" },
             { key: "jobTitle", label: "Job Title", fmt: dash }, { key: "DeptName", label: "Department", fmt: dash }, { key: "PosName", label: "Position", fmt: dash },
+            ...(rule("series-prefix") && list.some(r => !isEmpty(r.Prefix)) ? [{ key: "Prefix", label: "Prefix" }] : []),
             { key: "BPLName", label: "Branch", fmt: dash }, { key: "Manager", label: "Manager", fmt: dash }, { key: "USER_CODE", label: "User SAP", fmt: dash },
             { key: "SlpName", label: "Sales Employee", fmt: dash }, { key: "mobile", label: "Mobile", fmt: dash }, { key: "email", label: "E-Mail", fmt: dash },
             { key: "Active", label: "Aktif", fmt: badgeYN }, ...udfCols(d.employees)], emp)

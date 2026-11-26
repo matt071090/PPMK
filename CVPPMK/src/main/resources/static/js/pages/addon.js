@@ -1,5 +1,5 @@
 import { ADDONS, excludedAddonParam } from "./addon-data.js";
-import { addonHasData, nonBranch, emptyPreference, branchOnly, branchNotice, hiddenAddonTable, emptyDataRow, blankValue } from "../data-policy.js";
+import { addonHasData, nonBranch, emptyPreference, branchOnly, branchNotice, hiddenAddonTable, emptyDataRow, blankValue, retiredAddonObject, retiredPreference } from "../data-policy.js";
 // Bab 7 Addon: daftar dinamis dari DB (api/addon/objects): UDO Master Data + UDT No Object + UDO Document yang di mapping
 // ditandai sebagai master. Dikelompokkan per sub kategori (mapping, diatur di menu Setup), urut nama.
 // Halaman generik: isi tabel header + child apa adanya (kolom kunci + UDF berlabel CUFD), baca-saja.
@@ -13,9 +13,12 @@ export const addonPageId = code => "addon-" + code.toLowerCase().replace(/[^a-z0
 export const objTitle = o => o.title || o.name.replace(/_/g, " ");
 
 // halaman sidebar: sub kategori abjad, "Belum dikategorikan" paling bawah, item urut nama
-export function addonPages(objects, showEmpty = emptyPreference("addon-menu")) {
-  return objects.filter(o => o.shown && !o.tables?.some(t=>hiddenAddonTable(t.name)) && (!nonBranch() || !o.tables?.some(t => t.name === "STEM_TIBRANCHH")) && (showEmpty || addonHasData(o)))
-    .map(o => ({ id: addonPageId(o.code), title: objTitle(o), cat: o.cat || UNCAT, status: addonHasData(o) ? "progress" : null, empty: !addonHasData(o), addon: o.code }))
+export function addonPages(objects, showEmpty = emptyPreference("addon-menu"), showRetired = retiredPreference()) {
+  // item dicabut: tersembunyi kecuali toggle "Tampilkan yang dicabut"; saat tampil tidak punya status review dan tidak dihitung
+  return objects.filter(o => o.shown && !o.tables?.some(t=>hiddenAddonTable(t.name)) && (!nonBranch() || !o.tables?.some(t => t.name === "STEM_TIBRANCHH"))
+      && (retiredAddonObject(o) ? showRetired : (showEmpty || addonHasData(o))))
+    .map(o => { const retired = retiredAddonObject(o);
+      return { id: addonPageId(o.code), title: objTitle(o), cat: o.cat || UNCAT, status: !retired && addonHasData(o) ? "progress" : null, empty: !retired && !addonHasData(o), retired, addon: o.code }; })
     .sort((a, b) => (a.cat === UNCAT) - (b.cat === UNCAT) || a.cat.localeCompare(b.cat) || a.title.localeCompare(b.title));
 }
 

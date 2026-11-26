@@ -49,3 +49,12 @@ git diff --check
 Blob Git seed CV tetap `8a63c81e80863caa1d84480fdcd04f560941f501`; mapping CV tetap `36e03d16707742c794bb6ce3842763adf8ce0a33`.
 
 Untuk mengulang browser: jalankan `preview-server.mjs` default di 18635, `PREVIEW_COMPANY=cv` di 18637 dan `PREVIEW_ADMIN=1` di 18638 untuk inventory; skenario Addon memakai `PREVIEW_ADDON_PROFILE=1` di 18639 (WBI) dan 18640 (CV). Kedua baseline memakai static source `7f79802` melalui `PREVIEW_STATIC_ROOT`: CV di 18636, WBI di 18641 dengan `PREVIEW_LEGACY_ADDON=1`. Set port melalui `PREVIEW_PORT`; semuanya hanya listen di loopback dan memakai fixture. Snapshot static sementara dan seluruh server ditutup setelah pengujian.
+
+## Item dicabut (Cut off 2027)
+
+Dicabut = tidak lagi dibuat DBCreator. Ditandai di `addon-mapping-wbi.json` dengan `"retired": true` (rule prefix tabel/UDO dan rule `fields` berisi `TABEL.U_FIELD`); kode UI tidak memeriksa nama company, company tanpa rule (CV) tidak berubah.
+
+- **UDO/UDT (kategori "Dicabut (Cut off 2027)")**: ST_MR_DOCWEB, ST_VOUCHER, ST_VOUCHERMAP, ST_VOUCHERTYPE, ST_INTERNALRECON, ST_BANKUPLOAD beserta 13 tabelnya. **UDF**: U_STEM_UsedInterRecon di JDT1, BTF1, AJD1. UDF yang tetap dipakai (U_STEM_PaymentSource, U_ST_BankAccType, U_RealPath/U_WebPath/U_ST_RealPath/U_ST_WebPath, U_STEM_GUID/U_STEM_GUID_INT) tidak tersentuh.
+- **Perlakuan**: tersembunyi secara bawaan di bab 7, 5.1, 5.2, 5.3 dan validasi SP, walau di DB lama masih ada atau berisi baris; tidak jadi temuan, tidak masuk Ringkasan maupun hitungan "Menu sudah sesuai". Toggle "Tampilkan yang dicabut" (sidebar dan catatan di 5.1/5.2/5.3, tersimpan per browser) menampilkannya bertanda "Dicabut", tetap tidak dihitung.
+- ST_VOUCHERTYPE dihapus dari katalog pembanding Retail & iReapBiz (21 menjadi 20), sehingga DB baru tanpa tabel itu tidak ditandai "belum ada".
+- Bukti data: di WBI_TEST keenam UDO 0 baris. Pemakaian UDF U_STEM_UsedInterRecon belum dihitung.

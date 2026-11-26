@@ -1,5 +1,5 @@
 // Metadata for display and exported filenames. Kept independent of DOM and page helpers.
-export const company = { name: 'No company', code: '', picGroup:'PPMK', picSource:'file', picUsersFile:'ppmk-users.json', picExcludedCodes:[], addonCatalogs:[], addonRules:[] };
+export const company = { name: 'No company', code: '', picGroup:'PPMK', picSource:'file', picUsersFile:'ppmk-users.json', picExcludedCodes:[], addonCatalogs:[], addonRules:[], hideWhenEmpty:[], rules:[] };
 let pending;
 export function loadCompany() {
   return pending || (pending = fetch('api/company', { cache: 'no-store' }).then(async r => {
@@ -13,6 +13,8 @@ export function loadCompany() {
     company.addonCatalogs = Array.isArray(d.addonCatalogs) ? d.addonCatalogs : [];
     company.addonRules = Array.isArray(d.addonRules) ? d.addonRules : [];
     company.picExcludedCodes = Array.isArray(d.picExcludedCodes) ? d.picExcludedCodes : [];
+    company.hideWhenEmpty = Array.isArray(d.hideWhenEmpty) ? d.hideWhenEmpty.filter(k => typeof k === 'string') : [];
+    company.rules = Array.isArray(d.rules) ? d.rules.filter(k => typeof k === 'string') : [];
     if (typeof document !== 'undefined') document.documentElement.dataset.company = company.code;
     if (d.name) company.name = d.name;
     return company;

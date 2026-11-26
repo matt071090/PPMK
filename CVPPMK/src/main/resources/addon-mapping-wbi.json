@@ -4,6 +4,7 @@
     "STEM Base",
     "WebPortal SAP",
     "Transaksi/Log",
+    "Dicabut (Cut off 2027)",
     "Lainnya"
   ],
   "legacyCategories": [
@@ -51,6 +52,26 @@
     },
     {
       "prefixes": [
+        "ST_MR_DOCWEB",
+        "ST_VOUCHER",
+        "ST_INTERNALRECON",
+        "ST_BANKUPLOAD"
+      ],
+      "cat": "Dicabut (Cut off 2027)",
+      "master": true,
+      "retired": true
+    },
+    {
+      "prefixes": [],
+      "fields": [
+        "JDT1.U_STEM_UsedInterRecon",
+        "BTF1.U_STEM_UsedInterRecon",
+        "AJD1.U_STEM_UsedInterRecon"
+      ],
+      "retired": true
+    },
+    {
+      "prefixes": [
         "ST_ITR_DOCWEB",
         "ST_TO_DOCWEB",
         "ST_TI_DOCWEB",
@@ -59,7 +80,6 @@
         "ST_GRPC_DOCWEB",
         "ST_GI_DOCWEB",
         "ST_GIW_DOCWEB",
-        "ST_MR_DOCWEB",
         "ST_CR_DOCWEB",
         "ST_PCREQ_DOCWEB",
         "ST_PCEXP_DOCWEB",
@@ -78,14 +98,11 @@
         "ST_PLCATEGORY",
         "ST_PLCONFIG",
         "ST_PRICE",
-        "ST_VOUCHER",
         "ST_CCCONFIG",
         "ST_CC",
         "ST_IREAPCOMP",
         "ST_COMPMASTER",
         "ST_COMPMAP",
-        "ST_BANKUPLOAD",
-        "ST_INTERNALRECON",
         "ST_UDRT",
         "ST_ROUTEP",
         "ST_PARAMQC",

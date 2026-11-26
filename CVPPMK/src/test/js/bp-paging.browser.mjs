@@ -1,0 +1,41 @@
+// Verifikasi browser paging Business Partner (Customer & Vendor) di app yang sudah jalan (read-only).
+//   APP_URL=http://localhost:8091/wbi/ SHOT_DIR=D:/STEM/WBI-build/bukti-paging/lain node src/test/js/bp-paging.browser.mjs
+import { pathToFileURL } from 'node:url';
+import { mkdir } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const pw = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE || 'C:/nvm4w/nodejs/node_modules/n8n/node_modules/playwright-core/index.js').href);
+const chromium = pw.chromium || pw.default.chromium;
+const APP = process.env.APP_URL || 'http://localhost:8091/wbi/', SHOTS = process.env.SHOT_DIR || 'C:/tmp/ss-paging-lain';
+await mkdir(SHOTS, { recursive: true });
+const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
+const page = await browser.newPage({ viewport: { width: 1640, height: 1000 } });
+await page.goto(APP + 'index.html#/business-partners');
+await page.locator('#bpv-C .md-item').first().waitFor({ timeout: 120000 });
+await page.waitForFunction(() => !document.querySelector('#article .skeleton'));
+await page.waitForTimeout(800);
+const out = {};
+const c = page.locator('#bpv-C');
+out.customer = [await c.locator('.md-item').count(), await c.locator('.md-item:not([hidden])').count(), (await c.locator('.md-pager').first().innerText()).replace(/\s+/g, ' ')];
+assert.equal(out.customer[1], 10);
+await page.evaluate(() => document.querySelector('#bpv-C').scrollIntoView());
+await page.screenshot({ path: `${SHOTS}/bp-customer-default-10.png` });
+await c.locator('select[data-psize]').selectOption('25');
+assert.equal(await c.locator('.md-item:not([hidden])').count(), 25);
+await c.locator('[data-pg="1"]').first().click();
+out.cust25p2 = (await c.locator('.md-pager').first().innerText()).replace(/\s+/g, ' ');
+await page.screenshot({ path: `${SHOTS}/bp-customer-25-halaman-2.png` });
+await c.locator('input[type=search]').fill('a');
+out.search = [await c.locator('.md-count').innerText(), (await c.locator('.md-pager').first().innerText()).replace(/\s+/g, ' ')];
+assert.match(out.search[1], /Halaman 1 dari/);
+await c.locator('input[type=search]').fill('');
+await page.locator('[data-tab="1"]').first().click();
+const v = page.locator('#bpv-S');
+await v.locator('.md-item').first().waitFor();
+out.vendor = [await v.locator('.md-item').count(), await v.locator('.md-item:not([hidden])').count(), await v.locator('select[data-psize]').inputValue()];
+assert.equal(out.vendor[2], '10');   // ukuran per daftar (Customer dan Vendor terpisah)
+await v.locator('select[data-psize]').selectOption('0');
+assert.equal(await v.locator('.md-item:not([hidden])').count(), out.vendor[0]);
+await page.evaluate(() => document.querySelector('#bpv-S').scrollIntoView());
+await page.screenshot({ path: `${SHOTS}/bp-vendor-semua.png` });
+console.log(JSON.stringify(out, null, 1));
+await browser.close();
